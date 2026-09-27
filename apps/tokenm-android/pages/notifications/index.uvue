@@ -206,9 +206,9 @@ onShow(() => {
 </script>
 
 <style lang="scss">
-.permission-focus { margin-top: 12px; padding: 16px; }
-.focus-title { margin-bottom: 6px; color: $tm-text-1; font-size: 20px; font-weight: 600; line-height: 26px; }
-.focus-detail { margin-top: 4px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
+.permission-focus { margin-top: 18px; padding: 20px; border-color: #d8e4f4; background-color: #edf3fb; }
+.focus-title { margin-bottom: 8px; color: $tm-text-1; font-size: 22px; font-weight: 700; line-height: 29px; }
+.focus-detail { margin-top: 8px; color: $tm-text-2; font-size: 13px; line-height: 20px; }
 .setting-row { min-height: 64px; flex-direction: row; align-items: center; }
 .setting-copy { min-width: 0; flex: 1; margin-right: 12px; }
 .setting-title { color: $tm-text-1; font-size: 14px; font-weight: 500; line-height: 21px; }

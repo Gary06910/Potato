@@ -305,16 +305,16 @@ test('no saved theme preference means the complete Android default is light', ()
   const app = read('App.uvue');
 
   assert.equal(manifest.app.defaultAppTheme, 'light');
-  assert.equal(pages.globalStyle.navigationBarBackgroundColor, '#f4f7fb');
+  assert.equal(pages.globalStyle.navigationBarBackgroundColor, '#f5f3ee');
   assert.equal(pages.globalStyle.navigationBarTextStyle, 'black');
-  assert.equal(pages.globalStyle.backgroundColor, '#f4f7fb');
-  assert.equal(pages.globalStyle.backgroundColorContent, '#f4f7fb');
+  assert.equal(pages.globalStyle.backgroundColor, '#f5f3ee');
+  assert.equal(pages.globalStyle.backgroundColorContent, '#f5f3ee');
   assert.equal(pages.globalStyle.backgroundTextStyle, 'dark');
-  assert.equal(pages.pages.every((entry) => entry.style.backgroundColor === '#f4f7fb'), true);
+  assert.equal(pages.pages.every((entry) => entry.style.backgroundColor === '#f5f3ee'), true);
 
-  assert.match(tokens, /\$tm-bg:\s*#f4f7fb/);
-  assert.match(tokens, /\$tm-surface-1:\s*#ffffff/);
-  assert.match(tokens, /\$tm-text-1:\s*#172033/);
+  assert.match(tokens, /\$tm-bg:\s*#f5f3ee/);
+  assert.match(tokens, /\$tm-surface-1:\s*#fffdf9/);
+  assert.match(tokens, /\$tm-text-1:\s*#202a36/);
   assert.match(app, /\.btn-primary\s*\{[^}]*color:\s*#ffffff/);
   assert.doesNotMatch(`${tokens}\n${app}\n${JSON.stringify(pages)}`, /#07111f|#0d1b2b|#122238|#f2f7ff|#b4c2d4/);
   assert.doesNotMatch(app, /theme[^\n]{0,80}(?:getStorageSync|setStorageSync)/i);
@@ -335,7 +335,7 @@ test('login register and all primary pages inherit the shared light surfaces', (
   assert.match(app, /\.page-shell\s*\{[^}]*background-color:\s*\$tm-bg[^}]*color:\s*\$tm-text-1/);
   assert.match(app, /\.surface\s*\{[^}]*background-color:\s*\$tm-surface-1/);
   assert.match(app, /\.input\s*\{[^}]*border-color:\s*\$tm-line-strong[^}]*color:\s*\$tm-text-1[^}]*background-color:\s*\$tm-surface-1/);
-  assert.match(tokens, /\$tm-line-strong:\s*#b8c6d8/);
+  assert.match(tokens, /\$tm-line-strong:\s*#c9c2b7/);
   for (const pagePath of pagePaths) {
     assert.match(read(pagePath), /class=["'][^"']*page-shell/);
   }

@@ -170,9 +170,9 @@ onUnload(() => {
 </script>
 
 <style lang="scss">
-.pair-card { margin-top: 16px; align-items: center; padding-top: 24px; padding-right: 12px; padding-bottom: 24px; padding-left: 12px; }
+.pair-card { margin-top: 20px; align-items: center; padding-top: 32px; padding-right: 16px; padding-bottom: 32px; padding-left: 16px; border-color: #d8e4f4; background-color: #edf3fb; }
 .pair-label { color: $tm-text-2; font-size: 13px; line-height: 20px; }
-.pair-code { margin-top: 10px; color: $tm-text-1; font-family: "SFMono-Regular", Consolas, monospace; font-size: 32px; font-weight: 600; letter-spacing: 4px; line-height: 44px; }
+.pair-code { margin-top: 14px; color: $tm-text-1; font-family: "SFMono-Regular", Consolas, monospace; font-size: 34px; font-weight: 700; letter-spacing: 4px; line-height: 46px; }
 .pair-time { margin-top: 10px; color: $tm-info; font-size: 12px; line-height: 18px; }
 .pair-expired { background-color: $tm-surface-2; }
 .step { min-height: 48px; flex-direction: row; align-items: center; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: $tm-line; }

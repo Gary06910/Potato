@@ -225,9 +225,13 @@ body.is-windows.floating-bubble-collapsed-right .floating-bubble-tab {
 }
 .app-title-mark {
   display: none;
-  font-weight: 700;
-  line-height: 1;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  align-self: center;
+  color: var(--text);
 }
+.app-title-mark svg { display: block; width: 100%; height: 100%; overflow: visible; }
 /* Offscreen probe: rendered with the same font/size as the title, used by JS */
 /* to detect "would Token M still fit?". Independent of the live text */
 /* element so toggling its visibility never disturbs the measurement. */
@@ -239,11 +243,11 @@ body.is-windows.floating-bubble-collapsed-right .floating-bubble-tab {
   pointer-events: none;
   white-space: nowrap;
 }
-/* Swap text → Σ at the exact width where the title would start to truncate, */
+/* Swap text to the vector Potato mark when the title would truncate, */
 /* driven by JS overflow detection (see renderer/app.js). */
 .shell.title-collapsed .app-title-text, .shell.title-icon-only .app-title-text { display: none; }
 .shell.title-collapsed .app-title-mark, .shell.title-icon-only .app-title-mark {
-  display: inline;
+  display: inline-flex;
   position: relative;
 }
 .live-dot {

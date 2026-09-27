@@ -223,12 +223,12 @@ onReady(() => { timing.shellReady() })
 </script>
 
 <style lang="scss">
-.desktop-list { margin-top: 12px; }
-.desktop-card { margin-bottom: 12px; padding: 16px; }
-.desktop-name { color: $tm-text-1; font-size: $tm-type-card; font-weight: 600; line-height: 22px; }
+.desktop-list { margin-top: 18px; }
+.desktop-card { margin-bottom: 14px; padding: 20px; }
+.desktop-name { color: $tm-text-1; font-size: 18px; font-weight: 700; line-height: 25px; }
 .desktop-marker { margin-top: 4px; }
-.desktop-meta { margin-top: 3px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
-.inline-actions { flex-direction: row; margin-top: 10px; padding-top: 6px; border-top-width: 1px; border-top-style: solid; border-top-color: $tm-line; }
+.desktop-meta { margin-top: 5px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
+.inline-actions { flex-direction: row; margin-top: 16px; padding-top: 8px; border-top-width: 1px; border-top-style: solid; border-top-color: $tm-line; }
 .small-action { min-width: 0; min-height: 48px; flex: 1; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; }
 .small-action.primary { color: $tm-text-1; }
 .small-action.danger { flex: 0; min-width: 96px; color: $tm-danger; font-size: 12px; }

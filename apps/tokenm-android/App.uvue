@@ -31,16 +31,16 @@ export default {
 }
 .page-content {
   width: 100%;
-  padding-right: 16px;
-  padding-bottom: 24px;
-  padding-left: 16px;
+  padding-right: 20px;
+  padding-bottom: 32px;
+  padding-left: 20px;
 }
 .page-content-with-tabs { padding-bottom: 88px; }
-.page-title { margin-top: 12px; color: $tm-text-1; font-size: $tm-type-page; font-weight: 600; line-height: 32px; }
-.page-lead { margin-top: 4px; color: $tm-text-2; font-size: 14px; line-height: 23px; }
-.section { margin-top: $tm-space-12; }
+.page-title { margin-top: 16px; color: $tm-text-1; font-size: 27px; font-weight: 700; line-height: 36px; }
+.page-lead { margin-top: 6px; color: $tm-text-2; font-size: 14px; line-height: 23px; }
+.section { margin-top: 28px; }
 .section-head { flex-direction: row; min-height: 48px; align-items: center; justify-content: space-between; }
-.section-title { color: $tm-text-1; font-size: $tm-type-section; font-weight: 600; line-height: 24px; }
+.section-title { color: $tm-text-1; font-size: 17px; font-weight: 700; line-height: 24px; }
 .section-link {
   min-width: 48px;
   min-height: 48px;
@@ -57,6 +57,7 @@ export default {
   border-color: $tm-line;
   border-radius: $tm-radius-lg;
   background-color: $tm-surface-1;
+  box-shadow: 0 5px 18px rgba(50, 43, 32, 0.045);
 }
 .plain-list { padding-right: 4px; padding-left: 4px; }
 .row {
@@ -92,7 +93,7 @@ export default {
   text-align: center;
 }
 .btn-active { opacity: 0.9; }
-.btn-primary { color: #ffffff; background-color: $tm-accent; }
+.btn-primary { color: #ffffff; background-color: $tm-accent; box-shadow: 0 5px 12px rgba(40, 105, 201, 0.15); }
 .btn-primary-active { color: #ffffff; background-color: $tm-accent-pressed; opacity: 0.9; }
 .btn-secondary { border-width: 1px; border-style: solid; border-color: $tm-line-strong; background-color: transparent; }
 .btn-danger { border-width: 1px; border-style: solid; border-color: $tm-line; color: $tm-danger; background-color: transparent; }
@@ -108,7 +109,7 @@ export default {
   font-size: 13px;
   line-height: 48px;
 }
-.form-label { margin-top: 16px; margin-bottom: 8px; color: $tm-text-2; font-size: 12px; line-height: 18px; }
+.form-label { margin-top: 20px; margin-bottom: 8px; color: $tm-text-2; font-size: 12px; font-weight: 600; line-height: 18px; }
 .input {
   width: 100%;
   min-height: 48px;
@@ -135,7 +136,7 @@ export default {
 .detail-key { width: 72px; color: $tm-text-3; font-size: 12px; line-height: 20px; }
 .detail-value { min-width: 0; flex: 1; color: $tm-text-1; font-size: 14px; line-height: 22px; }
 .muted { color: $tm-text-3; }
-.group-label { margin-top: 24px; margin-bottom: 8px; color: $tm-text-2; font-size: $tm-type-secondary; font-weight: 600; line-height: 20px; }
-.brand-label { margin-bottom: 8px; color: $tm-info; font-size: $tm-type-secondary; font-weight: 600; line-height: 20px; }
+.group-label { margin-top: 28px; margin-bottom: 10px; color: $tm-text-2; font-size: $tm-type-secondary; font-weight: 700; line-height: 20px; }
+.brand-label { margin-bottom: 8px; color: $tm-info; font-size: $tm-type-secondary; font-weight: 700; line-height: 20px; }
 .privacy-caption { margin-top: 8px; color: $tm-text-2; font-size: $tm-type-caption; line-height: 18px; }
 </style>

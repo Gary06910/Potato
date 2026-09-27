@@ -228,8 +228,8 @@ onReady(() => { timing.shellReady() })
 </script>
 
 <style lang="scss">
-.profile-row { min-height: 64px; flex-direction: row; align-items: center; }
-.profile-mark { width: 48px; height: 48px; margin-right: 12px; align-items: center; justify-content: center; border-width: 1px; border-style: solid; border-color: $tm-line-strong; border-radius: 12px; background-color: $tm-surface-1; }
+.profile-row { min-height: 76px; flex-direction: row; align-items: center; padding-right: 16px; padding-left: 16px; border-radius: $tm-radius-lg; background-color: #e9f0fa; }
+.profile-mark { width: 48px; height: 48px; margin-right: 14px; align-items: center; justify-content: center; border-width: 1px; border-style: solid; border-color: #d8e4f4; border-radius: 14px; background-color: $tm-surface-1; }
 .profile-initial { color: $tm-info; font-size: 18px; font-weight: 600; line-height: 24px; }
 .setting-row { min-height: 64px; flex-direction: row; align-items: center; }
 .setting-row .row-main { margin-right: 12px; }

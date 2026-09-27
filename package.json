@@ -93,9 +93,10 @@
           ]
         }
       ],
-      "icon": "assets/icon-win.png",
+      "icon": "assets/icon-win.ico",
       "files": [
-        "assets/icon-win.png"
+        "assets/icon-win.png",
+        "assets/icon-win.ico"
       ],
       "verifyUpdateCodeSignature": true,
       "signtoolOptions": {
@@ -119,6 +120,9 @@
     },
     "nsis": {
       "artifactName": "Potato-Setup-${version}.${ext}",
+      "installerIcon": "assets/icon-win.ico",
+      "uninstallerIcon": "assets/icon-win.ico",
+      "installerHeaderIcon": "assets/icon-win.ico",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,

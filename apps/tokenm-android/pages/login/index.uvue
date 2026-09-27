@@ -127,7 +127,7 @@ onLoad((_options: OnLoadOptions) => {
 </script>
 
 <style lang="scss">
-.auth-body { padding-top: 24px; }
+.auth-body { margin-top: 20px; padding-top: 24px; padding-right: 20px; padding-bottom: 16px; padding-left: 20px; border-width: 1px; border-style: solid; border-color: $tm-line; border-radius: $tm-radius-lg; background-color: $tm-surface-1; box-shadow: 0 7px 22px rgba(50, 43, 32, 0.055); }
 .auth-link { width: 100%; min-height: 48px; margin-top: 8px; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; }
 .input-placeholder { color: $tm-text-3; }
 .captcha-row { width: 100%; flex-direction: row; align-items: center; }

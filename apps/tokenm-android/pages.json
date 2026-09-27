@@ -1,26 +1,26 @@
 {
   "pages": [
-    { "path": "pages/onboarding/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/login/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/register/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/permission/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/dashboard/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/tasks/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/desktops/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/settings/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/task-detail/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/pairing/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/notifications/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/privacy/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/about/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } },
-    { "path": "pages/background-protection/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f4f7fb" } }
+    { "path": "pages/onboarding/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/login/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/register/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/permission/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/dashboard/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/tasks/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/desktops/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/settings/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/task-detail/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/pairing/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/notifications/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/privacy/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/about/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } },
+    { "path": "pages/background-protection/index", "style": { "navigationStyle": "custom", "backgroundColor": "#f5f3ee" } }
   ],
   "globalStyle": {
     "navigationStyle": "custom",
-    "navigationBarBackgroundColor": "#f4f7fb",
+    "navigationBarBackgroundColor": "#f5f3ee",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f4f7fb",
-    "backgroundColorContent": "#f4f7fb",
+    "backgroundColor": "#f5f3ee",
+    "backgroundColorContent": "#f5f3ee",
     "backgroundTextStyle": "dark"
   },
   "easycom": { "autoscan": true }

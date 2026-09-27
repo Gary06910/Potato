@@ -231,14 +231,14 @@ onReady(() => {
 </script>
 
 <style lang="scss">
-.notification-focus { margin-top: 16px; padding: 16px; }
+.notification-focus { margin-top: 18px; padding: 20px; border-color: #d8e4f4; background-color: #edf3fb; }
 .focus-copy { min-width: 0; flex: 1; }
-.focus-title { margin-bottom: 5px; color: $tm-text-1; font-size: 20px; font-weight: 600; line-height: 26px; }
-.focus-detail { margin-top: 3px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
+.focus-title { margin-bottom: 8px; color: $tm-text-1; font-size: 22px; font-weight: 700; line-height: 29px; }
+.focus-detail { margin-top: 8px; color: $tm-text-2; font-size: 13px; line-height: 20px; }
 .push-marker { margin-top: 8px; }
-.focus-action { min-height: 48px; margin-top: 8px; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; }
+.focus-action { min-height: 48px; margin-top: 12px; border-radius: $tm-radius-md; color: #ffffff; background-color: $tm-accent; font-size: 13px; font-weight: 600; line-height: 48px; }
 .focus-action-active { opacity: 0.8; }
-.summary-line { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+.summary-line { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 18px; padding-right: 4px; padding-left: 4px; }
 .summary-text { color: $tm-text-2; font-size: 13px; line-height: 20px; }
 .summary-divider { margin-right: 6px; margin-left: 6px; color: $tm-line-strong; font-size: 13px; }
 .desktop-status { width: 66px; }

@@ -11,6 +11,12 @@
 	"app-android": {
 		"minSdkVersion": 21,
 		"distribute": {
+			"icons": {
+				"hdpi": "package/icons/potato-hdpi.png",
+				"xhdpi": "package/icons/potato-xhdpi.png",
+				"xxhdpi": "package/icons/potato-xxhdpi.png",
+				"xxxhdpi": "package/icons/potato-xxxhdpi.png"
+			},
 			"modules": {
 				"uni-push": {}
 			}
