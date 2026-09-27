@@ -5,7 +5,7 @@ const { formatCurrencyFromUsd, normalizeCurrency } = require('../shared/currency
 const compactTokens = require('../shared/compactTokens');
 
 const CLIENT_ID = '1507034330436862062';
-const GITHUB_URL = 'https://github.com/Gary06910/ToKnow';
+const GITHUB_URL = 'https://github.com/Gary06910/Potato';
 const KNOWN_CLIENT_ASSETS = new Set([
   'claude', 'codex', 'opencode', 'hermes', 'openclaw', 'cursor', 'antigravity', 'cline',
   'amp', 'droid', 'kimi', 'qwen', 'grok', 'copilot', 'pi', 'zed', 'kilo', 'commandcode', 'micode', 'zcode', 'kiro', 'codebuddy', 'workbuddy', 'proma', 'qodercn', 'reasonix', 'dsh', 'cherrystudio', 'lmstudio', 'unsloth',
@@ -52,12 +52,12 @@ function buildPayload(stats, currency = 'USD', compactTokenUnits = 'western', lo
   const base = {
     type: 0,
     largeImageKey: 'logo',
-    largeImageText: 'To Know',
+    largeImageText: 'Potato',
     startTimestamp,
     buttons: [{ label: 'View on GitHub', url: GITHUB_URL }]
   };
   if (totalTokens === 0) {
-    return { ...base, details: 'To Know', state: 'No usage today' };
+    return { ...base, details: 'Potato', state: 'No usage today' };
   }
   const top = topClient(today);
   const label = (top && CLIENT_LABELS[top]) || (top ? top : 'Active');

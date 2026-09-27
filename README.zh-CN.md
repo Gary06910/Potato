@@ -2,8 +2,8 @@
    <a href="./README.md">EN</a> | <strong>简</strong> | <a href="./README.zh-TW.md">繁</a> | <a href="./README.ko.md">KO</a> | <a href="./README.ja.md">JA</a>
 </p>
 <div align="center">
-    <img src=".github/assets/app.png" alt="To Know logo" width="120">
-    <h1>To Know</h1>
+    <img src=".github/assets/app.png" alt="Potato logo" width="120">
+    <h1>Potato</h1>
 </div>
 
 <p align="center">
@@ -11,8 +11,8 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/Gary06910/ToKnow/releases"><img src="https://img.shields.io/github/v/release/Gary06910/ToKnow?include_prereleases&style=flat-square&label=release&color=22c55e" alt="最新发布" /></a>
-    <a href="https://github.com/Gary06910/ToKnow/releases"><img src="https://img.shields.io/github/downloads/Gary06910/ToKnow/total?style=flat-square&color=22c55e" alt="总下载量" /></a>
+    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/v/release/Gary06910/Potato?include_prereleases&style=flat-square&label=release&color=22c55e" alt="最新发布" /></a>
+    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/downloads/Gary06910/Potato/total?style=flat-square&color=22c55e" alt="总下载量" /></a>
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square" alt="Windows 10 或更新" />
     <img src="https://img.shields.io/badge/macOS-12%2B-0A84FF?style=flat-square&logo=apple&logoColor=white" alt="macOS 12 或更新" />
     <img src="https://img.shields.io/badge/Linux-x64-64748b?style=flat-square&logo=linux&logoColor=white" alt="Linux x64" />
@@ -24,13 +24,13 @@
     <img src=".github/assets/demo.gif">
 </div>
 
-## To Know 是什么？
+## Potato 是什么？
 
 一款桌面小部件，实时显示 Claude Code、Codex、Cursor、GitHub Copilot、Cherry Studio 等 37+ 种 AI 编程工具的 Token 用量与 AI 工具额度，具备实时多设备同步与历史使用趋势功能，并支持按工具、设备、模型、session 或项目分项显示。
 
 ## 支持的工具
 
-To Know 对 Token 用量、账户额度和 session 明细分别支持：
+Potato 对 Token 用量、账户额度和 session 明细分别支持：
 
 | Logo | 工具 | 数据路径 | Token 用量 | AI 工具额度 | session 明细 |
 |:---:|------|-----------|:---:|:---:|:---:|
@@ -77,12 +77,12 @@ To Know 对 Token 用量、账户额度和 session 明细分别支持：
 
 <br>
 
-- 上表为默认路径。To Know 与 Tokscale 遵循相同的环境变量覆盖：`~/.local/share/` 下的路径跟随 `$XDG_DATA_HOME`，各工具另有 `$CODEX_HOME`、`$GROK_HOME`、`$HERMES_HOME`、`$KIMI_CODE_HOME`、`$UNSLOTH_STUDIO_HOME`、`$LM_STUDIO_HOME`、`$DSH_HOME`、`$REASONIX_STATE_HOME`、`$REASONIX_HOME` 以及 `$CLINE_*` 系列。
+- 上表为默认路径。Potato 与 Tokscale 遵循相同的环境变量覆盖：`~/.local/share/` 下的路径跟随 `$XDG_DATA_HOME`，各工具另有 `$CODEX_HOME`、`$GROK_HOME`、`$HERMES_HOME`、`$KIMI_CODE_HOME`、`$UNSLOTH_STUDIO_HOME`、`$LM_STUDIO_HOME`、`$DSH_HOME`、`$REASONIX_STATE_HOME`、`$REASONIX_HOME` 以及 `$CLINE_*` 系列。
 - LM Studio 追踪目前仅涵盖服务器日志中记录的 OpenAI 兼容 `/v1/chat/completions` 和 `/v1/responses` 请求。通过 LM Studio 内置 Chat 界面发起的对话，以及原生 `/api/v1/chat` 请求均不包括在内。
 - Unsloth Studio 从 `studio.db` 追踪 Studio 对话与本地 API 的推理用量。本地推理的 API 费用为零；可识别的按量计费供应商使用 Tokscale 的价格估算。不包括训练 Token。详见 [Unsloth 数据来源说明](docs/providers/unsloth.md)。
 
 - Command Code transcript 不包含实际 Token 数或每条消息的模型信息。Token 用量根据 transcript 文本估算；模型归属与推算成本可能反映当前配置的模型，而不是每次请求当时实际使用的模型。
-- Cursor 缓存来自 Cursor 的账号层级用量导出，因此同时涵盖 Cursor IDE 和 Cursor CLI。To Know 会自动检测 Cursor 桌面版已登录的账号，也可在设置中手动新增。缓存过期时会自动重新同步，但刚完成的 session 可能需要几分钟才会出现在 Cursor 控制台，因此用量会在同步后更新，而非即时显示。
+- Cursor 缓存来自 Cursor 的账号层级用量导出，因此同时涵盖 Cursor IDE 和 Cursor CLI。Potato 会自动检测 Cursor 桌面版已登录的账号，也可在设置中手动新增。缓存过期时会自动重新同步，但刚完成的 session 可能需要几分钟才会出现在 Cursor 控制台，因此用量会在同步后更新，而非即时显示。
 
 - Custom 会从一个 GET 余额端点映射数值 JSON 字段；仅兼容 OpenAI 或 Anthropic API 并不足够。
 
@@ -115,9 +115,9 @@ Qoder CN 的 Token 用量来自应用本地 SQLite 数据库，而非 API ——
 </tr>
 </table>
 
-## 为什么用 To Know？
+## 为什么用 Potato？
 
-大多数用量监控工具只在它运行的那台机器上有用。To Know 是为多设备工作流而设计的：每台设备监视自己的本地日志、把汇总更新发送到你的 hub，每个连接中的小部件几乎都能实时看到 Token 变化。
+大多数用量监控工具只在它运行的那台机器上有用。Potato 是为多设备工作流而设计的：每台设备监视自己的本地日志、把汇总更新发送到你的 hub，每个连接中的小部件几乎都能实时看到 Token 变化。
 
 ## 功能特性
 
@@ -136,7 +136,7 @@ Qoder CN 的 Token 用量来自应用本地 SQLite 数据库，而非 API ——
 - **AI 工具额度检测**：涵盖 Claude Code、Codex、Cursor、OpenRouter、第三方 API、GLM、Kimi 等 24+ 家提供方的 session、每日、每周、账单与 credits 窗口，支持多个 OpenRouter／第三方 profile，以及余额型账户（Claude credits、DeepSeek 预付余额与消费历史、第三方余额）
 - **多账号与 Codex 账号切换**：同一提供方可追踪多个账号、各自显示额度；已加入追踪的 Codex 账号还能一键切换为本机使用账号，免重新登录授权
 - **Codex 重置预测**：可选开启的第三方重置预测，显示预计重置时间、重置类型（Regular 或 Banked）与上次重置时间
-- **保留已删除会话用量**：许多工具会定期清除旧 session（Claude Code 默认清 30 天前的 transcript），一删就再也算不到。开启后，To Know 会在本地不设期限地归档已观测到的每日工具／模型用量，让热力图与趋势即使在来源文件被清掉后仍然完整（详见下方[〈会话数据保留期〉](#会话数据保留期)）
+- **保留已删除会话用量**：许多工具会定期清除旧 session（Claude Code 默认清 30 天前的 transcript），一删就再也算不到。开启后，Potato 会在本地不设期限地归档已观测到的每日工具／模型用量，让热力图与趋势即使在来源文件被清掉后仍然完整（详见下方[〈会话数据保留期〉](#会话数据保留期)）
 - **使用趋势与仪表板**：主页的活跃热力图与趋势图，加上独立的仪表板窗口，提供连续天数，以及跨所有设备、按工具／按模型堆叠的历史（柱状图与 K 线两种视图）
 - **固定时间范围**：除了原本的日、月、总计，还可以切换本周、近 7 天与近 30 天
 - **可选的状态视图**：追踪 Claude、OpenAI、Cursor 与 DeepSeek status 页，支持手动或定时重新检查
@@ -165,13 +165,13 @@ Qoder CN 的 Token 用量来自应用本地 SQLite 数据库，而非 API ——
 
 ## 安装
 
-上游 Token Monitor 项目的 macOS 版本可通过其 [Homebrew Cask](https://formulae.brew.sh/cask/token-monitor) 安装；这不是 To Know 的发布渠道：
+上游 Token Monitor 项目的 macOS 版本可通过其 [Homebrew Cask](https://formulae.brew.sh/cask/token-monitor) 安装；这不是 Potato 的发布渠道：
 
 ```bash
 brew install --cask token-monitor
 ```
 
-也可从 [GitHub Releases](https://github.com/Gary06910/ToKnow/releases) 下载。
+也可从 [GitHub Releases](https://github.com/Gary06910/Potato/releases) 下载。
 
 - **macOS（Apple Silicon）** — `.dmg`，已签名并 notarize
 - **macOS（Intel）** — x64 `.dmg`，已签名并 notarize
@@ -192,7 +192,7 @@ brew install --cask token-monitor
 
 在一台长期开机的机器上打开小部件，进入 设置 → 多设备同步，选 **在这台设备托管 Hub**。小部件会生成随机 secret，并列出其他设备可以连入的局域网 URL（Tailscale 或 ZeroTier 地址也会显示在这里）。在其他每台设备上选 **连接到 Hub**，把 URL 与 secret 贴进去即可。
 
-只要 To Know 还在跑，hub 就会运行——退出 App（仅关闭窗口不算）会停掉 hub，所有连入的设备都会断开。
+只要 Potato 还在跑，hub 就会运行——退出 App（仅关闭窗口不算）会停掉 hub，所有连入的设备都会断开。
 
 #### 方案 B——自托管 Node hub（长期开机的无头机器）
 
@@ -205,7 +205,7 @@ npm run hub
 
 #### 方案 C——Cloudflare Worker hub（跨网络，包含 iPhone）
 
-[![部署到 Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Gary06910/ToKnow/tree/main/worker)
+[![部署到 Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Gary06910/Potato/tree/main/worker)
 
 一键部署——Cloudflare 会在过程中提示你输入 `TOKEN_MONITOR_SECRET`。或手动部署:
 
@@ -262,7 +262,7 @@ npm run pack         # 未打包的 app 目录（无安装包），方便本机�
 
 ## 会话数据保留期
 
-开启**保留已删除会话用量**（设置 → 采集）后，To Know 会在本地不设期限地归档已观测到的每日工具／模型用量——即使来源工具日后清掉 session，热力图与趋势也不受影响。
+开启**保留已删除会话用量**（设置 → 采集）后，Potato 会在本地不设期限地归档已观测到的每日工具／模型用量——即使来源工具日后清掉 session，热力图与趋势也不受影响。
 
 <details>
 <summary><strong>进阶：延长来源工具本身的保留期</strong></summary>
@@ -279,7 +279,7 @@ npm run pack         # 未打包的 app 目录（无安装包），方便本机�
 
 设更大能留更多，代价是 transcript 会按你设定的期限一直留在磁盘上。其他工具的默认值与配置文件路径，请见 tokscale 的 [Session Data Retention](https://github.com/junhoyeo/tokscale#session-data-retention) 表。
 
-这份归档只涵盖 To Know 已观测过的日期；在它开始追踪之前就被删除的数据无法找回。
+这份归档只涵盖 Potato 已观测过的日期；在它开始追踪之前就被删除的数据无法找回。
 
 </details>
 
@@ -294,15 +294,15 @@ npm run pack         # 未打包的 app 目录（无安装包），方便本机�
 
 ## 隐私
 
-To Know 在本地处理使用日志，不会向项目维护者发送分析或遥测数据。网络访问仅用于文档所述或由用户启用的功能；更新、提供方集成、Discord Rich Presence 与可选多设备同步所使用的数据，请参阅[隐私政策](docs/privacy.md)。
+Potato 在本地处理使用日志，不会向项目维护者发送分析或遥测数据。网络访问仅用于文档所述或由用户启用的功能；更新、提供方集成、Discord Rich Presence 与可选多设备同步所使用的数据，请参阅[隐私政策](docs/privacy.md)。
 
 ## Star 历史
 
-<a href="https://github.com/Gary06910/ToKnow/tree/star-history">
+<a href="https://github.com/Gary06910/Potato/tree/star-history">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Gary06910/ToKnow/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Gary06910/ToKnow/star-history/star-history.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/Gary06910/ToKnow/star-history/star-history.svg" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history-dark.svg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
+   <img alt="Star History Chart" src="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
  </picture>
 </a>
 

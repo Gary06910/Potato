@@ -12,7 +12,7 @@ jobs:
         include:
           - os: windows-latest
             target: win
-            artifact_name: token-monitor-win
+            artifact_name: potato-win
             artifact_path: |
               dist/*.exe
               dist/latest.yml
@@ -40,7 +40,7 @@ jobs:
         run: node scripts/ensure-vendored-tokscale.js
       - name: Verify vendored tokscale (DSH bridge)
         run: node scripts/verify-vendored-tokscale.js
-      - name: Preflight To Know SignPath configuration
+      - name: Preflight Potato SignPath configuration
         if: matrix.target == 'win'
         shell: bash
         env:
@@ -245,7 +245,7 @@ jobs:
           path: artifacts
           # Download only the final Windows artifact; unsigned SignPath inputs
           # have different names and can never enter the release staging tree.
-          pattern: token-monitor-win
+          pattern: potato-win
       - name: Stage Windows release artifacts
         shell: bash
         run: |
@@ -258,7 +258,7 @@ jobs:
               exit 1
             fi
             cp "$file" "release-artifacts/$name"
-          done < <(find artifacts/token-monitor-win -mindepth 1 -type f -print0)
+          done < <(find artifacts/potato-win -mindepth 1 -type f -print0)
           node scripts/verify-updater-artifact-names.js release-artifacts
       - name: Add generated changelog details to release notes
         env:

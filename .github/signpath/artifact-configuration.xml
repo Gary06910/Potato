@@ -5,14 +5,14 @@
   </parameters>
   <zip-file>
     <pe-file
-      path="installer/To-Know-Setup-${version}.exe"
-      product-name="To Know"
+      path="installer/Potato-Setup-${version}.exe"
+      product-name="Potato"
       product-version="${version}">
       <authenticode-sign />
     </pe-file>
     <pe-file
-      path="portable/To-Know-${version}.exe"
-      product-name="To Know"
+      path="portable/Potato-${version}.exe"
+      product-name="Potato"
       product-version="${version}">
       <authenticode-sign />
     </pe-file>

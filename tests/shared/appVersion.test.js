@@ -10,7 +10,7 @@ const rootPackage = require('../../package.json');
 const workerPackage = require('../../worker/package.json');
 const workerLock = require('../../worker/package-lock.json');
 
-test('To Know 1.0.0 is newer than the prior 0.58.0 installation', () => {
+test('Potato 1.0.0 is newer than the prior 0.58.0 installation', () => {
   assert.equal(rootPackage.version, '1.0.0');
   assert.equal(semver.lt('0.58.0', rootPackage.version), true);
 });

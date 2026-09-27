@@ -22,7 +22,7 @@ const PROJECT = path.join(ROOT, 'native', 'macos', 'TokenMonitorWidget.xcodeproj
 const DEV_OUTPUT = path.join(ROOT, 'build', 'macos-widget-dev');
 const DERIVED_DATA = path.join(DEV_OUTPUT, 'DerivedData');
 const BUILD_CONFIGURATION = 'Debug';
-const DEFAULT_APP_NAME = 'To Know.app';
+const DEFAULT_APP_NAME = 'Potato.app';
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -88,7 +88,7 @@ function resolveAppPath(value) {
   const apps = findApps(path.join(ROOT, 'dist'));
   if (apps.length === 1) return apps[0];
   if (apps.length === 0) {
-    throw new Error('No packaged To Know.app found. Run npm run pack:mac:widget once.');
+    throw new Error('No packaged Potato.app found. Run npm run pack:mac:widget once.');
   }
   throw new Error(`More than one packaged app was found. Pass --app with one of:\n${apps.join('\n')}`);
 }
@@ -281,7 +281,7 @@ function buildWidget(config, developmentTeam, metadata) {
 }
 
 function stopRunningWidgetProcesses() {
-  run('pkill', ['-x', 'To Know'], { allowFailure: true });
+  run('pkill', ['-x', 'Potato'], { allowFailure: true });
   run('pkill', ['-x', 'TokenMonitorWidget'], { allowFailure: true });
 }
 

@@ -16,7 +16,7 @@ Local evidence collected from this workspace:
 | Android device tooling | `adb` is absent; no connected phone can be verified | REQUIRED |
 |支付宝 cloud binding | `uniCloud-alipay` contains source folders only; no verified HBuilderX association was available | REQUIRED |
 | Target space | user-specified `tokenm-prod`, SpaceID `env-00jy6pbiul92`; no operation was performed | NOT TOUCHED |
-| Cloud environment | required To Know values are absent from the current process | REQUIRED |
+| Cloud environment | required Potato values are absent from the current process | REQUIRED |
 | uni-push 2.0 | owner enablement and service-space binding cannot be verified | REQUIRED |
 | Honor application/Push | developer verification, registered application, credentials, and category approval cannot be verified | REQUIRED |
 | Xiaomi P1 | application, credentials, channel, and fixed template cannot be verified | OPTIONAL FOR HONOR P0; REQUIRED FOR XIAOMI P1 |
@@ -42,7 +42,7 @@ After completion, Codex can run source compilation/build validation from the con
 
 Platforms: DCloud Developer Center and HBuilderX cloud-build dialog.
 
-1. Create or select the real To Know DCloud application.
+1. Create or select the real Potato DCloud application.
 2. Put its assigned DCloud AppID into `apps/tokenm-android/manifest.json` through HBuilderX.
 3. Choose the final reverse-domain Android package name and register the same package in DCloud, Honor, and later Xiaomi.
 4. Do not reuse the package or DCloud AppID of an unrelated application.
@@ -78,7 +78,7 @@ Platform: uniCloud cloud-function environment/secret configuration.
 
 Configure without exposing values:
 
-- `TOKEN_M_DESKTOP_CREDENTIAL_KEY`: one canonical 43-character base64url value representing exactly 32 random bytes; the same value must be available to both To Know function runtimes that read encrypted Desktop credentials.
+- `TOKEN_M_DESKTOP_CREDENTIAL_KEY`: one canonical 43-character base64url value representing exactly 32 random bytes; the same value must be available to both Potato function runtimes that read encrypted Desktop credentials.
 - `TOKEN_M_DCLOUD_APP_ID`: the real `__UNI__...` value matching `manifest.json`.
 - `TOKEN_M_XIAOMI_CHANNEL_ID` and `TOKEN_M_XIAOMI_TEMPLATE_ID`: configure together only after Xiaomi approval; omit both for the Honor-only P0 gate.
 

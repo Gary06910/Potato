@@ -372,7 +372,7 @@ const {
 
 if (!app.isPackaged) loadDotEnv();
 
-const APP_NAME = 'To Know';
+const APP_NAME = 'Potato';
 const LEGACY_USER_DATA_PATH = path.join(app.getPath('appData'), 'Token Monitor');
 const APP_ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icon.png');
 const WINDOWS_APP_ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icon-win.png');
@@ -2414,7 +2414,7 @@ function reportCredentialStorageError(context, error) {
   try {
     dialog.showErrorBox(
       'Credential storage error',
-      `To Know could not safely access credentials.json (${context}). The save was stopped and previous data was restored where possible. Check the file's JSON and permissions, then restart the app.\n\n${detail}`
+      `Potato could not safely access credentials.json (${context}). The save was stopped and previous data was restored where possible. Check the file's JSON and permissions, then restart the app.\n\n${detail}`
     );
   } catch (_) {}
 }
@@ -2491,7 +2491,7 @@ function readSettings() {
     appUpdateCacheMigrationPending = savedAppUpdate !== undefined
       && JSON.stringify(savedAppUpdate) !== JSON.stringify(normalizedAppUpdate);
     if (!saved.secret && defaults.secret) delete saved.secret;
-    // Only recognized To Know settings may cross the historical settings file
+    // Only recognized Potato settings may cross the historical settings file
     // boundary. This keeps retired legacy keys inert while retaining the
     // current Android notification overlay fields.
     const currentSaved = Object.fromEntries(
@@ -4476,7 +4476,7 @@ function updateTrayDisplay() {
   if (trayShowsTitle(process.platform)) tray.setTitle(text);
   // Tooltip always shows a useful summary, even in icon-only mode where setTitle is blank.
   const tip = formatTrayText(visibleStats, 'both', currency, compactOptions);
-  tray.setToolTip(`To Know - ${tip}`);
+  tray.setToolTip(`Potato - ${tip}`);
   // Icon: rendered bars image in bar modes, otherwise the app icon.
   let icon = null;
   if (barsImageMode || trayImageMode || customImageMode) {
@@ -6284,7 +6284,7 @@ function isAllowedExternalUrl(value) {
   if (parsed.hostname === 'github.com' && parsed.pathname.startsWith('/junhoyeo/tokscale')) return true;
   if (parsed.hostname === 'www.npmjs.com' && parsed.pathname.startsWith('/package/@tokscale/')) return true;
   if (parsed.hostname === 'github.com' && parsed.pathname.startsWith('/Javis603/token-monitor')) return true;
-  if (parsed.hostname === 'github.com' && parsed.pathname.startsWith('/Gary06910/ToKnow')) return true;
+  if (parsed.hostname === 'github.com' && parsed.pathname.startsWith('/Gary06910/Potato')) return true;
   if (parsed.hostname === 'codex-resets.com' && (parsed.pathname === '' || parsed.pathname === '/')) return true;
   if (
     (parsed.hostname === 'javis-ai.com' || parsed.hostname === 'www.javis-ai.com')

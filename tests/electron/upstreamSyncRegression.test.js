@@ -69,12 +69,12 @@ test('upstream-sync candidate keeps the fetched upstream package and Token M rel
   assert.equal(manifest.baseVersion, '4.17.0');
   assert.equal(manifest.releaseTag, 'token-monitor-09cf5471');
 
-  assert.deepEqual(packageJson.build.publish, [{ provider: 'github', owner: 'Gary06910', repo: 'ToKnow' }]);
-  assert.match(updater, /const GITHUB_REPO = 'Gary06910\/ToKnow'/);
+  assert.deepEqual(packageJson.build.publish, [{ provider: 'github', owner: 'Gary06910', repo: 'Potato' }]);
+  assert.match(updater, /const GITHUB_REPO = 'Gary06910\/Potato'/);
   assert.doesNotMatch(updater, /const GITHUB_REPO = 'Javis603\/token-monitor'/);
-  assert.match(artifactConfig, /product-name="To Know"/);
-  assert.match(applicationConfig, /path="application\/To Know\.exe"/);
-  assert.match(applicationConfig, /product-name="To Know"/);
+  assert.match(artifactConfig, /product-name="Potato"/);
+  assert.match(applicationConfig, /path="application\/Potato\.exe"/);
+  assert.match(applicationConfig, /product-name="Potato"/);
   assert.match(releaseWorkflow, /prepare-github-release-notes\.js \.github\/TOKEN_M_RELEASE_TEMPLATE\.md/);
   assert.doesNotMatch(releaseWorkflow, /prepare-github-release-notes\.js \.github\/RELEASE_TEMPLATE\.md/);
 

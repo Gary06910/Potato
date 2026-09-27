@@ -1,4 +1,4 @@
-# To Know Android v1 real-device E2E plan
+# Potato Android v1 real-device E2E plan
 
 ## Entry gate
 
@@ -18,14 +18,14 @@ Evidence: HBuilderX compiler result, artifact identity shown by approved tooling
 
 ## First-run account and permission path
 
-1. Launch To Know after a clean installation.
+1. Launch Potato after a clean installation.
 2. Register or log in with username/password through official uni-id-co.
 3. Confirm the current privacy text/version.
 4. Verify no notification prompt appears before the explicit CTA.
 5. Tap “开启系统通知” once.
 6. Choose Allow in the Android 13+ system dialog.
 7. Confirm settings independently report login, current privacy consent, authorized system permission, and ready device registration.
-8. Confirm the official user/device association and `tokenm-mobile-devices` business record refer to the authenticated owner without exposing a CID in To Know data.
+8. Confirm the official user/device association and `tokenm-mobile-devices` business record refer to the authenticated owner without exposing a CID in Potato data.
 
 Expected: one user-driven permission request; later tasks require no per-task approval.
 
@@ -55,7 +55,7 @@ Repeat one new non-sensitive task in each device state:
 
 For every row verify:
 
-- title is exactly `To Know`;
+- title is exactly `Potato`;
 - body is exactly `任务已完成`;
 - no task summary, project, model, path, prompt, conversation, credential, or source content appears;
 - sound/vibration follow the approved category and the user's current settings;
@@ -69,7 +69,7 @@ Android Settings > Force stop is not part of this matrix.
 ## Negative and recovery cases
 
 - Deny the Android notification permission: the app must display denied, keep registration/display facts separate, and retain tasks.
-- Disable To Know task notifications: a new task must persist with `skipped_disabled` and no provider call.
+- Disable Potato task notifications: a new task must persist with `skipped_disabled` and no provider call.
 - Disable or invalidate all eligible mobile devices: a new task must persist with `skipped_no_target`.
 - Submit the identical Desktop event again: receive `duplicate`, same task ID, and no second provider attempt.
 - Reuse an event identity with changed allowed fields: receive `event_conflict`.

@@ -62,7 +62,7 @@ const STABLE_HOOK_LAUNCHER_SOURCE = [
 function assertPrivateRegularFile(filePath) {
   try {
     const stat = fs.lstatSync(filePath);
-    if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('To Know Hook launcher files must be regular files');
+    if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('Potato Hook launcher files must be regular files');
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
@@ -71,13 +71,13 @@ function assertPrivateRegularFile(filePath) {
 function assertPrivateDirectory(directoryPath) {
   try {
     const stat = fs.lstatSync(directoryPath);
-    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('To Know Hook launcher directory must be a real directory');
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Potato Hook launcher directory must be a real directory');
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
   fs.mkdirSync(directoryPath, { recursive: true, mode: 0o700 });
   const stat = fs.lstatSync(directoryPath);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('To Know Hook launcher directory must be a real directory');
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Potato Hook launcher directory must be a real directory');
 }
 
 function writePrivateTextAtomic(filePath, value) {

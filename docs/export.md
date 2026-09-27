@@ -1,6 +1,6 @@
 # Data export
 
-To Know can export your usage data in **tool-agnostic** formats so you can
+Potato can export your usage data in **tool-agnostic** formats so you can
 pull it into a spreadsheet, an Obsidian dashboard, Grafana, or your own scripts.
 Nothing here is specific to any one tool — the app writes standard CSV + JSON and
 you connect whatever consumer you like.
@@ -9,7 +9,7 @@ you connect whatever consumer you like.
 
 In **Settings → Collection → Data export**:
 
-- **Export data…** — pick a folder; To Know writes the file set below into
+- **Export data…** — pick a folder; Potato writes the file set below into
   it once, right now.
 - **Auto-export to a folder** — turn this on and choose a folder, and Token
   Monitor rewrites the file set whenever usage updates, at a frequency you choose
@@ -69,7 +69,7 @@ date,tool,tokens,cost_usd
 
 Each row is one day × one model. `input_tokens` is uncached input;
 `cache_read_tokens` and `cache_write_tokens` remain separate so every row keeps
-the same token-component semantics as To Know. When older or partial
+the same token-component semantics as Potato. When older or partial
 history does not contain a complete component split, the unknown remainder is
 reported as `unclassified_tokens` instead of being guessed as input.
 

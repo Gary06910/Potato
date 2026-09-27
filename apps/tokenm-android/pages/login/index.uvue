@@ -4,7 +4,7 @@
       <view class="page-content">
         <tm-header title="登录" :back="true" />
         <view class="auth-body">
-          <text class="brand-label">To Know</text>
+          <text class="brand-label">Potato</text>
           <text class="page-title">欢迎回来</text>
           <text class="page-lead">登录后查看你的电脑和 Codex 完成记录。</text>
           <notice-banner v-if="errorMessage.length > 0" class="section" tone="danger" :text="errorMessage" />

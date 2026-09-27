@@ -28,7 +28,7 @@ Additional numeric prop audit: `maxlength` is a numeric input prop but is curren
 ## Official API findings for HBuilderX 5.24
 
 - The official `uni-id-co` API includes `createCaptcha({ scene })`, `refreshCaptcha({ scene })`, `login({ username, password, captcha? })`, `registerUser({ username, password, captcha })`, `logout()`, `closeAccount()`, and `setPushCid({ pushClientId })`.
-- `setPushCid` is the official user/device/CID association path. To Know must not write a custom CID field to its user collection.
+- `setPushCid` is the official user/device/CID association path. Potato must not write a custom CID field to its user collection.
 - HBuilderX 5.24 local uni-push typings define `getPushClientId(options)`, `onPushMessage(callback)`, and `offPushMessage(callback)`. They do not define `OnPushMessageOptions`.
 - The current online push documentation exposes a newer optional permission option that is absent from the installed compiler typings. Release compatibility follows the installed compiler.
 

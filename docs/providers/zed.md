@@ -9,7 +9,7 @@ read_when:
 
 # Zed provider
 
-Zed appears in To Know in two independent data planes. Keep them separate when changing or debugging the provider.
+Zed appears in Potato in two independent data planes. Keep them separate when changing or debugging the provider.
 
 | Data plane | What it measures | Primary runtime | Inputs |
 | --- | --- | --- | --- |
@@ -38,21 +38,21 @@ Cookie: zed.session=...; ...
 
 The usage request is required. The subscription request is optional plan and Token Spend reset enrichment: a failure there must not hide valid usage windows that the usage endpoint already returned.
 
-The Zed editor's native credential and `GET /client/users/me` are deliberately not used for limits. That account response exposes plan, Edit Predictions, and a subscription period, but not the dashboard's token-spend allowance. The same native credential is rejected by the dashboard billing endpoint, so combining the two would create a second sign-in flow without authenticating the data To Know intends to show.
+The Zed editor's native credential and `GET /client/users/me` are deliberately not used for limits. That account response exposes plan, Edit Predictions, and a subscription period, but not the dashboard's token-spend allowance. The same native credential is rejected by the dashboard billing endpoint, so combining the two would create a second sign-in flow without authenticating the data Potato intends to show.
 
-The dashboard response is authoritative for both Token Spend and Edit Predictions. Each window is parsed independently, so a Free account can retain its limited Edit Predictions quota when no positive Token Spend allowance is present. To Know reads `current_usage.edit_predictions` directly instead of inferring entitlement from a plan name: a null `limit` is shown as Unlimited without a meter, a positive `limit` is shown with the returned usage, and a missing or malformed field is omitted. This matters for organization Billing Managers, who can see Business billing data without receiving the Business AI entitlement.
+The dashboard response is authoritative for both Token Spend and Edit Predictions. Each window is parsed independently, so a Free account can retain its limited Edit Predictions quota when no positive Token Spend allowance is present. Potato reads `current_usage.edit_predictions` directly instead of inferring entitlement from a plan name: a null `limit` is shown as Unlimited without a meter, a positive `limit` is shown with the returned usage, and a missing or malformed field is omitted. This matters for organization Billing Managers, who can see Business billing data without receiving the Business AI entitlement.
 
 ## Credential and security boundary
 
 The widget asks the user to copy the request-header `Cookie` value from a signed-in `frontend/billing/usage` browser request. It does not read browser databases, browser storage, macOS Keychain, Windows Credential Manager, or Linux Secret Service.
 
-The normalized credential must contain `zed.session`. To Know forwards only the observed Zed billing cookies (`zed.session`, `c15t`, and supported Cloudflare helpers) to `cloud.zed.dev`; unrelated cookies from the copied header are discarded. Provider requests use `credentials: 'omit'` so Electron's ambient cookie jar cannot replace the explicitly managed credential.
+The normalized credential must contain `zed.session`. Potato forwards only the observed Zed billing cookies (`zed.session`, `c15t`, and supported Cloudflare helpers) to `cloud.zed.dev`; unrelated cookies from the copied header are discarded. Provider requests use `credentials: 'omit'` so Electron's ambient cookie jar cannot replace the explicitly managed credential.
 
 GUI credentials live under the fixed `zedCookie` path in the shared credential store. The renderer receives only configured/source markers, never the stored Cookie value. Headless installations can set `TOKEN_MONITOR_ZED_COOKIE` (or the compatibility alias `ZED_COOKIE`).
 
 ## Snapshot mapping
 
-| Zed field | To Know output |
+| Zed field | Potato output |
 | --- | --- |
 | `plan` | Plan label, with transport prefixes such as `token_based_` removed |
 | `current_usage.token_spend_in_cents` | Token Spend used amount |
@@ -65,7 +65,7 @@ GUI credentials live under the fixed `zedCookie` path in the shared credential s
 | `subscription.name` | Preferred plan label when available |
 | `subscription.period.end_at` | Token Spend reset timestamp |
 
-Spend values are converted from cents to USD. `zed.token-spend` is the measured billing window and appears first, matching Zed's dashboard; its reset uses the subscription period end while omitting the separate renewal-date copy owned by To Know's subscription feature. `zed.edit-predictions` follows only when the usage response supplies a valid quota object and does not inherit that reset.
+Spend values are converted from cents to USD. `zed.token-spend` is the measured billing window and appears first, matching Zed's dashboard; its reset uses the subscription period end while omitting the separate renewal-date copy owned by Potato's subscription feature. `zed.edit-predictions` follows only when the usage response supplies a valid quota object and does not inherit that reset.
 
 ## Identity and aggregation
 

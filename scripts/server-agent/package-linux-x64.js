@@ -39,7 +39,7 @@ function createServerAgentPackageManifest(rootPackage) {
     name: SERVER_AGENT_PACKAGE_NAME,
     version: String(rootPackage.version || ''),
     private: true,
-    description: 'Self-contained To Know Server Agent runtime.',
+    description: 'Self-contained Potato Server Agent runtime.',
     license: rootPackage.license || 'MIT',
     dependencies
   };

@@ -10,7 +10,7 @@ name: Vendored tokscale
 # manifest checksum, including targets that cannot execute on these runners.
 #
 # This is also the only place "does tokscale support client X" gets checked
-# against the binary To Know actually ships. A client can be merged
+# against the binary Potato actually ships. A client can be merged
 # upstream and pinned into the vendor build well before it's in a tagged npm
 # release (dsh, cherrystudio), so that check can't run against the plain
 # npm-installed binary in ci.yml — it would just be testing an executable

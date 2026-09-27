@@ -156,7 +156,7 @@ test('--user-service does not overwrite an unknown existing unit', () => {
   fs.writeFileSync(unitPath(fixture), '[Service]\nExecStart=/custom/service\n', 'utf8');
   const result = runInstall(fixture, ['--user-service']);
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /not managed by To Know/i);
+  assert.match(result.stderr, /not managed by Potato/i);
   assert.equal(fs.readFileSync(unitPath(fixture), 'utf8'), '[Service]\nExecStart=/custom/service\n');
   assert.deepEqual(systemctlCalls(fixture), []);
 });

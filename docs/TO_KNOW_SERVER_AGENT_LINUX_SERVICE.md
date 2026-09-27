@@ -1,4 +1,4 @@
-# To Know Server Agent service backends
+# Potato Server Agent service backends
 
 The Server Agent runtime remains independent of systemd, supervisord, Docker,
 and Kubernetes. `toknow-agent run` owns profile workers and their recovery. A
@@ -88,7 +88,7 @@ journalctl --user -u toknow-agent.service
 ```
 
 For rollback, run `systemd/remove-user-service.sh` from the extracted package.
-It removes only the marked To Know unit after disabling that unit.
+It removes only the marked Potato unit after disabling that unit.
 
 Enabling the user service makes it start when the user manager starts. To keep
 it running after SSH logout and start it after reboot before the first login,
@@ -110,7 +110,7 @@ The installer reads the primary config and writes only
 directory. It never edits the primary config. It refuses symlinked or
 unwritable include directories, an unknown existing `toknow-agent` program,
 and an unmarked file at the destination. Generated configuration is marked
-`Managed by To Know Server Agent installer` and points to the stable launcher.
+`Managed by Potato Server Agent installer` and points to the stable launcher.
 
 After writing the program file, the installer runs the equivalent of:
 
@@ -145,7 +145,7 @@ shutdown. Configure an external restart policy such as `always` or
 - `~/.local/state/toknow-agent` for worker state, notification state, and
   local history.
 
-To Know does not guarantee that a newly created container or Pod starts the
+Potato does not guarantee that a newly created container or Pod starts the
 agent. That guarantee belongs to the external startup command and lifecycle
 policy, such as a Docker restart policy, Kubernetes Deployment, or managed
 cloud-container configuration. Persistence across container recreation also

@@ -404,7 +404,7 @@ function createTray({
 }) {
   const { Tray, Menu, nativeImage } = electron;
   const tray = new Tray(buildTrayIcon({ platform, nativeImage }));
-  tray.setToolTip('To Know');
+  tray.setToolTip('Potato');
 
   const menuState = () => (typeof getMenuState === 'function' ? getMenuState() : {});
   const buildMenu = (state = menuState()) => Menu.buildFromTemplate(buildTrayMenuTemplate({

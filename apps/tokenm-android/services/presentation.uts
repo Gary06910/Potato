@@ -47,7 +47,7 @@ export const deliveryView = (status: DeliveryStatus): StatusView => {
 }
 
 export const permissionView = (state: NotificationPermissionState): StatusView => {
-  if (state == 'authorized') return { label: '系统通知已开启', detail: 'To Know 可以显示任务提醒', tone: 'success' }
+  if (state == 'authorized') return { label: '系统通知已开启', detail: 'Potato 可以显示任务提醒', tone: 'success' }
   if (state == 'denied') return { label: '系统通知未开启', detail: '需要在系统设置中恢复', tone: 'danger' }
   return { label: '尚未开启系统通知', detail: '你可以在了解用途后选择开启', tone: 'warning' }
 }
@@ -59,7 +59,7 @@ export const registrationView = (state: ClientRegistrationState): StatusView => 
 }
 
 export const loginFactView = (state: LoginFact): StatusView => {
-  if (state == 'signedIn') return { label: '账户已登录', detail: '当前会话可访问 To Know 云端数据', tone: 'success' }
+  if (state == 'signedIn') return { label: '账户已登录', detail: '当前会话可访问 Potato 云端数据', tone: 'success' }
   if (state == 'signedOut') return { label: '账户未登录', detail: '登录后才会连接通知服务', tone: 'warning' }
   if (state == 'error') return { label: '会话状态异常', detail: '请重新登录并确认本地会话', tone: 'danger' }
   return { label: '正在确认登录状态', detail: '请稍候', tone: 'info' }

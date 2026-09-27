@@ -9,7 +9,7 @@
       @refresherrefresh="pullRefresh"
     >
       <view class="page-content page-content-with-tabs">
-        <tm-header title="To Know" action-text="设置" @action="goSettings" />
+        <tm-header title="Potato" action-text="设置" @action="goSettings" />
         <notice-banner v-if="banner.length > 0" tone="warning" :text="banner" action-text="重试" @action="refresh" />
         <ui-state v-if="state == 'loading'" mode="loading" variant="dashboard" />
         <ui-state v-else-if="state == 'error'" mode="error" title="无法载入首页" :detail="errorMessage" action-text="重试" @action="refresh" />
@@ -65,7 +65,7 @@
                 </view>
               </view>
             </view>
-            <ui-state v-else mode="empty" :compact="true" title="尚未绑定电脑" detail="在 To Know Desktop 输入配对码即可连接。" action-text="绑定电脑" @action="goPairing" />
+            <ui-state v-else mode="empty" :compact="true" title="尚未绑定电脑" detail="在 Potato Desktop 输入配对码即可连接。" action-text="绑定电脑" @action="goPairing" />
           </view>
 
 

@@ -121,6 +121,6 @@ test('Antigravity OAuth callback says sign-in was received before account persis
   const { _callbackPage } = require('../../src/electron/providers/antigravity/oauthLogin');
   const page = _callbackPage(true);
   assert.match(page, /Sign-in received/);
-  assert.match(page, /Return to To Know to finish connecting this account/);
+  assert.match(page, /Return to Potato to finish connecting this account/);
   assert.doesNotMatch(page, /account connected/);
 });

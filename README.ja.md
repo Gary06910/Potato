@@ -2,8 +2,8 @@
    <a href="./README.md">EN</a> | <a href="./README.zh-CN.md">简</a> | <a href="./README.zh-TW.md">繁</a> | <a href="./README.ko.md">KO</a> | <strong>JA</strong>
 </p>
 <div align="center">
-    <img src=".github/assets/app.png" alt="To Know logo" width="120">
-    <h1>To Know</h1>
+    <img src=".github/assets/app.png" alt="Potato logo" width="120">
+    <h1>Potato</h1>
 </div>
 
 <p align="center">
@@ -11,8 +11,8 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/Gary06910/ToKnow/releases"><img src="https://img.shields.io/github/v/release/Gary06910/ToKnow?include_prereleases&style=flat-square&label=release&color=22c55e" alt="最新リリース" /></a>
-    <a href="https://github.com/Gary06910/ToKnow/releases"><img src="https://img.shields.io/github/downloads/Gary06910/ToKnow/total?style=flat-square&color=22c55e" alt="総ダウンロード数" /></a>
+    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/v/release/Gary06910/Potato?include_prereleases&style=flat-square&label=release&color=22c55e" alt="最新リリース" /></a>
+    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/downloads/Gary06910/Potato/total?style=flat-square&color=22c55e" alt="総ダウンロード数" /></a>
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square" alt="Windows 10 以降" />
     <img src="https://img.shields.io/badge/macOS-12%2B-0A84FF?style=flat-square&logo=apple&logoColor=white" alt="macOS 12 以降" />
     <img src="https://img.shields.io/badge/Linux-x64-64748b?style=flat-square&logo=linux&logoColor=white" alt="Linux x64" />
@@ -24,13 +24,13 @@
     <img src=".github/assets/demo.gif">
 </div>
 
-## To Know とは
+## Potato とは
 
 Claude Code、Codex、Cursor、GitHub Copilot、Cherry Studio など 37+ 種類の AI コーディングツールのリアルタイムトークン使用量と AI ツール制限を表示するデスクトップウィジェットです。複数デバイス間のリアルタイム同期、使用履歴トレンド、ツール・デバイス・モデル・セッション・プロジェクト別の内訳表示に対応しています。
 
 ## 対応ツール
 
-To Know は **トークン使用量**、**アカウント制限**、**セッション詳細** を個別にサポートします。
+Potato は **トークン使用量**、**アカウント制限**、**セッション詳細** を個別にサポートします。
 
 | Logo | ツール | データパス | トークン使用量 | AI ツール制限 | セッション詳細 |
 |:---:|------|-----------|:---:|:---:|:---:|
@@ -77,12 +77,12 @@ To Know は **トークン使用量**、**アカウント制限**、**セッシ�
 
 <br>
 
-- 上記はデフォルトのパスです。To Know は Tokscale と同じ環境変数の上書きに従います。`~/.local/share/` 配下は `$XDG_DATA_HOME`、ツール個別では `$CODEX_HOME`、`$GROK_HOME`、`$HERMES_HOME`、`$KIMI_CODE_HOME`、`$UNSLOTH_STUDIO_HOME`、`$LM_STUDIO_HOME`、`$DSH_HOME`、`$REASONIX_STATE_HOME`、`$REASONIX_HOME`、`$CLINE_*` などです。
+- 上記はデフォルトのパスです。Potato は Tokscale と同じ環境変数の上書きに従います。`~/.local/share/` 配下は `$XDG_DATA_HOME`、ツール個別では `$CODEX_HOME`、`$GROK_HOME`、`$HERMES_HOME`、`$KIMI_CODE_HOME`、`$UNSLOTH_STUDIO_HOME`、`$LM_STUDIO_HOME`、`$DSH_HOME`、`$REASONIX_STATE_HOME`、`$REASONIX_HOME`、`$CLINE_*` などです。
 - LM Studio の追跡対象は現在、サーバーログに記録される OpenAI 互換の `/v1/chat/completions` および `/v1/responses` リクエストのみです。LM Studio 内蔵 Chat UI から開始した会話と、ネイティブの `/api/v1/chat` リクエストは含まれません。
 - Unsloth Studio は `studio.db` から Studio のチャットとローカル API の推論使用量を追跡します。ローカル推論の API コストはゼロで、識別可能な従量課金プロバイダーには Tokscale の推定価格を使用します。学習トークンは含まれません。[Unsloth のデータソース](docs/providers/unsloth.md)も参照してください。
 
 - Command Code の transcript には実際のトークン数やメッセージごとのモデル情報が含まれません。トークン使用量は transcript テキストから推定され、モデルの帰属と推定コストには各リクエストで過去に使用したモデルではなく、現在設定されているモデルが反映される場合があります。
-- Cursor キャッシュは Cursor のアカウント単位の使用量エクスポートから取得されるため、Cursor IDE と Cursor CLI の両方が対象です。To Know は Cursor デスクトップアプリでログイン済みのアカウントを自動検出し、設定から手動でアカウントを追加することもできます。古いキャッシュは自動的に再同期されますが、終了直後のセッションが Cursor ダッシュボードに届くまで数分かかる場合があるため、使用量は即時ではなく同期後に更新されます。
+- Cursor キャッシュは Cursor のアカウント単位の使用量エクスポートから取得されるため、Cursor IDE と Cursor CLI の両方が対象です。Potato は Cursor デスクトップアプリでログイン済みのアカウントを自動検出し、設定から手動でアカウントを追加することもできます。古いキャッシュは自動的に再同期されますが、終了直後のセッションが Cursor ダッシュボードに届くまで数分かかる場合があるため、使用量は即時ではなく同期後に更新されます。
 
 - Custom は1つの GET 残高エンドポイントから数値 JSON フィールドをマッピングします。OpenAI または Anthropic API 互換だけでは不十分です。
 
@@ -115,9 +115,9 @@ Qoder CN のトークン使用量は API ではなくアプリのローカル SQ
 </tr>
 </table>
 
-## To Know を使う理由
+## Potato を使う理由
 
-多くの使用量モニターは、実行しているマシン上でのみ役立ちます。To Know はマルチデバイス作業のために設計されています。各デバイスがローカルログを監視し、hub にサマリーを送信すると、接続されたすべてのウィジェットがトークンの変化をほぼリアルタイムで確認できます。
+多くの使用量モニターは、実行しているマシン上でのみ役立ちます。Potato はマルチデバイス作業のために設計されています。各デバイスがローカルログを監視し、hub にサマリーを送信すると、接続されたすべてのウィジェットがトークンの変化をほぼリアルタイムで確認できます。
 
 ## 機能
 
@@ -136,7 +136,7 @@ Qoder CN のトークン使用量は API ではなくアプリのローカル SQ
 - **AI ツール制限検出** — Claude Code、Codex、Cursor、OpenRouter、サードパーティAPI、GLM、Kimi など 24+ プロバイダーの session/daily/weekly/billing/credits、複数の OpenRouter／サードパーティプロファイル、残高型アカウント（Claude クレジット、DeepSeek のプリペイド残高と使用履歴、サードパーティ残高）
 - **複数アカウントと Codex 切り替え** — 1 つのプロバイダーで複数アカウントを追跡し、それぞれの制限を表示。追跡済みの Codex アカウントは、再認証なしでローカルアカウントとしてワンクリック切り替え可能
 - **Codex リセット予測** — 任意で有効にできるサードパーティのリセット予測。予測されるリセット時刻、リセットタイプ（Regular / Banked）、前回のリセット時刻を表示
-- **削除されたセッション使用量を保持** — 多くのツールは古いセッションを削除します（Claude Code はデフォルトで 30 日後にトランスクリプトを削除）。有効にすると、To Know は観測済みの日別ツール/モデル使用量をローカルにアーカイブし、元ファイルが消えてもヒートマップとトレンドを維持します（下記 [セッションデータの保持期間](#セッションデータの保持期間) を参照）
+- **削除されたセッション使用量を保持** — 多くのツールは古いセッションを削除します（Claude Code はデフォルトで 30 日後にトランスクリプトを削除）。有効にすると、Potato は観測済みの日別ツール/モデル使用量をローカルにアーカイブし、元ファイルが消えてもヒートマップとトレンドを維持します（下記 [セッションデータの保持期間](#セッションデータの保持期間) を参照）
 - **使用トレンド & ダッシュボード** — ホーム画面のアクティビティヒートマップ・トレンドチャート、連続日数・全デバイス横断のツール/モデル別累積使用（棒・K 線）専用ダッシュボードウィンドウ
 - **固定期間レンジ** — ネイティブの日・月・累計に加えて、今週・過去 7 日・過去 30 日を切り替え可能
 - **ステータスビュー**（任意） — Claude、OpenAI、Cursor、DeepSeek のステータスページを手動/定期確認
@@ -165,13 +165,13 @@ Qoder CN のトークン使用量は API ではなくアプリのローカル SQ
 
 ## インストール
 
-上流の Token Monitor プロジェクトの macOS 版は、その [Homebrew Cask](https://formulae.brew.sh/cask/token-monitor) からインストールできます。これは To Know の配布チャネルではありません：
+上流の Token Monitor プロジェクトの macOS 版は、その [Homebrew Cask](https://formulae.brew.sh/cask/token-monitor) からインストールできます。これは Potato の配布チャネルではありません：
 
 ```bash
 brew install --cask token-monitor
 ```
 
-または [GitHub Releases](https://github.com/Gary06910/ToKnow/releases) からダウンロードできます。
+または [GitHub Releases](https://github.com/Gary06910/Potato/releases) からダウンロードできます。
 
 - **macOS (Apple Silicon)** — `.dmg`、署名および notarize 済み
 - **macOS (Intel)** — x64 `.dmg`、署名および notarize 済み
@@ -192,7 +192,7 @@ brew install --cask token-monitor
 
 常時起動のマシンで **設定 → マルチデバイス同期 → このデバイスでHubをホスト** を選択します。ウィジェットが secret を生成し、LAN URL（Tailscale/ZeroTier 含む）を表示します。他のデバイスでは **Hubに接続** に URL と secret を貼り付けます。
 
-To Know が実行中の間のみ hub が動作します。アプリを終了すると（ウィンドウを閉じるだけではなく）hub が停止し、接続されたデバイスが切断されます。
+Potato が実行中の間のみ hub が動作します。アプリを終了すると（ウィンドウを閉じるだけではなく）hub が停止し、接続されたデバイスが切断されます。
 
 #### オプション B — Node hub をセルフホスト（常時 headless マシン）
 
@@ -205,7 +205,7 @@ npm run hub
 
 #### オプション C — Cloudflare Worker hub（ネットワーク間、iPhone 含む）
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Gary06910/ToKnow/tree/main/worker)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Gary06910/Potato/tree/main/worker)
 
 ワンクリックデプロイでは `TOKEN_MONITOR_SECRET` の入力を求められます。手動デプロイ:
 
@@ -262,7 +262,7 @@ npm run pack         # インストーラーなしのアプリディレクトリ
 
 ## セッションデータの保持期間
 
-**削除されたセッション使用量を保持**（設定 → 収集）を有効にすると、To Know は観測済みの日別ツール/モデル使用量を期限なしでローカルにアーカイブします。元のツールが後からセッションを削除しても、ヒートマップとトレンドは影響を受けません。
+**削除されたセッション使用量を保持**（設定 → 収集）を有効にすると、Potato は観測済みの日別ツール/モデル使用量を期限なしでローカルにアーカイブします。元のツールが後からセッションを削除しても、ヒートマップとトレンドは影響を受けません。
 
 <details>
 <summary><strong>詳細: 元ツール自体の保持期間を延長する</strong></summary>
@@ -279,13 +279,13 @@ npm run pack         # インストーラーなしのアプリディレクトリ
 
 値を大きくすればより多く残せますが、その分トランスクリプトがディスク上に残り続けます。他のツールのデフォルト値と設定ファイルのパスは、tokscale の [Session Data Retention](https://github.com/junhoyeo/tokscale#session-data-retention) の表を参照してください。
 
-このアーカイブは To Know が既に観測した日のみを対象とします。追跡を開始する前に削除されたデータは復元できません。
+このアーカイブは Potato が既に観測した日のみを対象とします。追跡を開始する前に削除されたデータは復元できません。
 
 </details>
 
 ## 設定
 
-To Know の設定は 2 か所にあります。日常利用に必要なのは前者だけです。
+Potato の設定は 2 か所にあります。日常利用に必要なのは前者だけです。
 
 - **ウィジェット (GUI)** — 右下の `⚙` ボタンで開きます。セクションは順に：一般（言語、ログイン時に起動、アップデート）、メイン画面（ホームモジュールと表示通貨）、ウィンドウ（ウィンドウ動作、メニューバー／フローティングバブルのレイアウト、トレイモード、ショートカット）、外観（テーマとツール別カラー）、収集（追跡ツール、収集間隔、削除されたセッション使用量を保持、データエクスポート）、AI ツール制限（プロバイダー選択、制限、認証情報）、サブスクリプション（アカウントごとの支払い額）、マルチデバイス同期。タイトルバーの `⇧` ボタンでウィンドウ動作を切り替えます。
 - **Headless agent と hub** — UI なし。プロジェクトルートの `.env`（`.env.example` をコピー）で設定します。優先順位は CLI フラグ → 環境変数 → 既定値。
@@ -294,15 +294,15 @@ To Know の設定は 2 か所にあります。日常利用に必要なのは前
 
 ## プライバシー
 
-To Know は使用ログをローカルで処理し、プロジェクトのメンテナーに分析データやテレメトリを送信しません。ネットワークアクセスは、文書化された機能またはユーザーが有効にした機能に限られます。アップデート、プロバイダー連携、Discord Rich Presence、任意のマルチデバイス同期で使用されるデータについては、[プライバシーポリシー](docs/privacy.md)を参照してください。
+Potato は使用ログをローカルで処理し、プロジェクトのメンテナーに分析データやテレメトリを送信しません。ネットワークアクセスは、文書化された機能またはユーザーが有効にした機能に限られます。アップデート、プロバイダー連携、Discord Rich Presence、任意のマルチデバイス同期で使用されるデータについては、[プライバシーポリシー](docs/privacy.md)を参照してください。
 
 ## Star 履歴
 
-<a href="https://github.com/Gary06910/ToKnow/tree/star-history">
+<a href="https://github.com/Gary06910/Potato/tree/star-history">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Gary06910/ToKnow/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Gary06910/ToKnow/star-history/star-history.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/Gary06910/ToKnow/star-history/star-history.svg" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history-dark.svg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
+   <img alt="Star History Chart" src="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
  </picture>
 </a>
 

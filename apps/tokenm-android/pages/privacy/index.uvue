@@ -15,7 +15,7 @@
         <view class="section surface detail-list">
           <view class="detail-row"><text class="detail-key">保存内容</text><text class="detail-value">账户、电脑、完成记录与通知状态</text></view>
           <view class="detail-row"><text class="detail-key">用途</text><text class="detail-value">展示任务记录、绑定电脑并发送你主动开启的通知</text></view>
-          <view class="detail-row"><text class="detail-key">存储</text><text class="detail-value">与你的 To Know 账户关联的云端服务</text></view>
+          <view class="detail-row"><text class="detail-key">存储</text><text class="detail-value">与你的 Potato 账户关联的云端服务</text></view>
           <view class="detail-row detail-row-last"><text class="detail-key">管理</text><text class="detail-value">你可以清除任务记录或删除账户；配对码仅在显示的有效期内使用</text></view>
         </view>
         <view class="section danger-zone">
@@ -97,8 +97,8 @@ const runDelete = async () => {
 const confirmDelete = () => {
   if (working.value) return
   uni.showModal({
-    title: '删除 To Know 账户',
-    content: '这会先清理 To Know 业务数据，再注销官方账户。操作开始后无法恢复。',
+    title: '删除 Potato 账户',
+    content: '这会先清理 Potato 业务数据，再注销官方账户。操作开始后无法恢复。',
     confirmText: '删除账户',
     confirmColor: '#c24152',
     success: (result) => {

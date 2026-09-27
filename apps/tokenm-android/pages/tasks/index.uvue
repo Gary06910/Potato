@@ -318,7 +318,7 @@ const taskActions = (task: TaskRecord): void => {
   suppressOpenUntil = Date.now() + 1000
   uni.showActionSheet({ itemList: ['删除此任务记录'], success: (action) => {
     if (action.tapIndex != 0) return
-    uni.showModal({ title: '删除这条任务记录？', content: '删除后将不再出现在 To Know 的任务列表中。', cancelText: '取消', confirmText: '删除', success: (result) => { if (result.confirm) runDelete(task) } })
+    uni.showModal({ title: '删除这条任务记录？', content: '删除后将不再出现在 Potato 的任务列表中。', cancelText: '取消', confirmText: '删除', success: (result) => { if (result.confirm) runDelete(task) } })
   } })
 }
 const openTask = (taskId: string) => {

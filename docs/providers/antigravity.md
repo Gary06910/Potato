@@ -9,11 +9,11 @@ read_when:
 
 # Antigravity provider
 
-Antigravity appears in To Know in two independent data planes. Keep them separate when changing or debugging the provider.
+Antigravity appears in Potato in two independent data planes. Keep them separate when changing or debugging the provider.
 
 | Data plane | What it measures | Primary runtime | Inputs |
 | --- | --- | --- | --- |
-| Token/session activity | Local model-token activity attributed to Antigravity | Shared usage collector through `tokscale` | Local Antigravity conversation data and the To Know-managed tokscale cache |
+| Token/session activity | Local model-token activity attributed to Antigravity | Shared usage collector through `tokscale` | Local Antigravity conversation data and the Potato-managed tokscale cache |
 | Limits/quota | Remaining Google account quota and reset windows | Shared limits runtime | A running local Antigravity RPC endpoint, or standalone Google OAuth accounts |
 
 An OAuth account is not a token-history source. Likewise, finding local Antigravity sessions does not identify the Google account that owns a quota row.
@@ -24,7 +24,7 @@ An OAuth account is not a token-history source. Likewise, finding local Antigrav
 
 ### Source roots and self-sync
 
-To Know recognizes these native Antigravity roots under `~/.gemini/`:
+Potato recognizes these native Antigravity roots under `~/.gemini/`:
 
 - `antigravity`
 - `antigravity-ide`
@@ -40,7 +40,7 @@ The parse-local CLI source lives under `${GEMINI_CLI_HOME || ~/.gemini}/antigrav
 
 The native roots are watched because tokscale reads them without writing back to them. A change can therefore trigger an Antigravity-targeted refresh safely.
 
-The generated `antigravity-cache` directory is deliberately not watched. To Know's own sync writes it, so watching it would create a refresh loop.
+The generated `antigravity-cache` directory is deliberately not watched. Potato's own sync writes it, so watching it would create a refresh loop.
 
 On Windows, running WSL distros are checked during full scans only. WSL discovery uses the same Antigravity source markers and never starts a stopped distro.
 
@@ -63,7 +63,7 @@ Local RPC probes prefer process kinds in this order:
 2. CLI
 3. IDE
 
-When managed OAuth accounts exist, To Know fetches enabled OAuth accounts and the local RPC snapshot concurrently. If local RPC returns a trusted email matching an OAuth account, the live local result replaces the remote result for that account, unless the local snapshot is empty or unavailable (`status !== 'ok'`), or a legacy 3-pool RPC fallback (`windowMinutes: null`) would overwrite richer grouped OAuth quota (`windowMinutes: 300` or `10080`).
+When managed OAuth accounts exist, Potato fetches enabled OAuth accounts and the local RPC snapshot concurrently. If local RPC returns a trusted email matching an OAuth account, the live local result replaces the remote result for that account, unless the local snapshot is empty or unavailable (`status !== 'ok'`), or a legacy 3-pool RPC fallback (`windowMinutes: null`) would overwrite richer grouped OAuth quota (`windowMinutes: 300` or `10080`).
 
 An account-scoped manual refresh fetches only the requested OAuth account. With no managed accounts, normal collection remains local-RPC-only.
 

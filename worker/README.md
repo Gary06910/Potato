@@ -2,9 +2,9 @@
    <strong>EN</strong> | <a href="./README.zh-CN.md">简</a> | <a href="./README.zh-TW.md">繁</a>
 </p>
 
-# To Know Hub — Cloudflare Worker
+# Potato Hub — Cloudflare Worker
 
-> Part of **[To Know](https://github.com/Gary06910/ToKnow)**, derived in part from **[Javis603/token-monitor](https://github.com/Javis603/token-monitor)**. This directory is just the Cloudflare Worker hub; the desktop widget, headless agent, and full docs live in the main repo. A one-click deploy creates a standalone copy that won't auto-update, so check the main repo for new versions.
+> Part of **[Potato](https://github.com/Gary06910/Potato)**, derived in part from **[Javis603/token-monitor](https://github.com/Javis603/token-monitor)**. This directory is just the Cloudflare Worker hub; the desktop widget, headless agent, and full docs live in the main repo. A one-click deploy creates a standalone copy that won't auto-update, so check the main repo for new versions.
 
 Drop-in replacement for the self-hosted Node hub, deployed as a Cloudflare
 Worker with a Durable Object holding device state. Speaks the same HTTP

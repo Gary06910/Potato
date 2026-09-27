@@ -1,4 +1,4 @@
-# To Know Android architecture — Phase 2 uni-push 2.0
+# Potato Android architecture — Phase 2 uni-push 2.0
 
 The Phase 1 runtime baseline remains intact: pairing, Desktop credential
 authentication, Desktop event acceptance, cloud task persistence, and Android
@@ -8,11 +8,11 @@ unchanged.
 
 ## Current implementation
 
-To Know Android v1 is implemented in `apps/tokenm-android` as a uni-app x VDOM application with an支付宝云 uniCloud backend. It does not replace or modify the existing WeChat/CloudBase path during development.
+Potato Android v1 is implemented in `apps/tokenm-android` as a uni-app x VDOM application with an支付宝云 uniCloud backend. It does not replace or modify the existing WeChat/CloudBase path during development.
 
 ```text
 Codex completion
-  -> existing To Know Desktop completion runtime
+  -> existing Potato Desktop completion runtime
   -> explicit Android destination selected by the user
   -> tokenm-desktop-http URLized cloud function
   -> tokenm-core application service
@@ -25,7 +25,7 @@ Codex completion
 Android app
   -> official uni-id-co username/password session
   -> authenticated tokenm-co Cloud Object
-  -> To Know server-only collections
+  -> Potato server-only collections
 ```
 
 The implemented client has four primary destinations: 首页, 任务, 电脑, 设置. Thirteen VDOM pages cover onboarding, authentication, privacy and permission onboarding, dashboard, task list/detail, desktops, pairing, notification settings, privacy controls, and about information.
@@ -57,7 +57,7 @@ its `(ownerId, deviceId)` row is an upsert.
 Desktop authentication is independent. Pairing produces a random credential in the `tm_uc_d1` namespace. The long-lived secret is encrypted at rest with one deployment-owned AES-256-GCM key. Revocation removes the encrypted secret and immediately makes the credential unusable.
 
 Every business collection is server-only. The client does not receive database
-permissions and never stores or supplies a push CID to To Know business
+permissions and never stores or supplies a push CID to Potato business
 methods. The official `uniIdCo.setPushCid()` lifecycle owns CID-to-user
 association, and the official `uni-id-device` identity record is the backend
 CID source. `tokenm-mobile-devices` remains a business-state mirror without a
@@ -80,7 +80,7 @@ CID field.
 
 The generic uni-push 2.0 client module supports the explicit local
 permission/CID contract. The server uses only DCloud's uniCloud push manager
-and a minimal system-notification payload: `To Know`, `任务完成` optionally
+and a minimal system-notification payload: `Potato`, `任务完成` optionally
 with the computer name, and safe data `{ taskId }`. Honor and Xiaomi vendor
 channels remain OFF: no vendor SDK/configuration, category, channel/template
 ID, provider secret, or offline-channel behavior belongs to this phase.

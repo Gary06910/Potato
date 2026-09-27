@@ -10,7 +10,7 @@ read_when:
 
 # Z.ai (GLM) provider
 
-Z.ai appears in To Know as one limits row fed by up to three independent account pools. Quota and cash balance share a console key; ZCode plan grants use the locally discovered credential. Their responses are combined at the row, with usable data retained when another request fails.
+Z.ai appears in Potato as one limits row fed by up to three independent account pools. Quota and cash balance share a console key; ZCode plan grants use the locally discovered credential. Their responses are combined at the row, with usable data retained when another request fails.
 
 | Pool | Credential | Endpoint | Windows |
 | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ Z.ai appears in To Know as one limits row fed by up to three independent account
 ## Two keys, two chains, never mixed
 
 - The **console key** (`sk-…` or `{id}.{secret}`) calls quota, subscription, and the finance report. It cannot call the ZCode billing endpoint.
-- A **start-plan mirror JWT** calls billing. A **coding-plan mirror key** calls quota. These are different selections and credentials, not one JWT that is assumed to work on both endpoints. Discovery reads the selected provider's `options.apiKey` in `config.json`; it never decrypts `credentials.json` or reads the OS keychain. The mirror remains in memory and never enters To Know's credential store or renderer.
+- A **start-plan mirror JWT** calls billing. A **coding-plan mirror key** calls quota. These are different selections and credentials, not one JWT that is assumed to work on both endpoints. Discovery reads the selected provider's `options.apiKey` in `config.json`; it never decrypts `credentials.json` or reads the OS keychain. The mirror remains in memory and never enters Potato's credential store or renderer.
 - Billing auth failures surface as `unavailable` until ZCode refreshes its managed credential. A console quota 401/403 surfaces as `unauthorized`. Do not infer endpoint compatibility from a key's format.
 
 ## ZCode billing gateway gates

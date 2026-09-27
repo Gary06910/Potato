@@ -13,7 +13,7 @@
         <notice-banner v-if="banner.length > 0" tone="warning" :text="banner" action-text="重试" @action="refresh" />
         <ui-state v-if="state == 'loading'" mode="loading" variant="list" />
         <ui-state v-else-if="state == 'error'" mode="error" title="无法载入电脑" :detail="errorMessage" action-text="重试" @action="refresh" />
-        <ui-state v-else-if="active.length == 0" mode="empty" title="尚未绑定电脑" detail="在 To Know Desktop 输入配对码即可连接。" action-text="生成配对码" @action="goPairing" />
+        <ui-state v-else-if="active.length == 0" mode="empty" title="尚未绑定电脑" detail="在 Potato Desktop 输入配对码即可连接。" action-text="生成配对码" @action="goPairing" />
         <view v-else>
           <view class="desktop-list">
             <view v-for="item in active" :key="item.desktopId" class="desktop-card surface">

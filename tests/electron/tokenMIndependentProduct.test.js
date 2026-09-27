@@ -12,20 +12,20 @@ function read(relativePath) {
   return fs.readFileSync(path.join(PROJECT_ROOT, relativePath), 'utf8');
 }
 
-test('To Know retains its independent identity, updater ownership, and package boundary', () => {
+test('Potato retains its independent identity, updater ownership, and package boundary', () => {
   const main = read('src/electron/main.js');
   const updater = read('src/shared/appUpdater.js');
   const releaseWorkflow = read('.github/workflows/release.yml');
 
-  assert.deepEqual(packageJson.build.publish, [{ provider: 'github', owner: 'Gary06910', repo: 'ToKnow' }]);
-  assert.equal(packageJson.productName, 'To Know');
-  assert.equal(packageJson.build.productName, 'To Know');
+  assert.deepEqual(packageJson.build.publish, [{ provider: 'github', owner: 'Gary06910', repo: 'Potato' }]);
+  assert.equal(packageJson.productName, 'Potato');
+  assert.equal(packageJson.build.productName, 'Potato');
   assert.equal(packageJson.build.appId, 'com.javis.tokenmonitor');
   assert.equal(packageJson.build.releaseInfo.releaseNotesFile, '.github/TOKEN_M_RELEASE_TEMPLATE.md');
 
-  assert.match(updater, /const GITHUB_REPO = 'Gary06910\/ToKnow'/);
+  assert.match(updater, /const GITHUB_REPO = 'Gary06910\/Potato'/);
   assert.doesNotMatch(updater, /Javis603\/token-monitor/);
-  assert.match(main, /const APP_NAME = 'To Know'/);
+  assert.match(main, /const APP_NAME = 'Potato'/);
   assert.match(main, /const LEGACY_USER_DATA_PATH = path\.join\(app\.getPath\('appData'\), 'Token Monitor'\)/);
   assert.match(main, /app\.setPath\('userData', LEGACY_USER_DATA_PATH\)/);
   assert.match(main, /app\.setAppUserModelId\('com\.javis\.tokenmonitor'\)/);

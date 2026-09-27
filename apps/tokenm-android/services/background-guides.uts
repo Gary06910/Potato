@@ -5,21 +5,21 @@ export type BackgroundGuide = { id: BackgroundGuideBrand, label: string, steps: 
 // Sources and device/version scope are recorded in the implementation report.
 export const honorGuide: BackgroundGuide = {
   id: 'honor', label: '荣耀 / Honor', steps: [
-    { title: '应用启动管理', text: '在设置中搜索“应用启动管理”，找到 To Know，关闭“自动管理”。' },
+    { title: '应用启动管理', text: '在设置中搜索“应用启动管理”，找到 Potato，关闭“自动管理”。' },
     { title: '允许自启动与关联启动', text: '在手动管理中开启“允许自启动”和“允许关联启动”。' },
     { title: '允许后台活动', text: '开启“允许后台活动”，保存设置。' },
-    { title: '电池优化', text: '在设置中搜索“电池优化”，选择所有应用并找到 To Know，选择“不允许”优化或“忽略优化”，以本机说明为准。' },
-    { title: '后台联网', text: '允许 To Know 联网；如开启省流量，允许其后台使用数据。在“电池 → 更多电池设置”中开启“休眠时始终保持网络连接”（如有）。' },
-    { title: '最近任务保护', text: '打开最近任务，找到 To Know；支持的荣耀机型可下滑卡片加锁，出现小锁即已保护。不要主动从最近任务划掉 To Know。' }
+    { title: '电池优化', text: '在设置中搜索“电池优化”，选择所有应用并找到 Potato，选择“不允许”优化或“忽略优化”，以本机说明为准。' },
+    { title: '后台联网', text: '允许 Potato 联网；如开启省流量，允许其后台使用数据。在“电池 → 更多电池设置”中开启“休眠时始终保持网络连接”（如有）。' },
+    { title: '最近任务保护', text: '打开最近任务，找到 Potato；支持的荣耀机型可下滑卡片加锁，出现小锁即已保护。不要主动从最近任务划掉 Potato。' }
   ]
 }
 export const xiaomiGuide: BackgroundGuide = {
   id: 'xiaomi', label: '小米 / Xiaomi / HyperOS', steps: [
-    { title: '通知权限', text: '在 To Know 的系统通知设置中开启允许通知，并按需要开启锁屏和悬浮通知。' },
-    { title: '后台自启动', text: '在设置中进入“应用 → 权限 → 后台自启动”，允许 To Know 自启动；也可搜索“自启动”查找本机入口。' },
-    { title: '电池与后台活动', text: '在“设置 → 电池”中选择 To Know，将电池策略设为“无限制”（No restrictions）或本机等价选项，允许应用在后台运行。这可能增加耗电。' },
-    { title: '后台联网', text: '在应用的数据使用或联网设置中，允许 To Know 使用移动数据、Wi-Fi 和后台数据。部分版本入口为“更多连接选项 → 数据使用”。' },
-    { title: '后台应用锁定', text: '支持该功能的机型可进入“手机管家（Security）→ 设置 → 加速（Boost speed）→ 锁定应用（Lock apps）”，开启 To Know，防止一键清理时被清除。请按本机支持的最近任务保护方式操作。' }
+    { title: '通知权限', text: '在 Potato 的系统通知设置中开启允许通知，并按需要开启锁屏和悬浮通知。' },
+    { title: '后台自启动', text: '在设置中进入“应用 → 权限 → 后台自启动”，允许 Potato 自启动；也可搜索“自启动”查找本机入口。' },
+    { title: '电池与后台活动', text: '在“设置 → 电池”中选择 Potato，将电池策略设为“无限制”（No restrictions）或本机等价选项，允许应用在后台运行。这可能增加耗电。' },
+    { title: '后台联网', text: '在应用的数据使用或联网设置中，允许 Potato 使用移动数据、Wi-Fi 和后台数据。部分版本入口为“更多连接选项 → 数据使用”。' },
+    { title: '后台应用锁定', text: '支持该功能的机型可进入“手机管家（Security）→ 设置 → 加速（Boost speed）→ 锁定应用（Lock apps）”，开启 Potato，防止一键清理时被清除。请按本机支持的最近任务保护方式操作。' }
   ]
 }
 export const getBackgroundGuide = (brand: BackgroundGuideBrand): BackgroundGuide => brand == 'xiaomi' ? xiaomiGuide : honorGuide

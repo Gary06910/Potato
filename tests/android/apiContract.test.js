@@ -476,7 +476,7 @@ test('custom account cleanup documentation requires completion before official i
   const databaseNotes = read('database/README.md');
   assert.match(integration, /cleanupPending.*false/s);
   assert.match(integration, /uniIdCo\.closeAccount\(\)/);
-  assert.match(databaseNotes, /only To Know custom data/i);
+  assert.match(databaseNotes, /only Potato custom data/i);
   assert.match(databaseNotes, /explicitly bump the version/i);
 });
 

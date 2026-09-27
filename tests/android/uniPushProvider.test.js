@@ -77,7 +77,7 @@ test('push_clientid targeting emits the exact contract shape without platform an
     kind: 'send',
     request: {
       push_clientid: ['controlled-cid-a', 'controlled-cid-b'],
-      title: 'To Know',
+      title: 'Potato',
       content: '任务完成 · LAPTOP-0Q9SBHOE secret-line',
       payload: { taskId: TASK_ID },
       force_notification: true

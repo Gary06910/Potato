@@ -4,8 +4,8 @@
       <view class="page-content">
         <tm-header title="创建账户" :back="true" />
         <view class="auth-body">
-          <text class="brand-label">To Know</text>
-          <text class="page-title">开始使用 To Know</text>
+          <text class="brand-label">Potato</text>
+          <text class="page-title">开始使用 Potato</text>
           <text class="page-lead">账户用于关联电脑、任务记录和通知设置。</text>
           <notice-banner v-if="errorMessage.length > 0" class="section" tone="danger" :text="errorMessage" />
           <text class="form-label">用户名</text>

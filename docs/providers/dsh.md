@@ -45,7 +45,7 @@ transcript before its stale predecessor. Callers that stop at the first match (S
 the header index used for session timestamps and titles) therefore read the file the harness is still
 writing, and a session whose only transcript is versioned is found at all.
 
-To Know's pinned tokscale build uses the same canonical generic-version matcher. Keeping
+Potato's pinned tokscale build uses the same canonical generic-version matcher. Keeping
 the two discovery rules aligned means a transcript visible in dashboard usage can also be opened
 in Session Detail. The npm 4.15.1 base predates this support; the vendor override supplies it
 until an official tokscale release includes the fix.
@@ -60,7 +60,7 @@ derives a title from `user/message` or `session/title-llm-request` content.
 Title reads retain complete plain-JSONL or zstd-frame boundaries for incremental refreshes. Before
 reusing an append offset, `sessionFiles.js` verifies the file identity and a bounded head/tail
 fingerprint; a rewrite or generation change resets the fold, while an unfinished tail is replayed
-on the next refresh. DSH validates titles before persistence, so To Know preserves
+on the next refresh. DSH validates titles before persistence, so Potato preserves
 `event.data.title` rather than applying a separate display limit. Resolved titles remain local and
 are not added to the device wire record.
 

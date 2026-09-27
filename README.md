@@ -2,25 +2,25 @@
    <strong>EN</strong> | <a href="./README.zh-CN.md">简</a> | <a href="./README.zh-TW.md">繁</a> | <a href="./README.ko.md">KO</a> | <a href="./README.ja.md">JA</a>
 </p>
 <div align="center">
-    <img src=".github/assets/app.png" alt="To Know logo" width="120">
-    <h1>To Know</h1>
+    <img src=".github/assets/app.png" alt="Potato logo" width="120">
+    <h1>Potato</h1>
 </div>
 
 <p align="center">
     <em>One live dashboard for every AI coding tool, synced across every machine.</em>
 </p>
 
-> To Know is independently maintained in [Gary06910/ToKnow](https://github.com/Gary06910/ToKnow). It uses [Javis603/token-monitor](https://github.com/Javis603/token-monitor) as an upstream reference and selectively adopts compatible changes; To Know owns its source of truth, releases, and update feed.
+> Potato is independently maintained in [Gary06910/Potato](https://github.com/Gary06910/Potato). It is derived in part from [Token Monitor](https://github.com/Javis603/token-monitor) under the MIT license, retains upstream attribution, and selectively adopts compatible future changes. Potato owns its source of truth, releases, and update feed.
 
-## To Know 1.0.0 desktop release scope
+## Potato 1.0.0 desktop release scope
 
 - **Official desktop binary:** Windows x64.
-- **Android:** a separate To Know mobile client; it is not built by the Desktop GitHub Release workflow.
+- **Android:** a separate Potato mobile client; it is not built by the Desktop GitHub Release workflow.
 - **macOS/Linux:** source and build support may exist in this repository, but official macOS/Linux binary distribution is not provided in 1.0.0.
 
 <p align="center">
-    <a href="https://github.com/Gary06910/ToKnow/releases"><img src="https://img.shields.io/github/v/release/Gary06910/ToKnow?include_prereleases&style=flat-square&label=release&color=22c55e" alt="Latest release" /></a>
-    <a href="https://github.com/Gary06910/ToKnow/releases"><img src="https://img.shields.io/github/downloads/Gary06910/ToKnow/total?style=flat-square&color=22c55e" alt="Total downloads" /></a>
+    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/v/release/Gary06910/Potato?include_prereleases&style=flat-square&label=release&color=22c55e" alt="Latest release" /></a>
+    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/downloads/Gary06910/Potato/total?style=flat-square&color=22c55e" alt="Total downloads" /></a>
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square" alt="Windows 10 or later" />
     <img src="https://img.shields.io/badge/macOS-source%2Fbuild-0A84FF?style=flat-square&logo=apple&logoColor=white" alt="macOS source/build support" />
     <img src="https://img.shields.io/badge/Linux-source%2Fbuild-64748b?style=flat-square&logo=linux&logoColor=white" alt="Linux source/build support" />
@@ -32,13 +32,13 @@
     <img src=".github/assets/demo.gif">
 </div>
 
-## What is To Know?
+## What is Potato?
 
 A desktop widget that shows live token usage and AI Tool Limits across 37+ AI coding tools — Claude Code, Codex, Cursor, GitHub Copilot, Cherry Studio, and more — with real-time multi-device sync, historical usage trends, and breakdowns by tool, device, model, session, or project.
 
 ## Supported Tools
 
-To Know supports token usage, account-limit checks, and session details separately:
+Potato supports token usage, account-limit checks, and session details separately:
 
 | Logo | Tool | Data path | Token Usage | AI Tool Limits | Session Details |
 |:---:|------|-----------|:---:|:---:|:---:|
@@ -85,12 +85,12 @@ To Know supports token usage, account-limit checks, and session details separate
 
 <br>
 
-- Paths above are the defaults. To Know follows the same environment overrides Tokscale does — `$XDG_DATA_HOME` for the `~/.local/share/` roots, and per-tool variables such as `$CODEX_HOME`, `$GROK_HOME`, `$HERMES_HOME`, `$KIMI_CODE_HOME`, `$UNSLOTH_STUDIO_HOME`, `$LM_STUDIO_HOME`, `$DSH_HOME`, `$REASONIX_STATE_HOME`, `$REASONIX_HOME` and the `$CLINE_*` family.
+- Paths above are the defaults. Potato follows the same environment overrides Tokscale does — `$XDG_DATA_HOME` for the `~/.local/share/` roots, and per-tool variables such as `$CODEX_HOME`, `$GROK_HOME`, `$HERMES_HOME`, `$KIMI_CODE_HOME`, `$UNSLOTH_STUDIO_HOME`, `$LM_STUDIO_HOME`, `$DSH_HOME`, `$REASONIX_STATE_HOME`, `$REASONIX_HOME` and the `$CLINE_*` family.
 - LM Studio tracking currently covers OpenAI-compatible `/v1/chat/completions` and `/v1/responses` requests recorded in server logs. Conversations started from LM Studio's built-in Chat UI and native `/api/v1/chat` requests are not included.
 - Unsloth Studio tracks inference usage from `studio.db`: Studio chats and its local API. Local inference has zero API cost; recognized metered providers use Tokscale's price estimates. Training tokens are not included. See [Unsloth source notes](docs/providers/unsloth.md).
 
 - Command Code transcripts do not contain actual token counts or per-message model metadata. Token usage is estimated from transcript text, while model attribution and derived cost may reflect the currently configured model rather than the model historically used for each request.
-- The Cursor cache comes from Cursor's account-level usage export, so it covers Cursor IDE and Cursor CLI alike. To Know automatically detects accounts signed in through the Cursor desktop app and also supports adding accounts manually in Settings. The cache re-syncs automatically when stale, but newly finished sessions can take a few minutes to reach Cursor's dashboard, so usage updates on sync rather than instantly.
+- The Cursor cache comes from Cursor's account-level usage export, so it covers Cursor IDE and Cursor CLI alike. Potato automatically detects accounts signed in through the Cursor desktop app and also supports adding accounts manually in Settings. The cache re-syncs automatically when stale, but newly finished sessions can take a few minutes to reach Cursor's dashboard, so usage updates on sync rather than instantly.
 
 - Custom maps numeric JSON fields from one GET balance endpoint; OpenAI or Anthropic compatibility alone is not enough.
 
@@ -123,9 +123,9 @@ This is an advanced local integration: reading needs a `sqlite3` CLI on PATH or 
 </tr>
 </table>
 
-## Why To Know?
+## Why Potato?
 
-Most usage monitors are useful on the machine they run on. To Know is built for multi-device work: each device watches its own local logs, sends summary updates to your hub, and every connected widget sees token changes almost immediately.
+Most usage monitors are useful on the machine they run on. Potato is built for multi-device work: each device watches its own local logs, sends summary updates to your hub, and every connected widget sees token changes almost immediately.
 
 ## Features
 
@@ -144,7 +144,7 @@ Most usage monitors are useful on the machine they run on. To Know is built for 
 - **AI Tool Limits detection** — provider-specific session, daily, weekly, billing, and credits windows for Claude Code, Codex, Cursor, OpenRouter, third-party APIs, GLM, Kimi, and 24+ providers, including multiple OpenRouter/third-party profiles and balance-style accounts (Claude credits, DeepSeek prepaid balance and spend history, third-party balances)
 - **Multiple accounts & Codex switching** — track several accounts per provider, each with its own limits; a tracked Codex account can be switched as the active local account in one click, without re-authenticating
 - **Codex reset forecast** — an optional third-party forecast below Codex limits, showing the expected reset time, the reset type (Regular or Banked), and when the window last reset
-- **Preserve deleted session usage** — many tools prune old sessions (Claude Code drops transcripts after 30 days by default), losing that history. When enabled, To Know archives observed daily tool/model usage locally so the heatmap and trends survive even after the source files are gone (see [Session data retention](#session-data-retention) below)
+- **Preserve deleted session usage** — many tools prune old sessions (Claude Code drops transcripts after 30 days by default), losing that history. When enabled, Potato archives observed daily tool/model usage locally so the heatmap and trends survive even after the source files are gone (see [Session data retention](#session-data-retention) below)
 - **Usage Trends & Dashboard** — a home-screen activity heatmap and trend chart, plus a dedicated dashboard window with streaks and stacked per-tool/per-model history (bar and K-line views) across all your devices
 - **Fixed usage ranges** — switch between This week, Last 7 days, and Last 30 days alongside the native day, month, and total periods
 - **Optional Status view** — Claude, OpenAI, Cursor, and DeepSeek status pages, with manual or interval re-checks
@@ -157,7 +157,7 @@ Most usage monitors are useful on the machine they run on. To Know is built for 
 - **Local-first** — no servers needed for single-device use
 - **Self-hosted sync backend** — in-widget hub, Node CLI hub, or Cloudflare Worker
 - **iOS widget support** — Widgy and Scriptable through the Worker hub
-- **Privacy-first** — usage logs and statistics are processed locally; optional sync and To Know notifications use documented fields and user-configured destinations
+- **Privacy-first** — usage logs and statistics are processed locally; optional sync and Potato notifications use documented fields and user-configured destinations
 
 ### Interface & surfaces
 
@@ -173,10 +173,10 @@ Most usage monitors are useful on the machine they run on. To Know is built for 
 
 ## Installation
 
-Download the official 1.0.0 Desktop binaries from [To Know GitHub Releases](https://github.com/Gary06910/ToKnow/releases):
+Download the official 1.0.0 Desktop binaries from [Potato GitHub Releases](https://github.com/Gary06910/Potato/releases):
 
 - **Windows 10/11 x64** — setup and portable `.exe`, [planned code-signing policy](docs/CODE_SIGNING_POLICY.md)
-- **Android** — distributed as the separate To Know mobile client
+- **Android** — distributed as the separate Potato mobile client
 - **macOS/Linux** — no official 1.0.0 binary distribution; source/build support remains available
 
 Packaged builds check GitHub Releases automatically. When an update is available, the app shows an update indicator; supported platforms can also install from Settings → General.
@@ -187,7 +187,7 @@ Local mode is the default: launch the app and it starts tracking this device. No
 
 ### Uninstall
 
-On Windows, use the To Know uninstaller from Windows Settings → Apps or the installation directory. Uninstalling the application does not silently delete `%APPDATA%\Token Monitor`; remove that data separately only when you intend to clear settings, credentials, usage history, pairing data, and notification outbox data.
+On Windows, use the Potato uninstaller from Windows Settings → Apps or the installation directory. Uninstalling the application does not silently delete `%APPDATA%\Token Monitor`; remove that data separately only when you intend to clear settings, credentials, usage history, pairing data, and notification outbox data.
 
 ## Multi-device sync
 
@@ -197,7 +197,7 @@ Pick ONE hub backend that all your devices (and any headless agents) connect to.
 
 In the widget on one always-on machine, open Settings → Multi-device Sync and pick **Host hub on this device**. The widget generates a random secret and lists the LAN URLs other devices can connect to (Tailscale or ZeroTier addresses appear here too). On every other device, pick **Connect to a hub** and paste the URL + secret.
 
-The hub runs while To Know is running — quitting (not just closing the window) stops it for all connected devices.
+The hub runs while Potato is running — quitting (not just closing the window) stops it for all connected devices.
 
 #### Option B — Self-hosted Node hub (always-on headless machine)
 
@@ -210,7 +210,7 @@ npm run hub
 
 #### Option C — Cloudflare Worker hub (across networks, including iPhone)
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Gary06910/ToKnow/tree/main/worker)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Gary06910/Potato/tree/main/worker)
 
 One-click deploy — Cloudflare will prompt for the `TOKEN_MONITOR_SECRET` during setup. Or deploy manually:
 
@@ -267,7 +267,7 @@ The widget chooses local vs sync mode based on Settings → Multi-device Sync. T
 
 ## Session data retention
 
-With **Preserve deleted session usage** enabled (Settings → Collection), To Know archives observed daily tool/model usage locally with no time limit — so even after a source tool prunes its own sessions, the heatmap and trends are unaffected.
+With **Preserve deleted session usage** enabled (Settings → Collection), Potato archives observed daily tool/model usage locally with no time limit — so even after a source tool prunes its own sessions, the heatmap and trends are unaffected.
 
 <details>
 <summary><strong>Advanced: extend the source tool's own retention</strong></summary>
@@ -284,13 +284,13 @@ The heatmap and sync payload use a rolling 370-day window (older observations re
 
 A larger value keeps more, at the cost of transcripts living on disk for as long as you set. tokscale's [Session Data Retention](https://github.com/junhoyeo/tokscale#session-data-retention) table covers the other tools' defaults and config paths.
 
-This archive only covers days To Know has already observed; data deleted before it started tracking cannot be recovered.
+This archive only covers days Potato has already observed; data deleted before it started tracking cannot be recovered.
 
 </details>
 
 ## Settings
 
-There are two places to configure To Know; day-to-day use only needs the first:
+There are two places to configure Potato; day-to-day use only needs the first:
 
 - **Widget (GUI)** — click the `⚙` button in the bottom-right corner. Sections, in order: General (language, launch at login, updates), Main (Home modules and display currency), Window (window behavior, menu bar and floating-bubble layout, tray mode, shortcut), Appearance (theme and vendor colours), Collection (tracked tools, collection cadence, Preserve deleted session usage, data export), AI Tool Limits (provider selection, limits, and credentials), Subscriptions (what you pay per account), and Multi-device Sync. The `⇧` button in the title bar cycles the window behavior.
 - **Headless agent & hub** — no UI; configured with a `.env` file at the project root (copy from `.env.example`), precedence CLI flag → env var → built-in default.
@@ -299,15 +299,15 @@ See the [configuration reference](docs/configuration.md) for every setting and a
 
 ## Privacy
 
-To Know processes usage logs and usage statistics locally and sends no analytics or telemetry to the project maintainer. It is not a pure offline application: GitHub is used for update checks, and user-enabled To Know notifications can call the configured To Know backend / uniCloud for Desktop-to-Android delivery. See the [privacy policy](docs/privacy.md) for the documented fields and other provider integrations.
+Potato processes usage logs and usage statistics locally and sends no analytics or telemetry to the project maintainer. It is not a pure offline application: GitHub is used for update checks, and user-enabled Potato notifications can call the configured Potato backend / uniCloud for Desktop-to-Android delivery. See the [privacy policy](docs/privacy.md) for the documented fields and other provider integrations.
 
 ## Star History
 
-<a href="https://github.com/Gary06910/ToKnow/tree/star-history">
+<a href="https://github.com/Gary06910/Potato/tree/star-history">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Gary06910/ToKnow/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Gary06910/ToKnow/star-history/star-history.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/Gary06910/ToKnow/star-history/star-history.svg" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history-dark.svg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
+   <img alt="Star History Chart" src="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
  </picture>
 </a>
 
@@ -319,7 +319,7 @@ Issues and PRs are welcome. Project conventions, architecture notes, and the com
 
 - [tokscale](https://github.com/junhoyeo/tokscale) for log parsing and token accounting.
 - [CodexBar](https://github.com/steipete/CodexBar) for AI Tool Limits research.
-- [To Know Code signing policy](docs/CODE_SIGNING_POLICY.md): planned/intended SignPath integration; To Know has not yet been approved or signed by SignPath Foundation.
+- [Potato Code signing policy](docs/CODE_SIGNING_POLICY.md): planned/intended SignPath integration; Potato has not yet been approved or signed by SignPath Foundation.
 
 ## License
 

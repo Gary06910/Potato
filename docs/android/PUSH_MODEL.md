@@ -1,4 +1,4 @@
-# To Know uni-push 2.0 notification contract — Phase 2
+# Potato uni-push 2.0 notification contract — Phase 2
 
 Phase 1 is a historical runtime baseline, not the current notification
 contract. Pairing, Desktop credentials, event persistence, and authenticated
@@ -33,7 +33,7 @@ official identity API:
 uniIdCo.setPushCid({ pushClientId: cid })
 ```
 
-The To Know business API does not accept or store the CID. `uni-id-device` is
+The Potato business API does not accept or store the CID. `uni-id-device` is
 the official server-side CID source. `tokenm-mobile-devices` records only safe
 business facts: enabled state, a label, notification-permission state,
 registration state, trusted platform/app version, trusted client device
@@ -45,7 +45,7 @@ upserted on refresh; it is not a CID cache.
 The backend requires all of the following before attempting Push:
 
 - authenticated task owner and `tokenm-users.notificationsEnabled` is true;
-- current To Know privacy consent;
+- current Potato privacy consent;
 - an active business device with `pushRegistrationStatus: ready` and
   `notificationPermissionState: authorized` on an Android platform; and
 - a current, non-empty official `uni-id-device.push_clientid` bound to that
@@ -107,7 +107,7 @@ The only provider is DCloud uni-push 2.0 through the uniCloud push manager:
 uniCloud.getPushManager({ appId: '__UNI__46C9063' }).sendMessage({
   push_clientid: ['<deduplicated eligible CIDs>'],
   platform: 'app-android',
-  title: 'To Know',
+  title: 'Potato',
   content: '任务完成' /* or `任务完成 · <电脑名>` */,
   payload: { taskId: '<task id>' },
   force_notification: true

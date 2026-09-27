@@ -1,4 +1,4 @@
-# To Know Android data model — Phase 2
+# Potato Android data model — Phase 2
 
 Phase 1 runtime facts remain the baseline for this model: the authenticated
 owner, paired Desktop, completion event, task persistence, and Android task
@@ -11,7 +11,7 @@ second task store or change the Phase 1 ownership boundary.
 All six Phase 1 `tokenm-*` collections deny direct client operations. Android reads and writes them only through authenticated `tokenm-co`; Desktop uses only `tokenm-desktop-http`. `ownerId` is derived or resolved on the server and is never accepted from a Desktop request.
 
 Official identity/push collections are installed and managed by the current
-DCloud modules. To Know does not duplicate their schemas. The official
+DCloud modules. Potato does not duplicate their schemas. The official
 `uni-id-device` collection is the server-side source for the uni-push CID
 bound by `uniIdCo.setPushCid`; `tokenm-mobile-devices` is only a business-state
 mirror and has no CID field.
@@ -101,7 +101,7 @@ upsert: CID refresh, reinstall, logout/relogin ownership changes, and device
 disablement update the current business row rather than creating a duplicate.
 
 The official identity record is resolved separately by authenticated owner,
-the To Know DCloud AppID, and trusted device identity. A target is eligible
+the Potato DCloud AppID, and trusted device identity. A target is eligible
 only when the business row is active and ready/authorized for an Android
 installation and the official identity has a current non-empty `push_clientid`
 whose provider expiry has not passed. The business row deliberately does not
@@ -159,7 +159,7 @@ channels remain OFF.
 
 ## Cleanup semantics
 
-Task-history clearing removes tasks in bounded server transactions and advances `historyClearedAtMs`; the app repeats the operation only while `cleanupPending` is true. Account deletion similarly clears the six To Know custom collections before the client calls the official account-close operation.
+Task-history clearing removes tasks in bounded server transactions and advances `historyClearedAtMs`; the app repeats the operation only while `cleanupPending` is true. Account deletion similarly clears the six Potato custom collections before the client calls the official account-close operation.
 
 There is no import of WeChat task history. Existing CloudBase records remain in the legacy system.
 

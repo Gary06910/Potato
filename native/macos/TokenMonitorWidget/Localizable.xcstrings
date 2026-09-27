@@ -128,13 +128,13 @@
         "ko": { "stringUnit": { "state": "translated", "value": "할당량 계정을 자동으로 표시하거나 최대 2개를 선택합니다." } }
       }
     },
-    "To Know Dashboard": {
+    "Potato Dashboard": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "To Know Dashboard" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "To Know 仪表盘" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "To Know 儀表板" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "To Know ダッシュボード" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "To Know 대시보드" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Potato Dashboard" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Potato 仪表盘" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "Potato 儀表板" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Potato ダッシュボード" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Potato 대시보드" } }
       }
     },
     "Usage, quota, breakdown, and activity in one dashboard.": {
@@ -146,13 +146,13 @@
         "ko": { "stringUnit": { "state": "translated", "value": "사용량, 할당량, 분석 및 활동을 하나의 대시보드에서 확인합니다." } }
       }
     },
-    "To Know Summary": {
+    "Potato Summary": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "To Know Summary" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "To Know 摘要" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "To Know 摘要" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "To Know サマリー" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "To Know 요약" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Potato Summary" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Potato 摘要" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "Potato 摘要" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Potato サマリー" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Potato 요약" } }
       }
     },
     "Tokens, cost, and a compact trend.": {
@@ -164,13 +164,13 @@
         "ko": { "stringUnit": { "state": "translated", "value": "토큰, 비용 및 간결한 추세입니다." } }
       }
     },
-    "To Know Activity": {
+    "Potato Activity": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "To Know Activity" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "To Know 活动" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "To Know 活動" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "To Know アクティビティ" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "To Know 활동" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Potato Activity" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Potato 活动" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "Potato 活動" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Potato アクティビティ" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Potato 활동" } }
       }
     },
     "Your recent activity heatmap.": {
@@ -182,13 +182,13 @@
         "ko": { "stringUnit": { "state": "translated", "value": "최근 활동 히트맵입니다." } }
       }
     },
-    "To Know Breakdown": {
+    "Potato Breakdown": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "To Know Breakdown" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "To Know 明细" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "To Know 明細" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "To Know 内訳" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "To Know 분석" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Potato Breakdown" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Potato 明细" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "Potato 明細" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Potato 内訳" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Potato 분석" } }
       }
     },
     "Compare tools or models for one period.": {
@@ -200,13 +200,13 @@
         "ko": { "stringUnit": { "state": "translated", "value": "한 기간의 도구 또는 모델을 비교합니다." } }
       }
     },
-    "To Know Quota": {
+    "Potato Quota": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "To Know Quota" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "To Know 额度" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "To Know 額度" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "To Know クォータ" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "To Know 할당량" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Potato Quota" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Potato 额度" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "Potato 額度" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Potato クォータ" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Potato 할당량" } }
       }
     },
     "Subscription windows and reset times.": {
@@ -762,36 +762,36 @@
         }
       }
     },
-    "Open To Know once": {
+    "Open Potato once": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open To Know once"
+            "value": "Open Potato once"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "请先打开一次 To Know"
+            "value": "请先打开一次 Potato"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "請先開啟一次 To Know"
+            "value": "請先開啟一次 Potato"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "To Know を一度開いてください"
+            "value": "Potato を一度開いてください"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "To Know를 한 번 열어 주세요"
+            "value": "Potato를 한 번 열어 주세요"
           }
         }
       }

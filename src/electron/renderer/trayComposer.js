@@ -222,7 +222,7 @@
 
     function styleTitle(style) {
       const fallback = {
-        appIcon: 'To Know icon',
+        appIcon: 'Potato icon',
         providerIcon: 'AI tool icon',
         singleBar: 'Single quota bar',
         doubleBar: 'Double quota bar',
@@ -961,7 +961,7 @@
       };
       const choices = [{
         value: 'app',
-        label: l('trayComposer.icon.app', 'To Know'),
+        label: l('trayComposer.icon.app', 'Potato'),
         icon: app?.icon
       }, choiceForRow(0)];
       if (item.rows.length > 1) choices.push(choiceForRow(1));
@@ -1024,7 +1024,7 @@
 
       if (item.type === 'icon') {
         const iconTypes = [
-          { value: 'app', label: l('trayComposer.icon.app', 'To Know'), icon: providerChoices('auto').find((choice) => choice.value === 'auto')?.icon },
+          { value: 'app', label: l('trayComposer.icon.app', 'Potato'), icon: providerChoices('auto').find((choice) => choice.value === 'auto')?.icon },
           { value: 'provider', label: l('trayComposer.icon.provider', 'AI tool icon') }
         ];
         popover.append(picker(

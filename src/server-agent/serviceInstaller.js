@@ -308,7 +308,7 @@ function runCli(argv = process.argv.slice(2), dependencies = {}) {
   }
   if (action === 'remove') {
     const result = removeSupervisordService(options);
-    process.stdout.write(`${result.removed ? 'Removed' : 'Not installed'} To Know Server Agent supervisord program.\n`);
+    process.stdout.write(`${result.removed ? 'Removed' : 'Not installed'} Potato Server Agent supervisord program.\n`);
     return result;
   }
   throw serviceError('unknown_service_installer_action');

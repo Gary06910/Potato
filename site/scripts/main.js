@@ -846,7 +846,7 @@ function setupGitHubStars() {
     }
   } catch (e) {}
 
-  window.fetch("https://api.github.com/repos/Gary06910/ToKnow", {
+  window.fetch("https://api.github.com/repos/Gary06910/Potato", {
     headers: { Accept: "application/vnd.github+json" }
   }).then(function (response) {
     if (!response.ok) throw new Error("GitHub returned " + response.status);
@@ -870,8 +870,8 @@ function setupSmartDownloads() {
   var buttons = document.querySelectorAll("[data-smart-download]");
   if (!buttons.length) return;
 
-  var releasePage = "https://github.com/Gary06910/ToKnow/releases/latest";
-  var apiUrl = "https://api.github.com/repos/Gary06910/ToKnow/releases/latest";
+  var releasePage = "https://github.com/Gary06910/Potato/releases/latest";
+  var apiUrl = "https://api.github.com/repos/Gary06910/Potato/releases/latest";
   var cacheKey = "token-monitor-latest-release-v1";
   var cacheMaxAge = 60 * 60 * 1000;
   var platform = detectPlatform();
@@ -908,7 +908,7 @@ function setupSmartDownloads() {
     var matches = assets.filter(function (asset) {
       var name = String(asset.name || "");
       if (/\.blockmap$/i.test(name) || /\.ya?ml$/i.test(name)) return false;
-      if (key === "windows") return /^To-Know-Setup-.*\.exe$/i.test(name);
+      if (key === "windows") return /^Potato-Setup-.*\.exe$/i.test(name);
       if (key === "linux") return /\.AppImage$/i.test(name);
       if (key !== "mac" || !/\.dmg$/i.test(name)) return false;
       if (architecture === "arm64") return /arm64/i.test(name);

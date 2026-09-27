@@ -4,29 +4,29 @@
 
 ## When this setup is needed
 
-On Windows, To Know normally scans supported tools inside every running WSL distribution through `\\wsl$` and merges their usage about every five minutes. File-based sources such as Codex JSONL sessions work well with this path.
+On Windows, Potato normally scans supported tools inside every running WSL distribution through `\\wsl$` and merges their usage about every five minutes. File-based sources such as Codex JSONL sessions work well with this path.
 
-SQLite-backed tools such as OpenCode, Hermes, and ZCode store current usage in SQLite databases. A Windows process can discover those databases through `\\wsl$` while SQLite still cannot reliably coordinate locks or an active WAL across the WSL 9P boundary. To Know may therefore show the tool under **Settings → Collection → WSL detection** with no usage.
+SQLite-backed tools such as OpenCode, Hermes, and ZCode store current usage in SQLite databases. A Windows process can discover those databases through `\\wsl$` while SQLite still cannot reliably coordinate locks or an active WAL across the WSL 9P boundary. Potato may therefore show the tool under **Settings → Collection → WSL detection** with no usage.
 
 Do not copy a live `.db` file as a workaround. Recent transactions may still be in `-wal`, and copying the database and sidecars separately does not guarantee a consistent snapshot.
 
 The reliable setup is:
 
 ```text
-WSL headless agent → Windows host hub → To Know widget
+WSL headless agent → Windows host hub → Potato widget
 ```
 
 The agent runs the Linux tokscale binary next to the database, then sends only the normalized usage summary to the hub.
 
 ## 1. Start the hub on Windows
 
-In To Know, open **Settings → Multi-device Sync** and select **Host hub on this device**. Record the hub URL and shared secret.
+In Potato, open **Settings → Multi-device Sync** and select **Host hub on this device**. Record the hub URL and shared secret.
 
 Keep the hub on a trusted network and retain the generated secret. If WSL cannot reach the displayed hostname, use the Windows host IP while keeping the same port, which defaults to `17321`.
 
 ## 2. Install the headless agent in WSL
 
-To Know requires Node.js 22.15.0 or newer. Verify Node.js and npm inside WSL before installing; upgrade Node.js first if the reported version is older.
+Potato requires Node.js 22.15.0 or newer. Verify Node.js and npm inside WSL before installing; upgrade Node.js first if the reported version is older.
 
 ```bash
 node --version
@@ -64,13 +64,13 @@ Send one snapshot first:
 npm run agent:once
 ```
 
-Confirm that a second device appears in To Know and that the SQLite-backed tool has usage. Then run the continuous agent:
+Confirm that a second device appears in Potato and that the SQLite-backed tool has usage. Then run the continuous agent:
 
 ```bash
 npm run agent
 ```
 
-For unattended use, run that command from your normal WSL service manager or login startup. Keep its working directory set to the To Know checkout so `.env` is loaded.
+For unattended use, run that command from your normal WSL service manager or login startup. Keep its working directory set to the Potato checkout so `.env` is loaded.
 
 ## Troubleshooting
 

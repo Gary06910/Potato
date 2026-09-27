@@ -1,6 +1,6 @@
 # Configuration
 
-To Know has two configuration surfaces:
+Potato has two configuration surfaces:
 
 - **Widget (GUI)** — everything the desktop app does, configured from the `⚙` settings panel. This is the only surface most people need.
 - **`.env`** — for the headless agent and standalone hub, which have no UI.
@@ -50,7 +50,7 @@ TOKEN_MONITOR_LIMITS_REFRESH_MS=     # optional — interval for fixed mode; def
 # The following are an advanced/headless-agent fallback, not normal widget setup.
 # Desktop Local App monitoring is available on macOS and Windows; Linux Local
 # App monitoring is unsupported. Desktop users do
-# not copy a token, and To Know does not store the WorkBuddy app credential.
+# not copy a token, and Potato does not store the WorkBuddy app credential.
 TOKEN_MONITOR_WORKBUDDY_ACCESS_TOKEN= # headless only — explicit billing-session token
 TOKEN_MONITOR_WORKBUDDY_USER_ID=      # headless only — WorkBuddy user ID
 TOKEN_MONITOR_WORKBUDDY_ENTERPRISE_ID= # headless only — selects enterprise billing

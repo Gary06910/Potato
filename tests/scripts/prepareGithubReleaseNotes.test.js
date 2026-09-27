@@ -99,9 +99,9 @@ test('fullChangelogRange locks generated notes to the curated compare range', ()
   assert.throws(() => fullChangelogRange('missing'), /found 0/);
 });
 
-test('fullChangelogRange accepts the To Know release repository and can enforce ownership', () => {
-  const template = '<summary><strong>Full Changelog:</strong> <a href="https://github.com/Gary06910/ToKnow/compare/v0.56.0...v0.57.0">v0.56.0...v0.57.0</a></summary>';
-  assert.deepEqual(fullChangelogRange(template, 'Gary06910/ToKnow'), {
+test('fullChangelogRange accepts the Potato release repository and can enforce ownership', () => {
+  const template = '<summary><strong>Full Changelog:</strong> <a href="https://github.com/Gary06910/Potato/compare/v0.56.0...v0.57.0">v0.56.0...v0.57.0</a></summary>';
+  assert.deepEqual(fullChangelogRange(template, 'Gary06910/Potato'), {
     previousTag: 'v0.56.0',
     currentTag: 'v0.57.0'
   });

@@ -785,11 +785,11 @@ test('each Widget family has a purpose-built composition', () => {
   assert.match(widgetDashboardSource, /\(width\|height\)=\["'\]1em\["'\]/);
 });
 
-test('macOS Widget packaging keeps the To Know app identity', () => {
+test('macOS Widget packaging keeps the Potato app identity', () => {
   assert.equal(packageJson.scripts['mac:local'], undefined);
   assert.equal(packageJson.scripts['mac:local:open'], undefined);
-  assert.equal(packageJson.productName, 'To Know');
-  assert.equal(packageJson.build.productName, 'To Know');
+  assert.equal(packageJson.productName, 'Potato');
+  assert.equal(packageJson.build.productName, 'Potato');
 });
 
 test('Widget build provenance fields are injected into the extension Info.plist', () => {
@@ -932,15 +932,15 @@ test('Widget user-facing strings are localized in five languages', () => {
     localization.stringUnit.value === 'Unlimited'
   )));
   for (const key of [
-    'To Know Dashboard',
+    'Potato Dashboard',
     'Usage, quota, breakdown, and activity in one dashboard.',
-    'To Know Summary',
+    'Potato Summary',
     'Tokens, cost, and a compact trend.',
-    'To Know Activity',
+    'Potato Activity',
     'Your recent activity heatmap.',
-    'To Know Breakdown',
+    'Potato Breakdown',
     'Compare tools or models for one period.',
-    'To Know Quota',
+    'Potato Quota',
     'Subscription windows and reset times.'
   ]) {
     assert.ok(widgetLocalization.strings[key], `missing Widget Gallery localization for ${key}`);
@@ -963,7 +963,7 @@ test('Widget user-facing strings are localized in five languages', () => {
   ]) {
     assert.ok(widgetLocalization.strings[key], `missing Widget configuration localization for ${key}`);
   }
-  assert.match(widgetSource, /configurationDisplayName\("To Know Dashboard"\)/);
+  assert.match(widgetSource, /configurationDisplayName\("Potato Dashboard"\)/);
   assert.match(widgetSource, /description\("Usage, quota, breakdown, and activity in one dashboard\."\)/);
   // A `LocalizedStringResource` argument only resolves on newer SDKs; keep the
   // literal form so the Widget compiles at the macOS 14 deployment target.

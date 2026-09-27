@@ -1,12 +1,12 @@
-# To Know 1.0.0
+# Potato 1.0.0
 
-## To Know first independently maintained release
+## Potato first independently maintained release
 
-To Know 1.0.0 is the first release prepared under To Know's independent maintenance and release ownership. To Know is derived in part from Javis603/token-monitor; the applicable upstream MIT attribution and license notices are retained. The current Desktop architecture has been modernized from that upstream baseline, and future upstream changes will be selectively adopted rather than synchronized automatically.
+Potato 1.0.0 is the first release prepared under Potato's independent maintenance and release ownership. Potato is derived in part from Javis603/token-monitor; the applicable upstream MIT attribution and license notices are retained. The current Desktop architecture has been modernized from that upstream baseline, and future upstream changes will be selectively adopted rather than synchronized automatically.
 
 ## What's included
 
-- An independent Desktop project and release channel owned by `Gary06910/ToKnow`; the updater feed and release metadata do not use the upstream `Javis603/token-monitor` binary or release channel.
+- An independent Desktop project and release channel owned by `Gary06910/Potato`; the updater feed and release metadata do not use the upstream `Javis603/token-monitor` binary or release channel.
 - A contemporary collector, provider and UI foundation, including the pinned Tokscale `4.17.0` integration.
 - Android notification delivery through `Desktop → uniCloud → uni-push 2.0 → Android`, including pairing, task synchronization and system notifications.
 - Codex Stop Hook integration for forwarding completed tasks to the paired Android device.
@@ -16,30 +16,30 @@ To Know 1.0.0 is the first release prepared under To Know's independent maintena
 - Background-notification guidance for Android. Honor and Xiaomi vendor Push paths are not enabled in this release; background delivery still depends on the user's device settings, and a Recents swipe-away is not guaranteed to preserve delivery.
 - Windows Codex profile/HOME compatibility and preservation of the established Token Monitor data location under `%APPDATA%\Token Monitor`.
 - Existing settings, credentials, usage history, Android pairing data, outbox data and Stop Hook configuration remain on their established paths. A source-to-installed path transition may require enabling and trusting the Hook for the installed executable.
-- WeChat integration remains legacy/frozen and is not the primary notification path; Android is the primary path for current To Know notification work.
+- WeChat integration remains legacy/frozen and is not the primary notification path; Android is the primary path for current Potato notification work.
 
 ## What's Changed
 
 <!-- github-generated-release-notes -->
 
 <details>
-<summary><strong>Full Changelog:</strong> <a href="https://github.com/Gary06910/ToKnow/compare/v0.58.0...v1.0.0">v0.58.0...v1.0.0</a></summary>
+<summary><strong>Full Changelog:</strong> <a href="https://github.com/Gary06910/Potato/compare/v0.58.0...v1.0.0">v0.58.0...v1.0.0</a></summary>
 </details>
 
-The compare range starts at the retained upstream-baseline tag; it is not a prior public To Know release.
+The compare range starts at the retained upstream-baseline tag; it is not a prior public Potato release.
 
 ## Downloads
 
-- Windows installer: `To-Know-Setup-1.0.0.exe`
-- Windows portable: `To-Know-1.0.0.exe`
+- Windows installer: `Potato-Setup-1.0.0.exe`
+- Windows portable: `Potato-1.0.0.exe`
 - Official desktop binary distribution: Windows x64 only.
-- Android is a separate To Know mobile client and is not part of the Desktop GitHub Release workflow.
+- Android is a separate Potato mobile client and is not part of the Desktop GitHub Release workflow.
 - macOS/Linux source and build support may exist, but official macOS/Linux binaries are not provided in 1.0.0.
-- Code signing policy: [To Know Code Signing Policy](../docs/CODE_SIGNING_POLICY.md) (planned/intended; SignPath Foundation approval is pending).
+- Code signing policy: [Potato Code Signing Policy](../docs/CODE_SIGNING_POLICY.md) (planned/intended; SignPath Foundation approval is pending).
 
 <!-- app-update-notes:zh:start -->
-### To Know 首个独立维护版本
-- 1.0.0 使用 To Know 自有发布与更新源，并保留适用的上游 MIT 许可与署名。
+### Potato 首个独立维护版本
+- 1.0.0 使用 Potato 自有发布与更新源，并保留适用的上游 MIT 许可与署名。
 - 桌面端包含 Tokscale 4.17.0、Codex Stop Hook、隐私/完整模式，以及稳定事件身份和持久 outbox。
 
 ### Android 通知与升级兼容
@@ -49,7 +49,7 @@ The compare range starts at the retained upstream-baseline tag; it is not a prio
 
 <!-- app-update-notes:en:start -->
 ### Independent release and compatibility
-- 1.0.0 uses the To Know release and update source while retaining applicable upstream MIT attribution.
+- 1.0.0 uses the Potato release and update source while retaining applicable upstream MIT attribution.
 - The Desktop keeps existing settings, credentials, usage history, Android pairing/outbox data and Stop Hook paths.
 
 ### Desktop, Android and delivery
@@ -58,8 +58,8 @@ The compare range starts at the retained upstream-baseline tag; it is not a prio
 <!-- app-update-notes:en:end -->
 
 <!-- app-update-notes:zh-TW:start -->
-### To Know 首個獨立維護版本
-- 1.0.0 使用 To Know 自有發佈與更新來源，並保留適用的上游 MIT 授權與署名。
+### Potato 首個獨立維護版本
+- 1.0.0 使用 Potato 自有發佈與更新來源，並保留適用的上游 MIT 授權與署名。
 - 桌面端包含 Tokscale 4.17.0、Codex Stop Hook、隱私/完整模式，以及穩定事件識別與持久 outbox。
 
 ### Android 通知與升級相容性
@@ -68,8 +68,8 @@ The compare range starts at the retained upstream-baseline tag; it is not a prio
 <!-- app-update-notes:zh-TW:end -->
 
 <!-- app-update-notes:ko:start -->
-### To Know 최초 독립 유지보수 릴리스
-- 1.0.0은 To Know의 자체 릴리스 및 업데이트 소스를 사용하며 해당 업스트림 MIT 라이선스와 저작자 표시를 유지합니다.
+### Potato 최초 독립 유지보수 릴리스
+- 1.0.0은 Potato의 자체 릴리스 및 업데이트 소스를 사용하며 해당 업스트림 MIT 라이선스와 저작자 표시를 유지합니다.
 - Tokscale 4.17.0, Codex Stop Hook, 개인정보 보호/전체 모드, 안정적인 이벤트 식별자와 영속 outbox를 포함합니다.
 
 ### Android 알림 및 호환성
@@ -78,8 +78,8 @@ The compare range starts at the retained upstream-baseline tag; it is not a prio
 <!-- app-update-notes:ko:end -->
 
 <!-- app-update-notes:ja:start -->
-### To Know 初の独立メンテナンスリリース
-- 1.0.0 は To Know 独自のリリースおよび更新ソースを使用し、適用される upstream MIT ライセンスと帰属表示を保持します。
+### Potato 初の独立メンテナンスリリース
+- 1.0.0 は Potato 独自のリリースおよび更新ソースを使用し、適用される upstream MIT ライセンスと帰属表示を保持します。
 - Tokscale 4.17.0、Codex Stop Hook、プライバシー/フルモード、安定したイベント識別子、永続 outbox を含みます。
 
 ### Android 通知と互換性

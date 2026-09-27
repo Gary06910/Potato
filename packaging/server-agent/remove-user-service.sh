@@ -12,7 +12,7 @@ UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 UNIT_PATH="$UNIT_DIR/toknow-agent.service"
 
 if [ ! -e "$UNIT_PATH" ]; then
-  printf '%s\n' 'To Know Server Agent user service is not installed.'
+  printf '%s\n' 'Potato Server Agent user service is not installed.'
   exit 0
 fi
 
@@ -40,4 +40,4 @@ if ! systemctl --user daemon-reload; then
   printf '%s\n' 'remove-user-service.sh: systemctl --user daemon-reload failed' >&2
   exit 1
 fi
-printf '%s\n' 'Removed To Know Server Agent user service.'
+printf '%s\n' 'Removed Potato Server Agent user service.'

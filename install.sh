@@ -167,7 +167,7 @@ if [ "$SERVICE_MANAGER" = systemd-user ]; then
   if [ -e "$UNIT_PATH" ] \
     && ! cmp -s "$UNIT_SOURCE" "$UNIT_PATH" \
     && ! grep -Fqx '# Managed by To Know Server Agent installer.' "$UNIT_PATH"; then
-    printf '%s\n' 'install.sh: existing user unit is not managed by To Know' >&2
+    printf '%s\n' 'install.sh: existing user unit is not managed by Potato' >&2
     exit 1
   fi
 fi
@@ -178,7 +178,7 @@ cp -a "$PACKAGE_ROOT/." "$VERSION_ROOT/"
 mkdir -p "$(dirname -- "$STABLE_BIN")"
 ln -sfn "$VERSION_ROOT/bin/toknow-agent" "$STABLE_BIN"
 
-printf 'Installed To Know Server Agent %s\n' "$VERSION"
+printf 'Installed Potato Server Agent %s\n' "$VERSION"
 printf 'Stable launcher: %s\n' "$STABLE_BIN"
 
 if [ "$USER_SERVICE" -eq 1 ]; then

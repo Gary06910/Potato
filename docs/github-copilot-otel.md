@@ -1,8 +1,8 @@
 # GitHub Copilot CLI token tracking
 
-To Know automatically detects VS Code Copilot Chat usage from VS Code's local session data through Tokscale 4.5.2 or later. No VS Code settings or OpenTelemetry exporter are required.
+Potato automatically detects VS Code Copilot Chat usage from VS Code's local session data through Tokscale 4.5.2 or later. No VS Code settings or OpenTelemetry exporter are required.
 
-The standalone GitHub Copilot CLI still needs its OpenTelemetry file exporter enabled. To Know reads those JSONL files from `~/.copilot/otel/` through Tokscale. OTel begins recording only after it is enabled, so earlier CLI interactions are not backfilled.
+The standalone GitHub Copilot CLI still needs its OpenTelemetry file exporter enabled. Potato reads those JSONL files from `~/.copilot/otel/` through Tokscale. OTel begins recording only after it is enabled, so earlier CLI interactions are not backfilled.
 
 ## Migrating from the previous VS Code setup
 
@@ -39,7 +39,7 @@ copilot
 
 ## Privacy
 
-To Know needs only token metadata. Do not enable optional OTel content-capture settings unless you intentionally want prompts, responses, or tool content written to disk.
+Potato needs only token metadata. Do not enable optional OTel content-capture settings unless you intentionally want prompts, responses, or tool content written to disk.
 
 ## References
 

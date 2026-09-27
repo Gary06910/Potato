@@ -11,7 +11,7 @@
             <view class="profile-mark"><text class="profile-initial">{{ profile.username.length > 0 ? profile.username.slice(0, 1).toUpperCase() : 'T' }}</text></view>
             <view class="row-main">
               <text class="row-title">{{ profile.username.length > 0 ? profile.username : loginFactView(facts.login).label }}</text>
-              <text class="row-meta">{{ profile.authenticated ? 'To Know 账户' : '登录后可管理云端数据' }}</text>
+              <text class="row-meta">{{ profile.authenticated ? 'Potato 账户' : '登录后可管理云端数据' }}</text>
             </view>
           </view>
 
@@ -45,11 +45,11 @@
               <view class="row-main"><text class="row-title">电脑连接</text><text class="row-meta">添加、重命名或解除绑定</text></view><text class="chevron">管理</text>
             </view>
             <view class="setting-link row-press setting-link-last" hover-class="row-press-active" @click="goAbout">
-              <view class="row-main"><text class="row-title">关于 To Know</text><text class="row-meta">版本与通知说明</text></view><text class="chevron">查看</text>
+              <view class="row-main"><text class="row-title">关于 Potato</text><text class="row-meta">版本与通知说明</text></view><text class="chevron">查看</text>
             </view>
           </view>
           <button v-if="facts.login == 'signedIn'" :class="['btn', 'btn-danger', 'section', updating ? 'btn-disabled' : '']" hover-class="btn-active" :disabled="updating" @click="confirmLogout">退出登录</button>
-          <button v-else class="btn btn-primary section" hover-class="btn-primary-active" @click="goLogin">登录 To Know</button>
+          <button v-else class="btn btn-primary section" hover-class="btn-primary-active" @click="goLogin">登录 Potato</button>
         </view>
       </view>
     </scroll-view>

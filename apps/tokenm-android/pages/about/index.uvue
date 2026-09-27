@@ -2,10 +2,10 @@
   <view class="page-shell">
     <scroll-view class="page-scroll" direction="vertical" :show-scrollbar="false">
       <view class="page-content">
-        <tm-header title="关于 To Know" :back="true" />
+        <tm-header title="关于 Potato" :back="true" />
         <view class="about-mark"><text class="about-initial">TM</text></view>
-        <text class="about-title">To Know</text>
-        <text class="about-copy">To Know 用于记录 Codex 完成事件，并在你主动开启任务通知后显示手机提醒。</text>
+        <text class="about-title">Potato</text>
+        <text class="about-copy">Potato 用于记录 Codex 完成事件，并在你主动开启任务通知后显示手机提醒。</text>
         <view class="surface detail-list section">
           <view class="detail-row"><text class="detail-key">版本</text><text class="detail-value">0.1.0</text></view>
           <view class="detail-row detail-row-last"><text class="detail-key">送达说明</text><text class="detail-value">通知到达受系统权限、网络和手机省电设置影响。任务记录可在应用内查看。</text></view>

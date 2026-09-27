@@ -1063,7 +1063,7 @@ async function readCodexRpcWithCommand(command, deps = {}) {
   try {
     if (signal?.aborted) throw abortError(signal);
     await rpc.send('initialize', {
-      clientInfo: { name: 'token-monitor', title: 'To Know', version: appVersion() }
+      clientInfo: { name: 'token-monitor', title: 'Potato', version: appVersion() }
     });
     rpc.notify('initialized', {});
     let rateLimitResult = await rpc.send('account/rateLimits/read');

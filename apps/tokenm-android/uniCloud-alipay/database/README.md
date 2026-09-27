@@ -16,14 +16,14 @@ The official identity modules own their own collections. Import and configure th
 Official `uni-id-co` remains responsible for username/password registration
 and login, account identity lifecycle, and platform notification identity
 lifecycle. The official `uni-id-device` collection is the CID source after the
-client binds the runtime CID through `uniIdCo.setPushCid`; To Know's
+client binds the runtime CID through `uniIdCo.setPushCid`; Potato's
 `tokenm-mobile-devices` collection is only a business-state mirror and has no
 CID field. Its `(ownerId, deviceId)` uniqueness key is upserted by the
 authenticated `tokenm-co` context, while device identity/platform/app version
 come from trusted client information rather than request-supplied ownership.
 
 An eligible target requires `tokenm-users.notificationsEnabled`, current
-To Know privacy consent, an active business device with
+Potato privacy consent, an active business device with
 `pushRegistrationStatus: ready` and `notificationPermissionState: authorized`,
 an Android platform identity, and a current non-empty official CID. CID
 refreshes and reinstall/relogin lifecycle changes update the current device
@@ -38,9 +38,9 @@ deduplicated CIDs are included in one request, up to 500 targets. The result is
 one automatic attempt per selected target and there is no retry or fallback.
 Provider `submitted` is not device display evidence.
 
-The only secret used by To Know backend code is `TOKEN_M_DESKTOP_CREDENTIAL_KEY`, configured as a 32-byte base64url environment variable. No SpaceID, cloud binding, provider secret, or production deployment configuration is stored here.
+The only secret used by Potato backend code is `TOKEN_M_DESKTOP_CREDENTIAL_KEY`, configured as a 32-byte base64url environment variable. No SpaceID, cloud binding, provider secret, or production deployment configuration is stored here.
 
-`tokenm-users` stores acceptance of the internal privacy protocol version `tokenm-android-v1`; this identifier does not represent legal-text approval. Publication requires final review of the privacy text and version, and any later text change must explicitly bump the version. Account deletion removes only To Know custom data. The client must repeat `deleteAccount` until `cleanupPending` is `false`, then separately call the current official `uniIdCo.closeAccount()` method; To Know does not proxy or imitate that official identity operation.
+`tokenm-users` stores acceptance of the internal privacy protocol version `tokenm-android-v1`; this identifier does not represent legal-text approval. Publication requires final review of the privacy text and version, and any later text change must explicitly bump the version. Account deletion removes only Potato custom data. The client must repeat `deleteAccount` until `cleanupPending` is `false`, then separately call the current official `uniIdCo.closeAccount()` method; Potato does not proxy or imitate that official identity operation.
 
 Platform validation references (accessed 2026-08-23):
 

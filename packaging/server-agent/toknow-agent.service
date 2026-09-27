@@ -1,6 +1,6 @@
 # Managed by To Know Server Agent installer.
 [Unit]
-Description=To Know Server Agent
+Description=Potato Server Agent
 Wants=network-online.target
 After=network-online.target
 StartLimitIntervalSec=60

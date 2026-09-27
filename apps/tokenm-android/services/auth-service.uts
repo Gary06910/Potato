@@ -3,7 +3,7 @@ import type { AccountProfile, CaptchaChallenge } from '../types/models.uts'
 const SESSION_USERNAME_KEY = 'tokenm.session.username.v1'
 
 // uni-id-co is supplied by the official local uni-id-pages-x module.
-// customUI keeps errors in To Know's own UI instead of invoking a framework dialog.
+// customUI keeps errors in Potato's own UI instead of invoking a framework dialog.
 export const uniIdCo = uniCloud.importObject('uni-id-co', { customUI: true })
 
 const storedUsername = (): string => {

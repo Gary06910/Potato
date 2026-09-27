@@ -1,4 +1,4 @@
-# To Know Server Agent in containers
+# Potato Server Agent in containers
 
 The container-external backend installs the Server Agent runtime and stable
 launcher, then leaves process startup and restart policy to the container
@@ -22,7 +22,7 @@ Persist the Server Agent roots across container restarts:
 - `~/.local/state/toknow-agent` for worker state, notification state, and
   local history.
 
-To Know cannot guarantee that a newly created Pod or container starts the
+Potato cannot guarantee that a newly created Pod or container starts the
 agent. That guarantee belongs to the external startup command and lifecycle
 policy, such as a Docker restart policy, Kubernetes Deployment, or managed
 cloud-container startup configuration. Persistence across container recreation

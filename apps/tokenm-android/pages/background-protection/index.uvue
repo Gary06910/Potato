@@ -32,7 +32,7 @@
         <text class="guide-note">品牌选择和手动确认仅保存在本机，不上传云端。更改品牌后，各自的确认状态分别保存。</text>
         <view class="surface guide-card">
           <text class="section-title">重要提示</text>
-          <text class="guide-limit">不要主动关闭 To Know。当前个人开发者版本从最近任务中被划掉后，实时通知可能无法及时送达。</text>
+          <text class="guide-limit">不要主动关闭 Potato。当前个人开发者版本从最近任务中被划掉后，实时通知可能无法及时送达。</text>
         </view>
       </view>
     </scroll-view>
@@ -81,7 +81,7 @@ const toggleGuide = (): void => {
   catch (_error) { message.value = '未能保存本机确认，请重试。' }
 }
 const openSettings = (destination: string): void => {
-  if (!openProtectionSystemSettings(destination)) message.value = '请手动打开手机设置，按本页步骤检查 To Know。'
+  if (!openProtectionSystemSettings(destination)) message.value = '请手动打开手机设置，按本页步骤检查 Potato。'
 }
 const openNotifications = (): void => { openProtectionNotificationSettings() }
 const openBattery = (): void => { openSettings('battery') }

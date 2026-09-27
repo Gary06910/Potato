@@ -84,7 +84,7 @@ export const ensureTaskNotificationChannel = () => {
   if (manager == null) return
   manager.setPushChannel({
     channelId: TASK_NOTIFICATION_CHANNEL_ID,
-    channelDesc: 'To Know 任务完成提醒',
+    channelDesc: 'Potato 任务完成提醒',
     enableVibration: true,
     importance: 3,
     lockscreenVisibility: 1

@@ -1,8 +1,8 @@
 {
   "name": "token-monitor",
-  "productName": "To Know",
+  "productName": "Potato",
   "version": "1.0.0",
-  "description": "Live token and cost widget with local-first Codex completion notifications for To Know Android.",
+  "description": "Live token and cost widget with local-first Codex completion notifications for Potato Android.",
   "main": "src/electron/main.js",
   "scripts": {
     "start": "npm run ensure:tokscale && electron .",
@@ -39,7 +39,7 @@
   },
   "build": {
     "appId": "com.javis.tokenmonitor",
-    "productName": "To Know",
+    "productName": "Potato",
     "directories": {
       "output": "dist"
     },
@@ -65,7 +65,7 @@
       "node_modules/koffi/**/*"
     ],
     "mac": {
-      "artifactName": "Token-Monitor-${version}-${arch}.${ext}",
+      "artifactName": "Potato-${version}-${arch}.${ext}",
       "target": [
         "dmg",
         "zip"
@@ -103,7 +103,7 @@
       }
     },
     "linux": {
-      "artifactName": "Token-Monitor-${version}.${ext}",
+      "artifactName": "Potato-${version}.${ext}",
       "target": [
         {
           "target": "AppImage",
@@ -118,14 +118,14 @@
       "description": "Real-time token, cost, and AI limits widget with multi-device sync for Claude Code, Codex, OpenCode and more."
     },
     "nsis": {
-      "artifactName": "To-Know-Setup-${version}.${ext}",
+      "artifactName": "Potato-Setup-${version}.${ext}",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "include": "scripts/nsis-installer.nsh"
     },
     "portable": {
-      "artifactName": "To-Know-${version}.${ext}"
+      "artifactName": "Potato-${version}.${ext}"
     },
     "releaseInfo": {
       "releaseNotesFile": ".github/TOKEN_M_RELEASE_TEMPLATE.md"
@@ -134,7 +134,7 @@
       {
         "provider": "github",
         "owner": "Gary06910",
-        "repo": "ToKnow"
+        "repo": "Potato"
       }
     ]
   },
@@ -153,15 +153,15 @@
     "local-first",
     "self-hosted"
   ],
-  "author": "Javis603 and To Know contributors",
+  "author": "Javis603 and Potato contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Gary06910/ToKnow.git"
+    "url": "git+https://github.com/Gary06910/Potato.git"
   },
-  "homepage": "https://github.com/Gary06910/ToKnow#readme",
+  "homepage": "https://github.com/Gary06910/Potato#readme",
   "bugs": {
-    "url": "https://github.com/Gary06910/ToKnow/issues"
+    "url": "https://github.com/Gary06910/Potato/issues"
   },
   "dependencies": {
     "@xhayper/discord-rpc": "^1.3.4",

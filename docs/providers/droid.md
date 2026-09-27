@@ -38,9 +38,9 @@ and an optional `factoryCredits` (Factory Standard Credits) that tokscale's acco
 - The kernel is shared, and so is the data: a future `factory` tracked client scanning
   `~/.factory/sessions` would double-count every session. Usage collection stays solely under
   `droid`; a `factory` provider is quota/balance only.
-- Factory limits use a `FACTORY_API_KEY` explicitly saved in To Know, supplied through the
+- Factory limits use a `FACTORY_API_KEY` explicitly saved in Potato, supplied through the
   process environment, or read from Droid's plaintext `~/.factory/.env`; an auto-discovered key
-  is used only in memory and is never copied into To Know's credential store.
+  is used only in memory and is never copied into Potato's credential store.
 
 | Data plane | Read by | Source |
 | --- | --- | --- |
@@ -68,7 +68,7 @@ working CodexBar integration, so their parsing stays optional and null-safe.
 
 The credential boundary follows the existing owner-approved local-discovery pattern: a readable
 provider-owned configuration file may supply an in-memory key, and only a key explicitly entered
-in To Know is persisted by To Know. Droid's own credential material — the
+in Potato is persisted by Potato. Droid's own credential material — the
 `auth.v2.loginkeychain` / keyring stores — stays out of bounds: providers never read or decrypt
 another tool's credentials (issue #586 precedent), so OAuth-login users create an `fk-` API key at
 `https://app.factory.ai/settings/api-keys` instead.

@@ -2,7 +2,7 @@
 
 ## Code state
 
-To Know selects Xiaomi alongside the frozen Honor P0 path in the uni-app x manifest:
+Potato selects Xiaomi alongside the frozen Honor P0 path in the uni-app x manifest:
 
 ```json
 {
@@ -19,7 +19,7 @@ To Know selects Xiaomi alongside the frozen Honor P0 path in the uni-app x manif
 }
 ```
 
-For the standard HBuilderX cloud-build path, DCloud owns the compatible uni-push, Getui Xiaomi adapter, and MiPush SDK dependency set. To Know does not carry a parallel Gradle project or independently pin a MiPush SDK version.
+For the standard HBuilderX cloud-build path, DCloud owns the compatible uni-push, Getui Xiaomi adapter, and MiPush SDK dependency set. Potato does not carry a parallel Gradle project or independently pin a MiPush SDK version.
 
 The server's Xiaomi provider mapping is deployment-owned and conditional:
 
@@ -34,18 +34,18 @@ The `XM` object is emitted only when both values are present. Missing or incompl
 
 ## Message-category plan
 
-As of 2026-08-23, Xiaomi's rules effective from 2026-08-01 require newly integrated private messages to use both an approved channel and a template. To Know should apply under the private-message category `任务进程`, subject to Xiaomi's decision:
+As of 2026-08-23, Xiaomi's rules effective from 2026-08-01 require newly integrated private messages to use both an approved channel and a template. Potato should apply under the private-message category `任务进程`, subject to Xiaomi's decision:
 
 - Trigger: the same user has initiated a real Codex work task on a paired Desktop.
 - State change: the accepted event reports that assigned task's completion.
-- Notification title: fixed `To Know`.
+- Notification title: fixed `Potato`.
 - Notification body: fixed `任务已完成`.
 - Destination: the stored task record for that same authenticated owner.
 - Exclusions: no marketing, recommendation, engagement prompt, inferred task, test text, task summary, project name, model name, or conversation content.
 
-Do not apply as `安装/卸载任务进程`; To Know is reporting an AI work-task completion, not an application installation, removal, or update. `任务进程` is only a candidate until approved. If Xiaomi rejects this mapping, keep Xiaomi P1 disabled and revise the product/category plan before another application; do not route the same content through a public category or another private category.
+Do not apply as `安装/卸载任务进程`; Potato is reporting an AI work-task completion, not an application installation, removal, or update. `任务进程` is only a candidate until approved. If Xiaomi rejects this mapping, keep Xiaomi P1 disabled and revise the product/category plan before another application; do not route the same content through a public category or another private category.
 
-Use a custom fixed-text private template matching the two strings above. Xiaomi supports fixed text in both title and content structures. Because this template has no variables, To Know omits `/extra.template_param`; it never sends task data as a template variable. If the console requires a different structure, stop and update the reviewed server contract before configuring production IDs.
+Use a custom fixed-text private template matching the two strings above. Xiaomi supports fixed text in both title and content structures. Because this template has no variables, Potato omits `/extra.template_param`; it never sends task data as a template variable. If the console requires a different structure, stop and update the reviewed server contract before configuring production IDs.
 
 ## MANUAL_PREREQUISITE — application identity
 
@@ -55,7 +55,7 @@ Before enabling Xiaomi push, the owner must establish one final Android identity
 2. Create or select the release JKS and retain it outside the repository.
 3. Preserve the release key alias and passwords outside the repository.
 4. Create the matching real DCloud application and place its real AppID into `manifest.json` through HBuilderX.
-5. Produce a custom release-signed base or APK. A DCloud standard base does not carry To Know's final package and signing identity and is not an end-to-end vendor verification artifact.
+5. Produce a custom release-signed base or APK. A DCloud standard base does not carry Potato's final package and signing identity and is not an end-to-end vendor verification artifact.
 
 Do not put signing material or any real vendor credential in this repository, source maps, logs, screenshots, test fixtures, or phase reports.
 
@@ -64,7 +64,7 @@ Do not put signing material or any real vendor credential in this repository, so
 Using the final package identity in the Xiaomi Push operations platform:
 
 1. Complete Xiaomi developer-account registration and review.
-2. Create or select the To Know Android application with the final application name and package name.
+2. Create or select the Potato Android application with the final application name and package name.
 3. Read and accept the message-classification rules, Push Service agreement, privacy policy, and data-protection terms shown by the current console.
 4. Enable Push Service. Xiaomi currently states that developer-account review generally takes 1–3 business days and an initial notification-category review takes 3–5 business days.
 5. Apply for a private `任务进程` notification category using the exact scenario and content boundaries above.
@@ -72,7 +72,7 @@ Using the final package identity in the Xiaomi Push operations platform:
 7. In Template Management, apply for a custom fixed-text template bound to that category. Record the approved template ID outside the repository.
 8. Obtain the application's Xiaomi AppID, AppKey, and AppSecret. Treat all three as deployment credentials and never commit them.
 
-Xiaomi's current console can also expose official templates. Use one only if its approved title and content structure exactly preserve To Know's fixed private notification. Otherwise use the reviewed custom template.
+Xiaomi's current console can also expose official templates. Use one only if its approved title and content structure exactly preserve Potato's fixed private notification. Otherwise use the reviewed custom template.
 
 ## MANUAL_PREREQUISITE — DCloud and cloud function
 
@@ -89,7 +89,7 @@ No real ID belongs in the empty `xiaomi: {}` manifest node. That node selects th
 
 ## HyperOS background acceptance
 
-Xiaomi documents notification-bar messages as using a system channel that does not require the application to remain resident in the background. This is a platform capability, not a To Know acceptance result. Provider `submitted` likewise means only that uni-push accepted the request.
+Xiaomi documents notification-bar messages as using a system channel that does not require the application to remain resident in the background. This is a platform capability, not a Potato acceptance result. Provider `submitted` likewise means only that uni-push accepted the request.
 
 The Xiaomi P1 gate requires observations from a release-signed installation on a current HyperOS device while the app is foregrounded, backgrounded, removed from recents, process-reclaimed, and locked. For every state verify:
 

@@ -145,6 +145,6 @@ jobs:
           CSC_FOR_PULL_REQUEST: 'true'
         run: |
           npm run pack:mac:widget:x64
-          npm run verify:mac:widget-app -- "dist/mac-x64/mac/To Know.app"
+          npm run verify:mac:widget-app -- "dist/mac-x64/mac/Potato.app"
       - name: Check Widget CI diff
         run: git diff --check

@@ -32,7 +32,7 @@ export const readBatteryOptimizationState = (): string => {
 
 export const openProtectionNotificationSettings = (): void => {
   uni.openAppAuthorizeSetting({
-    fail: () => { uni.showToast({ title: '请在系统设置中找到 To Know，打开允许通知。', icon: 'none' }) }
+    fail: () => { uni.showToast({ title: '请在系统设置中找到 Potato，打开允许通知。', icon: 'none' }) }
   })
 }
 

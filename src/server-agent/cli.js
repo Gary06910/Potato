@@ -225,7 +225,7 @@ async function runShell(subcommand, args, argv) {
 async function run(argv = process.argv.slice(2), deps = {}) {
   if (isVersionRequest(argv)) {
     const version = readServerAgentVersion();
-    process.stdout.write(`To Know Server Agent ${version}\n`);
+    process.stdout.write(`Potato Server Agent ${version}\n`);
     return version;
   }
 

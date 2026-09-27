@@ -2,9 +2,9 @@
    <a href="./README.md">EN</a> | <a href="./README.zh-CN.md">简</a> | <strong>繁</strong>
 </p>
 
-# To Know Hub — Cloudflare Worker
+# Potato Hub — Cloudflare Worker
 
-> 屬於 **[To Know](https://github.com/Gary06910/ToKnow)**，專案部分源自 **[Javis603/token-monitor](https://github.com/Javis603/token-monitor)**。這個目錄只是 Cloudflare Worker hub；桌面小工具、無頭 agent 和完整文件都在主倉庫。一鍵部署會建立一份獨立副本，不會自動更新，所以請回主倉庫查看新版本。
+> 屬於 **[Potato](https://github.com/Gary06910/Potato)**，專案部分源自 **[Javis603/token-monitor](https://github.com/Javis603/token-monitor)**。這個目錄只是 Cloudflare Worker hub；桌面小工具、無頭 agent 和完整文件都在主倉庫。一鍵部署會建立一份獨立副本，不會自動更新，所以請回主倉庫查看新版本。
 
 自架 Node hub 的即插即用替代品，以 Cloudflare Worker 部署，用 Durable Object 保存裝置狀態。它講的是同一套 HTTP 協定（`/api/ingest`、`/api/stats`、`/api/stats/stream`），所以小工具和 agent 無需改動即可使用，只是 Hub URL 不同。
 

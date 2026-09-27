@@ -15,8 +15,8 @@ function loginError(code, message) {
 function callbackPage(ok) {
   const title = ok ? 'Sign-in received' : 'Antigravity sign-in failed';
   const detail = ok
-    ? 'Return to To Know to finish connecting this account.'
-    : 'Return to To Know for details.';
+    ? 'Return to Potato to finish connecting this account.'
+    : 'Return to Potato for details.';
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title><body style="font:16px system-ui;padding:40px;max-width:560px;margin:auto"><h1>${title}</h1><p>${detail}</p></body></html>`;
 }
 
@@ -28,7 +28,7 @@ async function runAntigravityOAuthLogin(options = {}) {
   if (!client) {
     throw loginError(
       'OAUTH_CLIENT_NOT_FOUND',
-      'Antigravity OAuth is unavailable in this build. Update To Know or configure ANTIGRAVITY_OAUTH_CLIENT_ID and ANTIGRAVITY_OAUTH_CLIENT_SECRET.'
+      'Antigravity OAuth is unavailable in this build. Update Potato or configure ANTIGRAVITY_OAUTH_CLIENT_ID and ANTIGRAVITY_OAUTH_CLIENT_SECRET.'
     );
   }
   if (typeof options.openExternal !== 'function') throw new TypeError('openExternal is required');

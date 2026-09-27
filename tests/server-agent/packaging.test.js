@@ -214,7 +214,7 @@ test('version flag is local metadata only and does not enter the collector path'
     env: { ...process.env, CODEX_HOME: path.join(os.tmpdir(), 'missing-toknow-version-codex-home') }
   });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout.trim(), 'To Know Server Agent 1.0.0');
+  assert.equal(result.stdout.trim(), 'Potato Server Agent 1.0.0');
   assert.equal(result.stderr, '');
 });
 

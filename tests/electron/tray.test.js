@@ -426,7 +426,7 @@ test('tray context menu complements the primary click with useful commands', () 
   });
 
   assert.deepEqual(template.map((item) => item.label || item.type), [
-    'Refresh Now', 'Open View', 'separator', 'Tray Display', 'Window Presentation', 'separator', 'Version 0.27.0', 'Settings…', 'Quit To Know'
+    'Refresh Now', 'Open View', 'separator', 'Tray Display', 'Window Presentation', 'separator', 'Version 0.27.0', 'Settings…', 'Quit Potato'
   ]);
   assert.equal(template.some((item) => item.label === 'Show / Hide'), false);
   assert.equal(template[3].submenu.find((item) => item.label === 'Today Tokens + Cost').checked, true);
@@ -463,7 +463,7 @@ test('tray context menu uses the selected locale for every visible level', () =>
   });
 
   assert.deepEqual(template.map((item) => item.label || item.type), [
-    '立即重新整理', '開啟頁面', 'separator', '托盤顯示', '視窗呈現方式', 'separator', '版本 0.27.0', '設定…', '結束 To Know'
+    '立即重新整理', '開啟頁面', 'separator', '托盤顯示', '視窗呈現方式', 'separator', '版本 0.27.0', '設定…', '結束 Potato'
   ]);
   assert.equal(template[1].submenu[0].label, '主頁');
   assert.equal(template[3].submenu[0].label, '今日 Tokens');
@@ -483,7 +483,7 @@ test('tray context menu shows the macOS Quit shortcut on macOS only', () => {
     platform: 'darwin'
   });
   const quit = darwin.at(-1);
-  assert.equal(quit.label, 'Quit To Know');
+  assert.equal(quit.label, 'Quit Potato');
   assert.equal(quit.accelerator, 'Command+Q');
   // Scoped to macOS because that is where the shortcut is worth echoing, not
   // because a menu accelerator elsewhere would be unsafe: menu accelerators are

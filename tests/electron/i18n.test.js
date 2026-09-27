@@ -134,11 +134,11 @@ test('Hub deployment copy describes the whole build instead of only its shared c
   );
   assert.equal(
     translate('en', 'settings.sync.hubBuild.remoteNewer', { target: 'Worker' }),
-    'This Worker was deployed by a newer version of To Know'
+    'This Worker was deployed by a newer version of Potato'
   );
   assert.equal(
     translate('zh-TW', 'settings.sync.hubBuild.remoteNewer', { target: 'Worker' }),
-    '此 Worker 由較新的 To Know 版本部署'
+    '此 Worker 由較新的 Potato 版本部署'
   );
   for (const locale of Object.keys(MESSAGES)) {
     assert.doesNotMatch(MESSAGES[locale]['settings.sync.hubBuild.current'], /core|核心|코어|コア/i, locale);
@@ -149,7 +149,7 @@ test('Hub deployment copy describes the whole build instead of only its shared c
       /redeploy|重新部署|재배포|再デプロイ/i,
       locale
     );
-    assert.match(MESSAGES[locale]['settings.sync.hubBuild.remoteNewer'], /To Know/, locale);
+    assert.match(MESSAGES[locale]['settings.sync.hubBuild.remoteNewer'], /Potato/, locale);
   }
 });
 

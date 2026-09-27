@@ -1,4 +1,4 @@
-# To Know Android API contract — Phase 2
+# Potato Android API contract — Phase 2
 
 ## Scope and authentication
 
@@ -137,7 +137,7 @@ Error responses contain only `{ error: { code, message }, requestId }`. They do 
 
 ## Notification boundary
 
-The Android client never sends a CID to a To Know business method. After the
+The Android client never sends a CID to a Potato business method. After the
 authenticated official uni-id session is current, the current privacy version
 is accepted, and the user has explicitly enabled the notification path, the
 client obtains the runtime CID from uni-push 2.0 and binds it through the
@@ -165,7 +165,7 @@ authenticate Desktop
 ```
 
 Eligibility requires the authenticated task owner, `tokenm-users.notificationsEnabled`,
-current To Know privacy consent, an active business device with
+current Potato privacy consent, an active business device with
 `pushRegistrationStatus: ready` and `notificationPermissionState: authorized`,
 an Android platform identity, and a current non-empty CID in official
 `uni-id-device`. All initial eligible devices are selected, duplicate CIDs are
@@ -176,7 +176,7 @@ Desktop event acceptance result.
 
 The sole Phase 2 provider path is DCloud uni-push 2.0 through the uniCloud
 push manager (`uniCloud.getPushManager({ appId }).sendMessage(...)`). The
-minimal request uses `platform: "app-android"`, `title: "To Know"`, body
+minimal request uses `platform: "app-android"`, `title: "Potato"`, body
 `"任务完成"` or `"任务完成 · <电脑名>"`, `force_notification: true`, and the
 safe data payload `{ "taskId": "<task id>" }`. It never includes prompt,
 reply, cwd, terminal output, source, conversation, credential, token, or task

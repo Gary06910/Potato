@@ -61,7 +61,7 @@ cannot consume the cloud function's entire ten-second request window.
 
 The only provider is DCloud uni-push 2.0 through
 `uniCloud.getPushManager({ appId: "__UNI__46C9063" }).sendMessage(...)`. The
-minimal notification uses title `To Know`, body `任务完成` optionally followed
+minimal notification uses title `Potato`, body `任务完成` optionally followed
 by the safe computer name, `force_notification: true`, and data
 `{ taskId }` only. Prompt, reply, cwd, terminal output, source, conversation,
 credential, token, task正文, and summary content are forbidden. Provider
