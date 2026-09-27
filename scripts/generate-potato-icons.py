@@ -52,7 +52,13 @@ master = Image.new("RGBA", (1024, 1024))
 rounded_tile = Image.new("RGBA", master.size)
 ImageDraw.Draw(rounded_tile).rounded_rectangle((0, 0, 1023, 1023), radius=180, fill=TILE)
 master.alpha_composite(rounded_tile)
-master.alpha_composite(cutout.resize(master.size, RESAMPLING))
+# The reference icon leaves roughly half the tile's width clear around the
+# character: the colored body is about 41% of the tile rather than 65%.
+portrait_size = 640
+master.alpha_composite(
+    cutout.resize((portrait_size, portrait_size), RESAMPLING),
+    ((1024 - portrait_size) // 2, (1024 - portrait_size) // 2),
+)
 master.save(ROOT / "assets/icon-win.png", optimize=True)
 master.resize((256, 256), RESAMPLING).save(
     ROOT / "assets/icon-win.ico",
@@ -70,7 +76,7 @@ for density, size in (("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 144), ("xxxhdpi", 
 # mask, whether a launcher chooses a circle or a rounded square.
 foreground = Image.new("RGBA", (432, 432))
 figure = cutout.crop((60, 45, 455, 495))
-figure.thumbnail((280, 288), RESAMPLING)
+figure.thumbnail((224, 230), RESAMPLING)
 foreground.alpha_composite(figure, ((432 - figure.width) // 2, (432 - figure.height) // 2))
 drawable = android / "nativeResources/android/res/drawable"
 drawable.mkdir(parents=True, exist_ok=True)
