@@ -412,6 +412,7 @@ function createServerAgentSupervisor(options = {}, deps = {}) {
         if (!isActiveLifecycle()) break;
         spawnWorker(profile);
       }
+      if (isActiveLifecycle()) options.onMinimalReady?.({ notification: clone(notificationStatus) });
       await waitForStart();
       if (lifecycle === 'starting') lifecycle = 'running';
       return getDiagnostics();

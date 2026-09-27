@@ -35,7 +35,7 @@ function createVerifierFixture({ omitNodeModules = false } = {}) {
   fs.mkdirSync(path.join(packageRoot, 'systemd'), { recursive: true });
   fs.mkdirSync(path.join(packageRoot, 'supervisord'), { recursive: true });
   fs.mkdirSync(path.join(packageRoot, 'container'), { recursive: true });
-  for (const file of ['serviceDetection.js', 'serviceInstaller.js']) {
+  for (const file of ['serviceDetection.js', 'serviceInstaller.js', 'instance.js', 'shellBootstrap.js']) {
     fs.copyFileSync(path.join(root, 'src', 'server-agent', file), path.join(packageRoot, 'app', 'src', 'server-agent', file));
   }
   if (!omitNodeModules) fs.mkdirSync(path.join(packageRoot, 'app', 'node_modules'), { recursive: true });

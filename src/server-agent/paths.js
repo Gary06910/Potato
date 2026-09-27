@@ -73,6 +73,10 @@ function createServerAgentPaths(options = {}) {
     notificationRuntimePath: path.join(notificationRoot, 'hook-runtime.json'),
     notificationOutboxPath,
     supervisorPidPath: path.join(stateRoot, 'server-agent.pid'),
+    agentLockPath: path.join(stateRoot, 'server-agent.lock'),
+    agentReadyPath: path.join(stateRoot, 'server-agent.ready.json'),
+    agentReaperPath: path.join(stateRoot, 'server-agent.reaper.lock'),
+    agentLaunchPath: path.join(stateRoot, 'server-agent.launch.lock'),
     profileStateDir,
     profilePaths
   });

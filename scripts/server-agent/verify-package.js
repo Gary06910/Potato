@@ -12,6 +12,8 @@ const REQUIRED_PATHS = Object.freeze([
   'app/src/server-agent',
   'app/src/server-agent/serviceDetection.js',
   'app/src/server-agent/serviceInstaller.js',
+  'app/src/server-agent/instance.js',
+  'app/src/server-agent/shellBootstrap.js',
   'app/src/shared',
   'app/node_modules',
   'app/package.json',

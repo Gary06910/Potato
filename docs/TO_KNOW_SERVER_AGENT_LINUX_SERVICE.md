@@ -12,6 +12,7 @@ service backend owns only the top-level runtime process.
 | `supervisord` | SUPPORTED |
 | `container-external` | SUPPORTED |
 | Foreground (`none`) | SUPPORTED_MANUAL_ONLY |
+| Bash launcher shim | SUPPORTED_ON_DEMAND |
 | systemd-system | NOT_YET_FORMAL |
 | openrc | NOT_YET_FORMAL |
 | runit | NOT_YET_FORMAL |
@@ -162,6 +163,50 @@ When no manager backend is available, run the stable launcher manually:
 This is foreground operation only: `AUTO_RESTART: NO` and
 `PRODUCTION_DAEMON: NOT_CONFIGURED`. `tmux`, `screen`, and `nohup` are not
 formal service backends.
+
+## On-demand Codex bootstrap (bash)
+
+The always-on choices above are `systemd-user`, `supervisord`, or an external
+orchestrator. The shell shim is a separate on-demand adapter. It starts the
+Agent when a registered Codex launcher is first used; it does not start an
+Agent immediately after a new Pod/container appears before a launcher runs.
+`service detect` can still recommend `container-external` when the shim is
+enabled; the shim is not an always-on external orchestrator.
+
+Register only real launcher names, from a shell whose PATH already finds the
+original executables:
+
+```sh
+~/.local/bin/toknow-agent shell install \
+  --command codex --command codex-srj --command codex-plus
+exec bash
+~/.local/bin/toknow-agent shell status
+```
+
+The installer creates managed shims under
+`~/.local/share/toknow-agent/shims`, a bootstrap file under
+`~/.config/toknow-agent/shell`, and one marked block in `~/.bashrc`.
+The new shell prepends the shim directory once. Each shim calls
+`toknow-agent ensure --quiet`, removes its own directory from PATH, then
+`exec`s the first original executable with its arguments and terminal streams.
+An Agent error prints one short warning and still starts Codex. No shim
+changes `CODEX_HOME`, profile mapping, or the Stop Hook command. The original
+launcher remains untouched and follows its normal version upgrades.
+
+To add a launcher later, use `shell add --command NAME`. Remove a launcher
+with `shell remove --command NAME`; each remove targets one explicit shim file.
+When the last command is removed, the managed `.bashrc` block and bootstrap
+files are removed too. `shell uninstall` is a shorthand when exactly one
+registered launcher remains; with multiple registrations, remove each name
+explicitly. A damaged marker or modified managed shim fails closed.
+
+`toknow-agent ensure` also works without notification credentials. A running
+usage-only Agent is ready without a notification bridge. When notification is
+configured, readiness requires the local authenticated `/health` response.
+Multiple terminals share one top-level Agent per state root. The detached
+Agent continues after the launching terminal or Codex exits. A later Codex
+invocation recovers it after a container restart or Agent crash; this adapter
+does not add a watchdog.
 
 Service logs and detection output must remain privacy-safe. Do not include
 credentials, `Authorization`, `ownerId`, CID values, `CODEX_HOME`, prompts, or

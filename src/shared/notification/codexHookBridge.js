@@ -36,6 +36,12 @@ function createCodexHookBridge({ host = '127.0.0.1', port = 0, token, onCompleti
     const supplied = request.headers['x-token-m-bridge-token']
       || String(request.headers.authorization || '').replace(/^Bearer\s+/i, '');
     const profileId = headerValue(request.headers['x-to-know-profile-id']);
+    if (request.method === 'GET' && request.url === '/health') {
+      request.resume();
+      if (!tokenMatches(supplied, token)) respond(response, 401, { error: 'unauthorized' });
+      else respond(response, 200, { ready: true });
+      return;
+    }
     if (request.method !== 'POST' || request.url !== '/codex/stop') {
       request.resume();
       respond(response, 404, { error: 'not_found' });

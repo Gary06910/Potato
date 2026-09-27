@@ -10,6 +10,8 @@ const { loadServerCredential } = require('./notificationRuntime');
 const { serverHookCommand, stableLauncherPath } = require('./hooks');
 const { createServerAgentPaths } = require('./paths');
 const { detectServiceEnvironment } = require('./serviceDetection');
+const instance = require('./instance');
+const shellBootstrap = require('./shellBootstrap');
 
 function packageJsonPath() {
   return path.join(__dirname, '..', '..', 'package.json');
@@ -173,6 +175,53 @@ async function runHookFailOpen(args) {
   return undefined;
 }
 
+async function runEnsure(args, deps = {}) {
+  const paths = pathsForArgs(args);
+  configForArgs(args, paths);
+  const forwarded = [];
+  for (const [key, names] of Object.entries({
+    root: ['root'], config: ['config'], 'config-root': ['configRoot', 'config-root'],
+    'data-root': ['dataRoot', 'data-root'], 'state-root': ['stateRoot', 'state-root']
+  })) {
+    const value = optionValue(args, ...names);
+    if (value !== undefined) forwarded.push(`--${key}=${value}`);
+  }
+  const result = await (deps.ensure || instance.ensure)(paths, forwarded);
+  if (!args.quiet) process.stdout.write(`READY / ${result.result}\n`);
+  return result;
+}
+
+function commandOptions(argv) {
+  const result = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === '--command') {
+      if (!argv[index + 1] || argv[index + 1].startsWith('--')) throw commandError('missing_launcher_name');
+      result.push(argv[++index]);
+    } else if (argv[index].startsWith('--command=')) result.push(argv[index].slice('--command='.length));
+  }
+  return result;
+}
+
+async function runShell(subcommand, args, argv) {
+  const paths = pathsForArgs(args);
+  const commands = commandOptions(argv);
+  if (subcommand === 'install' || subcommand === 'add') {
+    return writeJson(shellBootstrap.install({ paths, commands, launcher: launcherForArgs(args) }));
+  }
+  if (subcommand === 'remove') {
+    if (commands.length !== 1) throw commandError('remove_one_launcher_at_a_time');
+    return writeJson(shellBootstrap.remove({ paths, command: commands[0] }));
+  }
+  if (subcommand === 'uninstall') {
+    const current = await shellBootstrap.status({ paths });
+    if (current.commands.length > 1) throw commandError('remove_commands_individually');
+    if (!current.commands.length) return writeJson(current);
+    return writeJson(shellBootstrap.remove({ paths, command: current.commands[0] }));
+  }
+  if (subcommand === 'status') return writeJson(await shellBootstrap.status({ paths }));
+  throw commandError('unknown_shell_command');
+}
+
 async function run(argv = process.argv.slice(2), deps = {}) {
   if (isVersionRequest(argv)) {
     const version = readServerAgentVersion();
@@ -186,20 +235,48 @@ async function run(argv = process.argv.slice(2), deps = {}) {
   if (command === 'hook') return runHookFailOpen(args);
   if (command === 'hooks') return runHooks(positional[1], args);
   if (command === 'service') return runService(positional[1], args, deps);
+  if (command === 'ensure') return runEnsure(args, deps);
+  if (command === 'shell') return runShell(positional[1], args, argv);
   if (!['run', 'once'].includes(command)) throw commandError('unknown_server_agent_command');
   const paths = pathsForArgs(args);
   const { config } = configForArgs(args, paths);
+  const owner = (deps.acquire || instance.acquire)(paths);
+  const release = () => (deps.release || instance.release)(paths, owner);
+  let released = false;
+  const cleanup = () => { if (!released) { released = true; release(); } };
+  process.once('exit', cleanup);
   const createServerAgentSupervisor = deps.createServerAgentSupervisor
     || require('./supervisor').createServerAgentSupervisor;
-  const supervisor = createServerAgentSupervisor({
-    config,
-    paths,
-    once: command === 'once',
-    agentVersion: args.agentVersion,
-    watchEnabled: args.watch === '0' ? false : undefined
-  });
-
-  await supervisor.start();
+  let supervisor;
+  let stop;
+  try {
+    supervisor = createServerAgentSupervisor({
+      config,
+      paths,
+      once: command === 'once',
+      agentVersion: args.agentVersion,
+      watchEnabled: args.watch === '0' ? false : undefined,
+      onMinimalReady: command === 'run'
+        ? ({ notification }) => instance.markReady(paths, owner, notification)
+        : undefined
+    });
+    if (command === 'run') {
+      stop = () => { void supervisor.stop().catch((cause) => {
+        process.stderr.write(`server-agent failed: ${safeCode(cause)}\n`);
+      }).finally(() => {
+        cleanup();
+        process.removeListener('exit', cleanup);
+      }); };
+      for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.once(signal, stop);
+    }
+    await supervisor.start();
+  } catch (cause) {
+    try { await supervisor?.stop(); } catch (_) {}
+    cleanup();
+    process.removeListener('exit', cleanup);
+    if (stop) for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.removeListener(signal, stop);
+    throw cause;
+  }
   if (command === 'once') {
     try {
       await supervisor.waitForSnapshots();
@@ -208,11 +285,11 @@ async function run(argv = process.argv.slice(2), deps = {}) {
       return snapshots;
     } finally {
       await supervisor.stop();
+      cleanup();
+      process.removeListener('exit', cleanup);
     }
   }
 
-  const stop = () => { void supervisor.stop(); };
-  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.once(signal, stop);
   return supervisor;
 }
 
