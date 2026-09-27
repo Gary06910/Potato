@@ -57,7 +57,7 @@ function readBoundedStdin() {
 
 function readRuntime(filePath) {
   const value = JSON.parse(readRegularFileNoFollow(filePath, {
-    description: 'To Know notification runtime',
+    description: 'Potato notification runtime',
     encoding: 'utf8',
     maxBytes: MAX_RUNTIME_BYTES,
     mode: 0o600

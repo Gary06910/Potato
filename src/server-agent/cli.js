@@ -26,6 +26,14 @@ function isVersionRequest(argv) {
   return argv.includes('--version') || argv.includes('-v');
 }
 
+function isHelpRequest(argv) {
+  return argv.includes('--help') || argv.includes('-h');
+}
+
+function writeHelp() {
+  process.stdout.write(`Potato Server Agent\n\nUsage: toknow-agent <command> [options]\n\nCommands:\n  run       Start the Server Agent\n  once      Collect one snapshot and exit\n  ensure    Ensure the Server Agent is running\n  service   Detect service environment\n  shell     Manage shell launchers\n  hooks     Manage Codex Stop hooks\n  hook      Forward a Codex Stop hook\n\nOptions:\n  --help, -h     Show this help\n  --version, -v  Show the version\n`);
+}
+
 function safeCode(error, fallback = 'server_agent_failed') {
   const code = String(error?.code || fallback);
   return /^[A-Za-z0-9_.-]{1,80}$/.test(code) ? code : fallback;
@@ -227,6 +235,11 @@ async function run(argv = process.argv.slice(2), deps = {}) {
     const version = readServerAgentVersion();
     process.stdout.write(`Potato Server Agent ${version}\n`);
     return version;
+  }
+
+  if (isHelpRequest(argv)) {
+    writeHelp();
+    return undefined;
   }
 
   const args = parseArgs(argv);

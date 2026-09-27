@@ -92,7 +92,7 @@ function createServerAgentSupervisor(options = {}, deps = {}) {
       TOKEN_MONITOR_LIMITS_ENABLED: '0',
       TO_KNOW_PROFILE_ID: profile.id,
       TO_KNOW_PROFILE_NAME: profile.name,
-      TO_KNOW_DEVICE_NAME: safeEnvValue(config.deviceName, 'To Know Server'),
+      TO_KNOW_DEVICE_NAME: safeEnvValue(config.deviceName, 'Potato Server'),
       TO_KNOW_AGENT_VERSION: safeEnvValue(options.agentVersion || process.env.npm_package_version, '1.0.0'),
       TO_KNOW_SERVER_AGENT_ONCE: options.once === true ? '1' : '0',
       TO_KNOW_WATCH_ENABLED: options.watchEnabled === false ? '0' : '1',

@@ -29,6 +29,13 @@ function validConfig(overrides = {}) {
   };
 }
 
+test('new device labels default to Potato Server while explicit saved names remain unchanged', () => {
+  const { deviceName, ...withoutDeviceName } = validConfig();
+  assert.equal(parseServerAgentConfig(withoutDeviceName).deviceName, 'Potato Server');
+  assert.equal(parseServerAgentConfig(validConfig()).deviceName, deviceName);
+  assert.equal(parseServerAgentConfig(validConfig({ deviceName: 'My Server' })).deviceName, 'My Server');
+});
+
 test('config v1 accepts enabled profiles and ignores unrecognized secret-shaped fields', () => {
   const config = parseServerAgentConfig({
     ...validConfig(),

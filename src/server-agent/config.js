@@ -77,7 +77,7 @@ function parseServerAgentConfig(value, options = {}) {
   }
 
   const deviceName = value.deviceName === undefined
-    ? 'To Know Server'
+    ? 'Potato Server'
     : boundedSingleLine(value.deviceName, 'deviceName', MAX_DEVICE_NAME_LENGTH);
   const endpoint = value.endpoint === undefined
     ? undefined

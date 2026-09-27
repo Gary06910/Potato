@@ -9,6 +9,7 @@ const { spawnSync } = require('node:child_process');
 const test = require('node:test');
 
 const { createServerAgentPaths } = require('../../src/server-agent/paths');
+const { readRuntime } = require('../../src/shared/notification/codexHookForwarder');
 const { writePrivateJsonAtomic } = require('../../src/shared/credentialStore');
 
 const root = path.resolve(__dirname, '..', '..');
@@ -77,6 +78,43 @@ function runCli(args, input = '') {
 function rootArgs(rootPath, launcher = '/home/user/.local/bin/toknow-agent') {
   return ['--root', rootPath, '--launcher', launcher];
 }
+
+test('help and version are informational with valid, missing, malformed, or invalid runtime config', (t) => {
+  const { rootPath, paths } = fixture(t);
+  for (const configState of ['valid', 'missing', 'malformed', 'invalid']) {
+    if (configState === 'missing') fs.unlinkSync(paths.configFile);
+    if (configState === 'malformed') fs.writeFileSync(paths.configFile, '{invalid-json', 'utf8');
+    if (configState === 'invalid') fs.writeFileSync(paths.configFile, '{"version":2,"profiles":[]}', 'utf8');
+    const before = fs.readdirSync(rootPath, { recursive: true }).sort();
+    for (const flag of ['--help', '--version']) {
+      const result = runCli([flag, '--root', rootPath]);
+      assert.equal(result.status, 0, `${configState} ${flag}: ${result.stderr}`);
+      assert.equal(result.stderr, '');
+      assert.match(result.stdout, /Potato Server Agent/);
+      if (flag === '--help') assert.match(result.stdout, /toknow-agent <command>/);
+      else assert.equal(result.stdout.trim(), 'Potato Server Agent 1.0.0');
+      assert.deepEqual(fs.readdirSync(rootPath, { recursive: true }).sort(), before);
+      assert.equal(fs.existsSync(paths.agentLockPath), false);
+      assert.equal(fs.existsSync(paths.supervisorPidPath), false);
+      assert.equal(fs.existsSync(paths.profilesRoot), false);
+    }
+  }
+});
+
+test('once still rejects malformed runtime config before starting an Agent', (t) => {
+  const { rootPath, paths } = fixture(t);
+  fs.writeFileSync(paths.configFile, '{invalid-json', 'utf8');
+  const result = runCli(['once', '--root', rootPath]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /config-read-failed/);
+  assert.equal(fs.existsSync(paths.agentLockPath), false);
+  assert.equal(fs.existsSync(paths.supervisorPidPath), false);
+});
+
+test('notification runtime file diagnostics use the Potato description', (t) => {
+  const { paths } = fixture(t);
+  assert.throws(() => readRuntime(paths.configRoot), /Potato notification runtime must be a regular file/);
+});
 
 test('service detect CLI emits backend availability and a safe runtime contract', () => {
   const result = runCli(['service', 'detect']);
