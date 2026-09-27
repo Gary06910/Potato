@@ -225,9 +225,9 @@ body.is-windows.floating-bubble-collapsed-right .floating-bubble-tab {
 }
 .app-title-mark {
   display: none;
-  width: 17px;
-  height: 17px;
-  flex: 0 0 17px;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
   align-self: center;
   color: var(--text);
 }
