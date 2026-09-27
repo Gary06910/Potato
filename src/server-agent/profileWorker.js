@@ -44,7 +44,7 @@ function defaultDeviceRuntimeFactory() {
   return require('../shared/deviceRuntime').createDeviceRuntime;
 }
 
-function sendIpc(message, send = (value) => process.send?.(value)) {
+function sendIpc(message, send = (value) => process.send?.(value, () => {})) {
   if (!validateWorkerMessage(message) && message.type !== MESSAGE_TYPES.STOP) {
     throw new TypeError(`invalid server-agent IPC message: ${String(message?.type || '')}`);
   }
@@ -222,7 +222,7 @@ if (require.main === module) {
     }
   });
   process.on('disconnect', () => {
-    if (!worker.getSnapshotPublished()) void worker.stop();
+    void worker.stop();
   });
   worker.start();
 }
