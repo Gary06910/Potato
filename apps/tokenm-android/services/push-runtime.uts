@@ -12,21 +12,89 @@ const TASK_NOTIFICATION_CHANNEL_ID = 'DcloudChannelID'
 let listenerRegistered = false
 let navigationReady = false
 let notificationIconBindingAttempted = false
-let notificationIconsBound = false
+
+export type PushIconDiagnostics = {
+  sdkVersion: string
+  packageName: string
+  pushSmallResourceId: number
+  pushResourceId: number
+  autoBindingState: string
+  lastBindingResult: string
+  lastBindingSource: string
+  lastBindingErrorCategory: string
+}
+
+let iconDiagnostics: PushIconDiagnostics = {
+  sdkVersion: 'unavailable',
+  packageName: 'unavailable',
+  pushSmallResourceId: 0,
+  pushResourceId: 0,
+  autoBindingState: 'not_attempted',
+  lastBindingResult: 'not_attempted',
+  lastBindingSource: 'none',
+  lastBindingErrorCategory: 'none'
+}
+
+export const getGetuiNotificationIconDiagnostics = (): PushIconDiagnostics => {
+  // #ifdef APP-ANDROID
+  try {
+    const context = UTSAndroid.getAppContext()
+    if (context != null) {
+      const packageName = context.getPackageName()
+      const resources = context.getResources()
+      iconDiagnostics.packageName = packageName
+      iconDiagnostics.pushSmallResourceId = resources.getIdentifier('push_small', 'drawable', packageName)
+      iconDiagnostics.pushResourceId = resources.getIdentifier('push', 'drawable', packageName)
+      iconDiagnostics.sdkVersion = PushManager.getInstance().getVersion(context)
+    }
+  } catch (_error) {
+    // Metadata lookup must not interrupt notification delivery.
+  }
+  // #endif
+  return {
+    sdkVersion: iconDiagnostics.sdkVersion,
+    packageName: iconDiagnostics.packageName,
+    pushSmallResourceId: iconDiagnostics.pushSmallResourceId,
+    pushResourceId: iconDiagnostics.pushResourceId,
+    autoBindingState: iconDiagnostics.autoBindingState,
+    lastBindingResult: iconDiagnostics.lastBindingResult,
+    lastBindingSource: iconDiagnostics.lastBindingSource,
+    lastBindingErrorCategory: iconDiagnostics.lastBindingErrorCategory
+  }
+}
+
+const attemptGetuiNotificationIconBinding = (source: string): PushIconDiagnostics => {
+  // #ifdef APP-ANDROID
+  iconDiagnostics.lastBindingSource = source
+  iconDiagnostics.lastBindingErrorCategory = 'none'
+  try {
+    const context = UTSAndroid.getAppContext()
+    if (context == null) {
+      iconDiagnostics.lastBindingResult = 'false'
+    } else {
+      getGetuiNotificationIconDiagnostics()
+      iconDiagnostics.lastBindingResult = PushManager.getInstance().setNotificationIcon(context, 'push_small', 'push') ? 'success' : 'false'
+    }
+  } catch (_error) {
+    iconDiagnostics.lastBindingResult = 'exception'
+    iconDiagnostics.lastBindingErrorCategory = 'exception'
+  }
+  if (iconDiagnostics.lastBindingResult != 'success') console.warn('Getui notification icon binding failed')
+  if (source == 'auto') iconDiagnostics.autoBindingState = iconDiagnostics.lastBindingResult
+  // #endif
+  return getGetuiNotificationIconDiagnostics()
+}
 
 const bindGetuiNotificationIcons = () => {
   // #ifdef APP-ANDROID
   if (notificationIconBindingAttempted) return
   notificationIconBindingAttempted = true
-  try {
-    const context = UTSAndroid.getAppContext()
-    notificationIconsBound = context != null && PushManager.getInstance().setNotificationIcon(context, 'push_small', 'push')
-    if (!notificationIconsBound) console.warn('Getui notification icon binding failed')
-  } catch (_error) {
-    console.warn('Getui notification icon binding failed')
-  }
+  attemptGetuiNotificationIconBinding('auto')
   // #endif
 }
+
+export const rebindGetuiNotificationIconsForDiagnostics = (): PushIconDiagnostics =>
+  attemptGetuiNotificationIconBinding('manual')
 
 export const isAllowedTaskId = (taskId: string | null): boolean => {
   if (taskId == null) return false
@@ -145,7 +213,7 @@ export const requestAndroidNotificationPermission = (): Promise<void> => {
 export const startPushRuntime = () => {
   if (listenerRegistered) return
   notificationIconBindingAttempted = false
-  notificationIconsBound = false
+  iconDiagnostics.autoBindingState = 'not_attempted'
   ensureTaskNotificationChannel()
   uni.onPushMessage(pushMessageListener)
   listenerRegistered = true

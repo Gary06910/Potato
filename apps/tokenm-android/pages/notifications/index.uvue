@@ -72,6 +72,17 @@
             </view>
           </view>
           <text class="notification-help">若收不到提醒，请检查系统通知权限和手机省电设置。</text>
+          <view class="surface detail-list section icon-diagnostics">
+            <text class="setting-title">通知图标诊断</text>
+            <view class="detail-row"><text class="detail-key">Getui SDK</text><text class="detail-value">{{ iconDiagnostics.sdkVersion }}</text></view>
+            <view class="detail-row"><text class="detail-key">Android package</text><text class="detail-value">{{ iconDiagnostics.packageName }}</text></view>
+            <view class="detail-row"><text class="detail-key">push_small 资源</text><text class="detail-value">{{ resourceView(iconDiagnostics.pushSmallResourceId) }}</text></view>
+            <view class="detail-row"><text class="detail-key">push 资源</text><text class="detail-value">{{ resourceView(iconDiagnostics.pushResourceId) }}</text></view>
+            <view class="detail-row"><text class="detail-key">自动绑定</text><text class="detail-value">{{ bindingView(iconDiagnostics.autoBindingState) }}</text></view>
+            <view class="detail-row"><text class="detail-key">最近绑定</text><text class="detail-value">{{ sourceView(iconDiagnostics.lastBindingSource) }} · {{ bindingView(iconDiagnostics.lastBindingResult) }}</text></view>
+            <view class="detail-row detail-row-last"><text class="detail-key">异常类别</text><text class="detail-value">{{ iconDiagnostics.lastBindingErrorCategory }}</text></view>
+            <button class="btn btn-secondary section" :disabled="bindingIcons" @click="rebindIcons">{{ bindingIcons ? '正在绑定…' : '重新绑定通知图标' }}</button>
+          </view>
         </view>
       </view>
     </scroll-view>
@@ -99,6 +110,8 @@ import {
   presentError
 } from '../../services/presentation.uts'
 import type { NotificationSettings, RuntimeFacts, UiLoadState } from '../../types/models.uts'
+import { getGetuiNotificationIconDiagnostics, rebindGetuiNotificationIconsForDiagnostics } from '../../services/push-runtime.uts'
+import type { PushIconDiagnostics } from '../../services/push-runtime.uts'
 
 const state = ref<UiLoadState>('loading')
 const settings = ref<NotificationSettings>({
@@ -110,11 +123,29 @@ const facts = ref<RuntimeFacts>(getRuntimeFacts())
 const working = ref(false)
 const banner = ref('')
 const errorMessage = ref('')
+const iconDiagnostics = ref<PushIconDiagnostics>(getGetuiNotificationIconDiagnostics())
+const bindingIcons = ref(false)
+
+const resourceView = (id: number): string => id > 0 ? `found (${id})` : 'missing'
+const bindingView = (state: string): string => {
+  if (state == 'success') return '成功'
+  if (state == 'false') return '失败'
+  if (state == 'exception') return '异常'
+  return '未执行'
+}
+const sourceView = (source: string): string => source == 'auto' ? '自动' : source == 'manual' ? '手动' : '无'
+const rebindIcons = () => {
+  if (bindingIcons.value) return
+  bindingIcons.value = true
+  iconDiagnostics.value = rebindGetuiNotificationIconsForDiagnostics()
+  bindingIcons.value = false
+}
 
 const runLoad = async (keepExisting: boolean) => {
   if (!keepExisting) state.value = 'loading'
   try {
     facts.value = await bootstrapClientRuntime()
+    iconDiagnostics.value = getGetuiNotificationIconDiagnostics()
     if (facts.value.login != 'signedIn') {
       uni.reLaunch({ url: '/pages/login/index' })
       return
@@ -201,6 +232,7 @@ const retryRegistration = () => {
 }
 
 onShow(() => {
+  iconDiagnostics.value = getGetuiNotificationIconDiagnostics()
   refresh()
 })
 </script>
@@ -215,4 +247,5 @@ onShow(() => {
 .setting-detail { margin-top: 2px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
 .detail-row-last { border-bottom-width: 0; }
 .notification-help { margin-top: 12px; color: $tm-text-3; font-size: 12px; line-height: 19px; }
+.icon-diagnostics { margin-top: 24px; opacity: 0.85; }
 </style>

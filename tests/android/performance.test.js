@@ -71,8 +71,15 @@ function environment() {
     Promise,
     Date: class extends Date { static now() { return env.now; } },
     console: { info: (...args) => env.logs.push(args), warn: (...args) => env.logs.push(args) },
-    UTSAndroid: { getAppContext: () => ({}) },
-    PushManager: { getInstance: () => ({ setNotificationIcon: (_context, small, large) => {
+    UTSAndroid: { getAppContext: () => ({
+      getPackageName: () => 'com.gary.tokenm',
+      getResources: () => ({ getIdentifier: (name, type, packageName) => {
+        assert.equal(type, 'drawable');
+        assert.equal(packageName, 'com.gary.tokenm');
+        return name === 'push_small' ? 101 : name === 'push' ? 102 : 0;
+      } })
+    }) },
+    PushManager: { getInstance: () => ({ getVersion: () => '3.test', setNotificationIcon: (_context, small, large) => {
       env.iconBindings.push([small, large]);
       return env.iconBindingSucceeds;
     } }) },
@@ -451,6 +458,12 @@ test('Getui icons bind after CID success once per push runtime and report failur
   assert.equal(env.iconBindings.length, 0);
   assert.equal(await push.getOfficialPushClientId(), 'test-cid');
   assert.deepEqual(env.iconBindings, [['push_small', 'push']]);
+  assert.deepEqual({ ...push.getGetuiNotificationIconDiagnostics() }, {
+    sdkVersion: '3.test', packageName: 'com.gary.tokenm',
+    pushSmallResourceId: 101, pushResourceId: 102,
+    autoBindingState: 'success', lastBindingResult: 'success',
+    lastBindingSource: 'auto', lastBindingErrorCategory: 'none'
+  });
   await push.getOfficialPushClientId();
   assert.equal(env.iconBindings.length, 1);
 
@@ -460,6 +473,14 @@ test('Getui icons bind after CID success once per push runtime and report failur
   await push.getOfficialPushClientId();
   assert.equal(env.iconBindings.length, 2);
   assert.deepEqual(env.logs.at(-1), ['Getui notification icon binding failed']);
+  assert.equal(push.getGetuiNotificationIconDiagnostics().autoBindingState, 'false');
+  env.iconBindingSucceeds = true;
+  const manual = push.rebindGetuiNotificationIconsForDiagnostics();
+  assert.equal(env.iconBindings.length, 3);
+  assert.equal(manual.autoBindingState, 'false');
+  assert.equal(manual.lastBindingResult, 'success');
+  assert.equal(manual.lastBindingSource, 'manual');
+  assert.equal(env.pushRegistrations, 0);
 });
 
 test('event arriving during a read keeps the result stale for the next entry', async () => {
