@@ -1,0 +1,137 @@
+// Read only package and drawable metadata for the installed Android app.
+// #ifdef APP-ANDROID
+import Build from 'android.os.Build'
+import Resources from 'android.content.res.Resources'
+import Drawable from 'android.graphics.drawable.Drawable'
+import Bitmap from 'android.graphics.Bitmap'
+import Canvas from 'android.graphics.Canvas'
+import Base64 from 'android.util.Base64'
+import ByteArrayOutputStream from 'java.io.ByteArrayOutputStream'
+// #endif
+
+export type ApplicationIconResource = {
+  resourceId: number
+  resourcePackage: string
+  resourceName: string
+  previewDataUrl: string
+}
+
+export type ApplicationIconInspection = {
+  state: string
+  packageName: string
+  applicationIcon: ApplicationIconResource
+  roundIcon: ApplicationIconResource
+  roundIconState: string
+  packageManagerIconPreviewDataUrl: string
+  launcherComponent: string
+  launcherActivityIcon: ApplicationIconResource
+  launcherEffectivePreviewDataUrl: string
+  pushSmallIcon: ApplicationIconResource
+  drawableIcon: ApplicationIconResource
+}
+
+const emptyResource = (): ApplicationIconResource => ({
+  resourceId: 0, resourcePackage: 'unavailable', resourceName: 'unresolved', previewDataUrl: ''
+})
+
+const emptyInspection = (): ApplicationIconInspection => ({
+  state: 'UNAVAILABLE', packageName: 'unavailable',
+  applicationIcon: emptyResource(), roundIcon: emptyResource(), roundIconState: 'UNAVAILABLE',
+  packageManagerIconPreviewDataUrl: '', launcherComponent: 'unavailable',
+  launcherActivityIcon: emptyResource(), launcherEffectivePreviewDataUrl: '',
+  pushSmallIcon: emptyResource(), drawableIcon: emptyResource()
+})
+
+// #ifdef APP-ANDROID
+const previewDrawable = (drawable: Drawable | null): string => {
+  if (drawable == null) return ''
+  try {
+    const bitmap = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888)
+    const canvas = new Canvas(bitmap)
+    drawable.setBounds(0, 0, 48, 48)
+    drawable.draw(canvas)
+    const output = new ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+    const encoded = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+    output.close()
+    bitmap.recycle()
+    return 'data:image/png;base64,' + encoded
+  } catch (_error) {
+    return ''
+  }
+}
+
+const inspectResource = (resources: Resources, resourceId: number): ApplicationIconResource => {
+  const result = emptyResource()
+  result.resourceId = resourceId
+  if (resourceId == 0) return result
+  try {
+    result.resourcePackage = resources.getResourcePackageName(resourceId.toInt())
+    const kind = resources.getResourceTypeName(resourceId.toInt())
+    const entry = resources.getResourceEntryName(resourceId.toInt())
+    result.resourceName = result.resourcePackage + ':' + kind + '/' + entry
+    if (kind == 'drawable' || kind == 'mipmap') {
+      result.previewDataUrl = previewDrawable(resources.getDrawable(resourceId.toInt(), null))
+    }
+  } catch (_error) {
+    // Preserve the resource ID even when the installed resource cannot be resolved.
+  }
+  return result
+}
+// #endif
+
+export const inspectApplicationIcons = (): ApplicationIconInspection => {
+  const result = emptyInspection()
+  // #ifdef APP-ANDROID
+  try {
+    const context = UTSAndroid.getAppContext()
+    if (context == null) return result
+    const packageName = context.getPackageName()
+    result.packageName = packageName
+    const manager = context.getPackageManager()
+    const resources = context.getResources()
+    const applicationInfo = manager.getApplicationInfo(packageName, 0)
+
+    // ApplicationInfo.icon is the installed manifest identity selected by Android.
+    result.applicationIcon = inspectResource(resources, applicationInfo.icon)
+    result.packageManagerIconPreviewDataUrl = previewDrawable(manager.getApplicationIcon(packageName))
+
+    // roundIconRes is a hidden Android field. Reflection may be denied on a device;
+    // report that explicitly instead of treating an inaccessible value as absent.
+    if (Build.VERSION.SDK_INT < 25) {
+      result.roundIconState = 'UNSUPPORTED_API'
+    } else {
+      try {
+        const field = applicationInfo.getClass().getField('roundIconRes')
+        result.roundIcon = inspectResource(resources, field.getInt(applicationInfo))
+        result.roundIconState = result.roundIcon.resourceId > 0 ? 'FOUND' : 'NOT_SET'
+      } catch (_error) {
+        result.roundIconState = 'INACCESSIBLE'
+      }
+    }
+
+    // Resolve the component chosen by PackageManager, then read its declared icon.
+    const launchIntent = manager.getLaunchIntentForPackage(packageName)
+    if (launchIntent != null) {
+      const component = launchIntent.getComponent()
+      if (component != null) {
+        result.launcherComponent = component.flattenToString()
+        const activityInfo = manager.getActivityInfo(component, 0)
+        result.launcherActivityIcon = inspectResource(resources, activityInfo.icon)
+        result.launcherEffectivePreviewDataUrl = previewDrawable(activityInfo.loadIcon(manager))
+      }
+    }
+
+    const pushSmallId = resources.getIdentifier('push_small', 'drawable', packageName)
+    result.pushSmallIcon = inspectResource(resources, pushSmallId)
+    if (result.applicationIcon.resourceName == packageName + ':drawable/icon') {
+      const iconId = resources.getIdentifier('icon', 'drawable', packageName)
+      result.drawableIcon = inspectResource(resources, iconId)
+    }
+    result.state = 'READY'
+  } catch (_error) {
+    result.state = 'UNAVAILABLE'
+  }
+  // #endif
+  return result
+}
