@@ -14,7 +14,8 @@ test('application identity inspector resolves installed package and launcher met
   assert.match(inspector, /manager\.getApplicationInfo\(packageName, 0\)/);
   assert.match(inspector, /inspectResource\(resources, applicationInfo\.icon\)/);
   assert.match(inspector, /manager\.getApplicationIcon\(packageName\)/);
-  assert.match(inspector, /getField\('roundIconRes'\)/);
+  assert.match(inspector, /UTSAndroid\.getJavaClass\(applicationInfo\)\.getField\('roundIconRes'\)/);
+  assert.doesNotMatch(inspector, /applicationInfo\.getClass\(\)/);
   assert.match(inspector, /manager\.getLaunchIntentForPackage\(packageName\)/);
   assert.match(inspector, /manager\.getActivityInfo\(component, 0\)/);
   assert.match(inspector, /inspectResource\(resources, activityInfo\.icon\)/);

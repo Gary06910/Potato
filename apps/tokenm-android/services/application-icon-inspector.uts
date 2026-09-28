@@ -102,7 +102,7 @@ export const inspectApplicationIcons = (): ApplicationIconInspection => {
       result.roundIconState = 'UNSUPPORTED_API'
     } else {
       try {
-        const field = applicationInfo.getClass().getField('roundIconRes')
+        const field = UTSAndroid.getJavaClass(applicationInfo).getField('roundIconRes')
         result.roundIcon = inspectResource(resources, field.getInt(applicationInfo))
         result.roundIconState = result.roundIcon.resourceId > 0 ? 'FOUND' : 'NOT_SET'
       } catch (_error) {
