@@ -44,7 +44,7 @@ const emptyInspection = (): ActiveNotificationIconInspection => ({
 // #ifdef APP-ANDROID
 const previewResource = (resources: Resources, resourceId: number): string => {
   try {
-    const drawable = resources.getDrawable(resourceId, null)
+    const drawable = resources.getDrawable(resourceId.toInt(), null)
     if (drawable == null) return ''
     const bitmap = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888)
     const canvas = new Canvas(bitmap)
@@ -88,9 +88,9 @@ const inspectIcon = (context: Context, icon: Icon | null): InspectedNotification
   if (owner == null || result.resourceId == 0) return result
   try {
     const resources = owner.getResources()
-    const entry = resources.getResourceEntryName(result.resourceId)
-    const kind = resources.getResourceTypeName(result.resourceId)
-    const declaredPackage = resources.getResourcePackageName(result.resourceId)
+    const entry = resources.getResourceEntryName(result.resourceId.toInt())
+    const kind = resources.getResourceTypeName(result.resourceId.toInt())
+    const declaredPackage = resources.getResourcePackageName(result.resourceId.toInt())
     result.resourceName = declaredPackage + ':' + kind + '/' + entry
     if (kind == 'drawable' || kind == 'mipmap') {
       result.previewDataUrl = previewResource(resources, result.resourceId)
@@ -126,7 +126,7 @@ export const inspectActiveNotificationIcons = (): ActiveNotificationIconInspecti
       result.state = 'UNAVAILABLE'
       return result
     }
-    const active = manager.getActiveNotifications()
+    const active = Array.fromNative(manager.getActiveNotifications())
     let latestIndex = -1
     let latestPostTime: number = -1
     for (let i = 0; i < active.length; i++) {

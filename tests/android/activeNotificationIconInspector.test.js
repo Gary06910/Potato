@@ -32,9 +32,9 @@ test('inspector reads bounded icon and channel metadata without notification con
 test('resource lookup and foreign-package resolution preserve package and ID on failure', () => {
   assert.match(inspector, /getIdentifier\('push_small', 'drawable', packageName\)/);
   assert.match(inspector, /context\.createPackageContext\(packageName, 0\)/);
-  assert.match(inspector, /resources\.getResourceEntryName\(result\.resourceId\)/);
-  assert.match(inspector, /resources\.getResourceTypeName\(result\.resourceId\)/);
-  assert.match(inspector, /resources\.getResourcePackageName\(result\.resourceId\)/);
+  assert.match(inspector, /resources\.getResourceEntryName\(result\.resourceId\.toInt\(\)\)/);
+  assert.match(inspector, /resources\.getResourceTypeName\(result\.resourceId\.toInt\(\)\)/);
+  assert.match(inspector, /resources\.getResourcePackageName\(result\.resourceId\.toInt\(\)\)/);
   assert.match(inspector, /resourceName: 'unresolved'/);
   assert.match(inspector, /result\.smallIcon\.resourcePackage == packageName &&\s+result\.smallIcon\.resourceId == result\.expectedPushSmallId \? 'YES' : 'NO'/);
   assert.doesNotMatch(inspector, /0x7f[0-9a-f]{6}/i);
@@ -47,5 +47,12 @@ test('notification settings expose manual read, comparison, and two local previe
   assert.match(page, /activeIconInspection\.matchPushSmall/);
   assert.match(page, /activeIconInspection\.expectedPreviewDataUrl/);
   assert.match(page, /activeIconInspection\.smallIcon\.previewDataUrl/);
-  assert.match(inspector, /resources\.getDrawable\(resourceId, null\)/);
+  assert.match(inspector, /resources\.getDrawable\(resourceId\.toInt\(\), null\)/);
+});
+
+test('Android native notification array is converted before UTS length and number indexes', () => {
+  assert.match(inspector, /const active = Array\.fromNative\(manager\.getActiveNotifications\(\)\)/);
+  assert.match(inspector, /i < active\.length/);
+  assert.match(inspector, /active\[i\]/);
+  assert.match(inspector, /active\[latestIndex\]/);
 });
