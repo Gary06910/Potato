@@ -41,7 +41,7 @@ const state = {
   tab: 'activity', range: '30', stackBy: 'client', mode: 'bars', flat: false,
   locale: 'en', currency: 'USD', compactTokenUnits: 'western', history: null, chartModel: null,
   chartKind: 'bars', motion: 'none', reduceMotion: 'system',
-  heatmapMetric: 'cost'
+  heatmapMetric: 'tokens'
 };
 
 const DATA_MOTION_MS = 800;
@@ -603,12 +603,12 @@ function showCandleTooltip(c, ev) {
 function showHeatTooltip(date, day, ev) {
   const tokens = day ? day.tokens : 0;
   const cost = day ? day.cost : 0;
-  const tokLabel = state.locale.startsWith('zh') ? 'Token' : 'Tokens';
-  const costLabel = state.locale.startsWith('zh') ? '花費' : 'Cost';
-  let html = `<div class="tt-head">${longDate(date)}</div>`;
-  html += `<div class="tt-row"><span class="tt-name">${tokLabel}</span><span class="tt-val">${formatCompact(tokens)}</span></div>`;
-  if (cost > 0) html += `<div class="tt-row"><span class="tt-name">${costLabel}</span><span class="tt-val">${formatCost(cost)}</span></div>`;
-  els.tooltip.innerHTML = html;
+  const costMode = state.heatmapMetric === 'cost';
+  const label = costMode ? (state.locale.startsWith('zh') ? '花費' : 'Cost')
+    : (state.locale.startsWith('zh') ? 'Token' : 'Tokens');
+  const value = costMode ? formatCost(cost) : formatCompact(tokens);
+  els.tooltip.innerHTML = `<div class="tt-head">${longDate(date)}</div>`
+    + `<div class="tt-row"><span class="tt-name">${label}</span><span class="tt-val">${value}</span></div>`;
   positionTooltip(ev);
 }
 
@@ -647,7 +647,7 @@ async function boot() {
     window.TokenMonitorCurrency.configureRates(settings.currencyRatesEffective);
   }
   state.flat = settings.dashboardFlat === true;
-  state.heatmapMetric = settings.heatmapMetric || 'cost';
+  state.heatmapMetric = settings.heatmapMetric || 'tokens';
   applyAppearance(settings);
   applyTranslations();
   populateRangeSelect();
@@ -691,7 +691,7 @@ window.tokenMonitor.onSettingsPush?.((next) => {
     applyReduceMotionPreference(reduceMotion);
     needsRender = true;
   }
-  const nextMetric = next.heatmapMetric || 'cost';
+  const nextMetric = next.heatmapMetric || 'tokens';
   if (state.heatmapMetric !== nextMetric) {
     state.heatmapMetric = nextMetric;
     needsRender = true;

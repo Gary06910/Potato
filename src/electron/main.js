@@ -509,7 +509,7 @@ function defaultSettings() {
     liveTokenRateScope: 'all',
     compactTokenUnits: 'western',
     tokenRateMode: 'speed',
-    heatmapMetric: 'cost',
+    heatmapMetric: 'tokens',
     modelRankingMetric: 'tokens',
     homeActiveDaysWindow: 'all',
     periodMonthMode: 'month',
@@ -679,10 +679,10 @@ function normalizeLiveTokenRateScope(value) {
   return value === 'device' ? 'device' : 'all';
 }
 
-function normalizeHeatmapMetric(value, fallback = 'cost') {
+function normalizeHeatmapMetric(value, fallback = 'tokens') {
   const next = String(value || '').trim();
   if (next === 'tokens' || next === 'cost') return next;
-  return fallback === 'tokens' ? 'tokens' : 'cost';
+  return fallback === 'cost' ? 'cost' : 'tokens';
 }
 
 function normalizeHomeActiveDaysWindow(value, fallback = 'all') {

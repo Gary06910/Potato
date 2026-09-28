@@ -288,26 +288,31 @@ test('an in-flight Dashboard refresh preserves a hidden invalidation for restore
   assert.equal(refreshQueued, true);
 });
 
-test('heatmap metric preserves the legacy cost default and normalizes settings', () => {
+test('heatmap defaults to tokens and preserves both selectable metrics', () => {
   const main = read('src', 'electron', 'main.js');
   const js = read('src', 'electron', 'renderer', 'dashboard.js');
   const html = read('src', 'electron', 'renderer', 'dashboard.html');
-  assert.match(main, /heatmapMetric:\s*'cost'/);
+  assert.match(main, /heatmapMetric:\s*'tokens'/);
   assert.match(main, /merged\.heatmapMetric = normalizeHeatmapMetric\(merged\.heatmapMetric\)/);
   assert.match(main, /normalizedPatch\.heatmapMetric = normalizeHeatmapMetric\(patch\.heatmapMetric, settings\.heatmapMetric\)/);
   assert.match(js, /computeHeatmapIntensities\(state\.history\?\.daily \|\| \[\]\)/);
-  assert.match(js, /heatmapMetric:\s*'cost'/);
-  assert.match(html, /class="seg-btn active" data-val="cost" aria-pressed="true"/);
+  assert.match(js, /heatmapMetric:\s*'tokens'/);
+  assert.match(js, /state\.heatmapMetric === 'cost' \? 'costIntensity' : 'tokenIntensity'/);
+  assert.match(html, /class="seg-btn active" data-val="tokens" aria-pressed="true"/);
+  assert.match(html, /class="seg-btn" data-val="cost" aria-pressed="false"/);
+  assert.match(js, /costMode \? formatCost\(cost\) : formatCompact\(tokens\)/);
 });
 
-test('Home configures heatmap color in Settings while keeping token tooltips', () => {
+test('Home heatmap tooltip follows the selected color metric', () => {
   const app = read('src', 'electron', 'renderer', 'app.js');
   const css = read('src', 'electron', 'renderer', 'styles.css');
   assert.match(app, /settings\.home\.configureActivity/);
   assert.match(app, /function renderHomeActivitySettings/);
   assert.match(app, /saveSettings\(\{ heatmapMetric: metric \}\)/);
-  assert.match(app, /data-home-activity-tooltip-count[^\n]*formatCompact\(Number\(cell\.dataset\.t/);
-  assert.match(app, /data-home-activity-tooltip-label[^\n]*textContent = 'tokens'/);
+  assert.match(app, /state\.settings\?\.heatmapMetric === 'cost'/);
+  assert.match(app, /formatCost\(Number\(cell\.dataset\.cost \|\| 0\)\)/);
+  assert.match(app, /formatCompact\(Number\(cell\.dataset\.t \|\| 0\)\)/);
+  assert.match(app, /label\.hidden = costMode/);
   assert.doesNotMatch(app, /home-heatmap-metric/);
   assert.match(css, /\.home-activity-settings/);
   assert.doesNotMatch(css, /\.home-heatmap-metric/);

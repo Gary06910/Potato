@@ -8530,8 +8530,13 @@ function setupHomeActivityHover(scroller) {
       activeCell?.removeAttribute('data-active');
       activeCell = cell;
       activeCell.setAttribute('data-active', 'true');
-      tooltip.querySelector('[data-home-activity-tooltip-count]').textContent = formatCompact(Number(cell.dataset.t || 0));
-      tooltip.querySelector('[data-home-activity-tooltip-label]').textContent = 'tokens';
+      const costMode = state.settings?.heatmapMetric === 'cost';
+      tooltip.querySelector('[data-home-activity-tooltip-count]').textContent = costMode
+        ? formatCost(Number(cell.dataset.cost || 0))
+        : formatCompact(Number(cell.dataset.t || 0));
+      const label = tooltip.querySelector('[data-home-activity-tooltip-label]');
+      label.textContent = costMode ? '' : 'tokens';
+      label.hidden = costMode;
       tooltip.querySelector('[data-home-activity-tooltip-date]').textContent = cell.dataset.d || '';
     }
     tooltip.dataset.visible = 'true';
@@ -8647,7 +8652,7 @@ function renderHomeTrendsModule() {
     Number(todayPeriod?.costUsd || 0)
   );
   const activityLayout = homeOverviewApi.homeActivityHeatmapLayout();
-  const heatMetric = state.settings?.heatmapMetric || 'cost';
+  const heatMetric = state.settings?.heatmapMetric || 'tokens';
   const intensityField = heatMetric === 'cost' ? 'costIntensity' : 'tokenIntensity';
   const intensityPoints = dailyWithHeatIntensity(points).map((p) => ({
     ...p,
@@ -11263,7 +11268,7 @@ function renderHomeActivitySettings() {
   heatmapOptions.className = 'inline-options';
   heatmapOptions.setAttribute('role', 'radiogroup');
   heatmapOptions.setAttribute('aria-label', heatmapLabel.textContent);
-  const currentMetric = state.settings?.heatmapMetric || 'cost';
+  const currentMetric = state.settings?.heatmapMetric || 'tokens';
   for (const metric of ['tokens', 'cost']) {
     const option = document.createElement('label');
     option.className = 'inline-option';

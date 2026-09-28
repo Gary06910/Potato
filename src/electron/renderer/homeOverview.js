@@ -327,10 +327,9 @@
   // bucket lags the live headline total as usage accrues within the day (the trends
   // sparkline avoids this via patchTodayBar). Overwrite today's tokens AND cost with the
   // live period totals so the home heatmap/trend agree with the number shown above them
-  // — cost matters because dailyWithHeatIntensity colours cells by cost when any exists,
-  // so an appended today with cost 0 would render as an empty cell. Append a today row
-  // when the frozen snapshot predates today (app opened before midnight). Returns a new
-  // array; the input is never mutated.
+  // — both metrics matter because the user can color the heatmap by either one.
+  // Append a today row when the frozen snapshot predates today (app opened before
+  // midnight). Returns a new array; the input is never mutated.
   function patchDailyToday(daily, todayDate, todayTotal, todayCost) {
     const rows = Array.isArray(daily) ? daily.slice() : [];
     const date = String(todayDate || '').slice(0, 10);

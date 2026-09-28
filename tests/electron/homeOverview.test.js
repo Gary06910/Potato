@@ -624,7 +624,7 @@ test('patchDailyToday overwrites the frozen today bucket with the live headline 
   const patched = patchDailyToday(daily, '2026-07-07', 61_700_000, 492.5);
   const patchedToday = patched.find((d) => d.date === '2026-07-07');
   assert.equal(patchedToday.tokens, 61_700_000);
-  assert.equal(patchedToday.cost, 492.5); // cost drives the heatmap intensity, patch it too
+  assert.equal(patchedToday.cost, 492.5); // Cost mode needs the fresh value too.
   assert.equal(patched.find((d) => d.date === '2026-07-06').tokens, 200); // past days untouched
   assert.equal(patched.length, 2);
   assert.equal(daily[1].tokens, 61_500_000); // input not mutated
@@ -637,7 +637,7 @@ test('patchDailyToday appends today with live cost so its heatmap cell is not em
   const appended = patched[patched.length - 1];
   assert.equal(appended.date, '2026-07-07');
   assert.equal(appended.tokens, 61_700_000);
-  assert.equal(appended.cost, 492.5); // intensity uses cost — a 0 here renders today as empty
+  assert.equal(appended.cost, 492.5); // Cost mode must not render today as empty.
 });
 
 test('renderHomeTrendsModule preserves long-range Activity and peak', () => {

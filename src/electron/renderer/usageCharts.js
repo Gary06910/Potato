@@ -73,7 +73,7 @@
     return rows.map((row) => {
       const tokenIntensity = heatmapIntensity(row?.tokens, maxTokens);
       const costIntensity = heatmapIntensity(row?.cost, maxCost);
-      return { ...row, intensity: costIntensity, costIntensity, tokenIntensity };
+      return { ...row, intensity: tokenIntensity, costIntensity, tokenIntensity };
     });
   }
 
