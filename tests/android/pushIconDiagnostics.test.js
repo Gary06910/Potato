@@ -50,7 +50,7 @@ test('diagnostic build only bumps version code and retains delivery contract', (
   const push = read('services/push-runtime.uts');
   const delivery = read('uniCloud-alipay/cloudfunctions/common/tokenm-core/push-notification.js');
   assert.equal(manifest.versionName, '0.1.1');
-  assert.equal(manifest.versionCode, 2);
+  assert.equal(manifest.versionCode, 3);
   assert.equal(manifest.appid, '__UNI__46C9063');
   assert.match(push, /TASK_NOTIFICATION_CHANNEL_ID = 'DcloudChannelID'/);
   assert.match(delivery, /force_notification: true/);

@@ -1,0 +1,156 @@
+// Local Android notification metadata only. Keep this separate from push registration and delivery.
+// #ifdef APP-ANDROID
+import Build from 'android.os.Build'
+import Context from 'android.content.Context'
+import NotificationManager from 'android.app.NotificationManager'
+import Icon from 'android.graphics.drawable.Icon'
+import Resources from 'android.content.res.Resources'
+import Bitmap from 'android.graphics.Bitmap'
+import Canvas from 'android.graphics.Canvas'
+import Base64 from 'android.util.Base64'
+import ByteArrayOutputStream from 'java.io.ByteArrayOutputStream'
+// #endif
+
+export type InspectedNotificationIcon = {
+  type: string
+  resourcePackage: string
+  resourceId: number
+  resourceName: string
+  previewDataUrl: string
+}
+
+export type ActiveNotificationIconInspection = {
+  state: string
+  activeCount: number
+  channelId: string
+  expectedPushSmallId: number
+  expectedPreviewDataUrl: string
+  smallIcon: InspectedNotificationIcon
+  largeIcon: InspectedNotificationIcon
+  matchPushSmall: string
+}
+
+const emptyIcon = (): InspectedNotificationIcon => ({
+  type: 'none', resourcePackage: 'unavailable', resourceId: 0,
+  resourceName: 'unresolved', previewDataUrl: ''
+})
+
+const emptyInspection = (): ActiveNotificationIconInspection => ({
+  state: 'NO_ACTIVE_NOTIFICATION', activeCount: 0, channelId: 'unavailable',
+  expectedPushSmallId: 0, expectedPreviewDataUrl: '',
+  smallIcon: emptyIcon(), largeIcon: emptyIcon(), matchPushSmall: 'UNKNOWN'
+})
+
+// #ifdef APP-ANDROID
+const previewResource = (resources: Resources, resourceId: number): string => {
+  try {
+    const drawable = resources.getDrawable(resourceId, null)
+    if (drawable == null) return ''
+    const bitmap = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888)
+    const canvas = new Canvas(bitmap)
+    drawable.setBounds(0, 0, 48, 48)
+    drawable.draw(canvas)
+    const output = new ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+    const encoded = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+    output.close()
+    bitmap.recycle()
+    return 'data:image/png;base64,' + encoded
+  } catch (_error) {
+    return ''
+  }
+}
+
+const resourceContext = (context: Context, packageName: string): Context | null => {
+  try {
+    if (packageName == context.getPackageName()) return context
+    return context.createPackageContext(packageName, 0)
+  } catch (_error) {
+    return null
+  }
+}
+
+const inspectIcon = (context: Context, icon: Icon | null): InspectedNotificationIcon => {
+  const result = emptyIcon()
+  if (icon == null) return result
+  const type = icon.getType()
+  if (type != Icon.TYPE_RESOURCE) {
+    result.type = type == Icon.TYPE_BITMAP ? 'BITMAP' :
+      type == Icon.TYPE_DATA ? 'DATA' :
+      type == Icon.TYPE_URI ? 'URI' :
+      type == Icon.TYPE_ADAPTIVE_BITMAP ? 'ADAPTIVE_BITMAP' : 'OTHER'
+    return result
+  }
+  result.type = 'RESOURCE'
+  result.resourcePackage = icon.getResPackage()
+  result.resourceId = icon.getResId()
+  const owner = resourceContext(context, result.resourcePackage)
+  if (owner == null || result.resourceId == 0) return result
+  try {
+    const resources = owner.getResources()
+    const entry = resources.getResourceEntryName(result.resourceId)
+    const kind = resources.getResourceTypeName(result.resourceId)
+    const declaredPackage = resources.getResourcePackageName(result.resourceId)
+    result.resourceName = declaredPackage + ':' + kind + '/' + entry
+    if (kind == 'drawable' || kind == 'mipmap') {
+      result.previewDataUrl = previewResource(resources, result.resourceId)
+    }
+  } catch (_error) {
+    // A foreign or stale resource remains identifiable by its original package and ID.
+  }
+  return result
+}
+// #endif
+
+export const inspectActiveNotificationIcons = (): ActiveNotificationIconInspection => {
+  const result = emptyInspection()
+  // #ifdef APP-ANDROID
+  try {
+    const context = UTSAndroid.getAppContext()
+    if (context == null) {
+      result.state = 'UNAVAILABLE'
+      return result
+    }
+    const packageName = context.getPackageName()
+    const resources = context.getResources()
+    result.expectedPushSmallId = resources.getIdentifier('push_small', 'drawable', packageName)
+    if (result.expectedPushSmallId > 0) {
+      result.expectedPreviewDataUrl = previewResource(resources, result.expectedPushSmallId)
+    }
+    if (Build.VERSION.SDK_INT < 28) {
+      result.state = 'UNSUPPORTED_API'
+      return result
+    }
+    const manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager | null
+    if (manager == null) {
+      result.state = 'UNAVAILABLE'
+      return result
+    }
+    const active = manager.getActiveNotifications()
+    let latestIndex = -1
+    let latestPostTime: number = -1
+    for (let i = 0; i < active.length; i++) {
+      const posted = active[i]
+      if (posted.getPackageName() != packageName) continue
+      result.activeCount++
+      if (posted.getPostTime() > latestPostTime) {
+        latestPostTime = posted.getPostTime()
+        latestIndex = i
+      }
+    }
+    if (latestIndex < 0) return result
+    const notification = active[latestIndex].getNotification()
+    result.state = 'READY'
+    result.channelId = notification.getChannelId() ?? 'unavailable'
+    result.smallIcon = inspectIcon(context, notification.getSmallIcon())
+    result.largeIcon = inspectIcon(context, notification.getLargeIcon())
+    if (result.smallIcon.type == 'RESOURCE' && result.expectedPushSmallId > 0) {
+      result.matchPushSmall = result.smallIcon.resourcePackage == packageName &&
+        result.smallIcon.resourceId == result.expectedPushSmallId ? 'YES' : 'NO'
+    }
+  } catch (_error) {
+    result.state = 'UNAVAILABLE'
+  }
+  // #endif
+  return result
+}
