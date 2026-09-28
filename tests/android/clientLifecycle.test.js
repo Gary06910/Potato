@@ -101,6 +101,32 @@ test('push runtime creates the stable task channel inside the consent-gated star
   assert.match(push, /startPushRuntime[\s\S]{0,500}ensureTaskNotificationChannel\s*\(\)[\s\S]{0,300}onPushMessage\s*\(/);
 });
 
+test('Getui notification icons bind once after Android push SDK initialization without changing delivery', () => {
+  const push = read('services/push-runtime.uts');
+  const manifest = JSON.parse(read('manifest.json'));
+  const delivery = read('uniCloud-alipay/cloudfunctions/common/tokenm-core/push-notification.js');
+  const androidImport = push.match(/\/\/ #ifdef APP-ANDROID\s+import PushManager from 'com\.igexin\.sdk\.PushManager'\s+\/\/ #endif/);
+  const binding = push.match(/const bindGetuiNotificationIcons = \(\) => \{([\s\S]*?)\n\}/);
+  const cidSuccess = push.match(/success: \(result: GetPushClientIdSuccess\) => \{([\s\S]*?)\n {4}\}/);
+
+  assert.ok(androidImport, 'the Getui import must be Android-only');
+  assert.ok(binding, 'the icon binding must be inside one helper');
+  assert.match(binding[1], /\/\/ #ifdef APP-ANDROID[\s\S]*PushManager\.getInstance\(\)\.setNotificationIcon\(context, 'push_small', 'push'\)[\s\S]*\/\/ #endif/);
+  assert.match(binding[1], /notificationIconBindingAttempted[\s\S]*notificationIconBindingAttempted = true/);
+  assert.match(binding[1], /notificationIconsBound = [^\n]*setNotificationIcon[\s\S]*if \(!notificationIconsBound\) console\.warn\('Getui notification icon binding failed'\)/);
+  assert.equal(occurrenceCount(push, /\.setNotificationIcon\s*\(/g), 1);
+  assert.ok(cidSuccess, 'CID success is the SDK initialization completion point');
+  assert.match(cidSuccess[1], /bindGetuiNotificationIcons\(\)[\s\S]*resolve\(result\.cid\)/);
+  assert.match(push, /startPushRuntime[\s\S]*notificationIconBindingAttempted = false[\s\S]*uni\.onPushMessage/);
+  assert.doesNotMatch(push.slice(push.indexOf('const pushMessageListener'), push.indexOf('export const wasPushActivatedByUser')), /bindGetuiNotificationIcons|setNotificationIcon/);
+
+  assert.equal(manifest.appid, '__UNI__46C9063');
+  assert.equal(manifest['app-android'].distribute.icons.hdpi, 'package/icons/potato-hdpi.png');
+  assert.match(push, /TASK_NOTIFICATION_CHANNEL_ID = 'DcloudChannelID'/);
+  assert.match(delivery, /force_notification: true/);
+  assert.match(delivery, /payload: \{ taskId: safeTaskId \}/);
+});
+
 test('mobile registration binds official setPushCid before writing the business device record', () => {
   const runtime = read('services/client-runtime.uts');
   const mobile = read('services/mobile-device.uts');

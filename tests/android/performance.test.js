@@ -29,6 +29,8 @@ function environment() {
     routes: [],
     hooks: {},
     logs: [],
+    iconBindings: [],
+    iconBindingSucceeds: true,
     pushRegistrations: 0,
     desktop: { desktopId: 'desk-1', name: 'Laptop', status: 'active', createdAt: null, lastSeenAt: null, lastEventAt: null },
     task: { taskId: 'tsk-1', desktopId: 'desk-1', occurredAt: '2026-09-09T00:00:00Z', privacyMode: false, summary: 'Finished', project: 'App', model: 'model', durationMs: 20, notificationStatus: 'submitted' }
@@ -68,10 +70,16 @@ function environment() {
     Error,
     Promise,
     Date: class extends Date { static now() { return env.now; } },
-    console: { info: (...args) => env.logs.push(args), warn() {} },
+    console: { info: (...args) => env.logs.push(args), warn: (...args) => env.logs.push(args) },
+    UTSAndroid: { getAppContext: () => ({}) },
+    PushManager: { getInstance: () => ({ setNotificationIcon: (_context, small, large) => {
+      env.iconBindings.push([small, large]);
+      return env.iconBindingSucceeds;
+    } }) },
     uniCloud: { importObject: () => cloud },
     uni: {
       getPushChannelManager: () => null,
+      getPushClientId: ({ success }) => success({ cid: 'test-cid' }),
       onPushMessage: (listener) => { env.pushListener = listener; },
       offPushMessage() {},
       getAppAuthorizeSetting: () => ({ notificationAuthorized: 'authorized' }),
@@ -103,7 +111,7 @@ function environment() {
 
   function evaluate(file, source, names) {
     const dependencies = [];
-    source = source.replace(/import\s+(type\s+)?\{([\s\S]*?)\}\s+from\s+['"]([^'"]+)['"]/g, (_all, type, bindings, specifier) => {
+    source = source.replace(/import PushManager from 'com\.igexin\.sdk\.PushManager'/g, '').replace(/import\s+(type\s+)?\{([\s\S]*?)\}\s+from\s+['"]([^'"]+)['"]/g, (_all, type, bindings, specifier) => {
       if (type) return '';
       const dependency = specifier.startsWith('.') ? path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)) : specifier;
       const index = dependencies.push(load(dependency)) - 1;
@@ -434,6 +442,24 @@ test('Push receive expires task views without clearing data, requesting data or 
   assert.equal(cache.settingsSnapshot.fresh(), true);
   assert.notEqual(cache.tasksSnapshot.peek(), null);
   assert.equal(env.calls.length, calls);
+});
+
+test('Getui icons bind after CID success once per push runtime and report failure without user data', async () => {
+  const env = environment();
+  const push = env.loadActualPush();
+  push.startPushRuntime();
+  assert.equal(env.iconBindings.length, 0);
+  assert.equal(await push.getOfficialPushClientId(), 'test-cid');
+  assert.deepEqual(env.iconBindings, [['push_small', 'push']]);
+  await push.getOfficialPushClientId();
+  assert.equal(env.iconBindings.length, 1);
+
+  push.stopPushRuntime();
+  push.startPushRuntime();
+  env.iconBindingSucceeds = false;
+  await push.getOfficialPushClientId();
+  assert.equal(env.iconBindings.length, 2);
+  assert.deepEqual(env.logs.at(-1), ['Getui notification icon binding failed']);
 });
 
 test('event arriving during a read keeps the result stale for the next entry', async () => {
