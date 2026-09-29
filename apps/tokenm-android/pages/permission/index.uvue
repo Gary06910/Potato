@@ -31,7 +31,9 @@
             tone="warning"
             text="请先登录，再确认隐私说明并设置任务通知。"
           />
-          <button v-if="facts.login != 'signedIn'" class="btn btn-primary section" hover-class="btn-primary-active" @click="goLogin">前往登录</button>
+          <view v-if="facts.login != 'signedIn'" class="primary-surface section">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goLogin">前往登录</button>
+          </view>
 
           <view v-else-if="facts.privacyConsent != 'current'" class="consent-block">
             <notice-banner class="section" tone="info" text="请阅读数据与隐私说明，再选择是否同意当前版本。" />
@@ -43,12 +45,10 @@
               <switch :checked="privacyConfirmed" color="#2869c9" aria-label="隐私确认" @change="toggleConsent" />
             </view>
             <button class="privacy-link" @click="goPrivacy">查看数据与隐私说明</button>
-            <button
-              :class="['btn', 'btn-primary', privacyConfirmed && !working ? '' : 'btn-disabled']"
-              hover-class="btn-primary-active"
-              :disabled="!privacyConfirmed || working"
-              @click="acceptConsent"
-            >{{ working ? '正在保存…' : '同意当前隐私版本' }}</button>
+            <view class="primary-surface" :class="(!privacyConfirmed || working) ? 'primary-surface-disabled' : ''">
+              <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="!privacyConfirmed || working"
+              @click="acceptConsent">{{ working ? '正在保存…' : '同意当前隐私版本' }}</button>
+            </view>
           </view>
 
           <view v-else class="permission-actions">
@@ -57,14 +57,14 @@
               <button class="btn btn-secondary" hover-class="btn-active" :disabled="working" @click="goPairing">绑定电脑</button>
               <button class="btn btn-secondary btn-spaced" hover-class="btn-active" :disabled="working" @click="goDesktops">查看电脑</button>
             </view>
-            <button
-              v-if="facts.notificationPermission != 'authorized' || facts.mobileRegistration != 'ready'"
-              :class="['btn', 'btn-primary', 'section', working ? 'btn-disabled' : '']"
-              hover-class="btn-primary-active"
-              :disabled="working"
-              @click="requestNotificationPermissionFromCtaAction"
-            >{{ permissionActionLabel }}</button>
-            <button :class="['btn', 'btn-spaced', facts.notificationPermission == 'authorized' && facts.mobileRegistration == 'ready' ? 'btn-primary' : 'btn-secondary']" hover-class="btn-active" :disabled="working" @click="continueToApp">进入 App</button>
+            <view v-if="facts.notificationPermission != 'authorized' || facts.mobileRegistration != 'ready'" class="primary-surface section" :class="(working) ? 'primary-surface-disabled' : ''">
+              <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="working"
+              @click="requestNotificationPermissionFromCtaAction">{{ permissionActionLabel }}</button>
+            </view>
+            <view v-if="facts.notificationPermission == 'authorized' && facts.mobileRegistration == 'ready'" class="primary-surface btn-spaced" :class="working ? 'primary-surface-disabled' : ''">
+              <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="working" @click="continueToApp">进入 App</button>
+            </view>
+            <button v-else class="btn btn-secondary btn-spaced" hover-class="btn-active" :disabled="working" @click="continueToApp">进入 App</button>
             <button v-if="facts.mobileRegistration == 'error'" class="btn btn-secondary btn-spaced" hover-class="btn-active" :disabled="working" @click="retryRegistration">恢复通知服务</button>
             <text class="permission-help">任务通知开关可在设置中管理。</text>
           </view>

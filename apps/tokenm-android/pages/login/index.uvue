@@ -22,9 +22,11 @@
           </view>
           <text v-if="captchaError.length > 0" class="captcha-error" @click="reloadCaptcha">{{ captchaError }}</text>
           <text class="captcha-help">提示需要验证码时填写；点击图片可换一张。</text>
-          <button :class="['btn', 'btn-primary', 'section', submitting ? 'btn-disabled' : '']" hover-class="btn-primary-active" :disabled="submitting" @click="submit">
+          <view class="primary-surface section" :class="(submitting) ? 'primary-surface-disabled' : ''">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="submitting" @click="submit">
             {{ submitting ? '正在登录…' : '登录' }}
           </button>
+          </view>
           <button class="auth-link" @click="goRegister">没有账户？创建账户</button>
         </view>
       </view>

@@ -16,7 +16,9 @@
           <text class="brand">Potato</text>
           <text class="onboarding-title">Codex 完成时，让手机告诉你。</text>
           <text class="onboarding-copy">绑定 Potato Desktop 后，任务记录会保存在你的账户；开启系统通知后，再在手机上显示完成提醒。</text>
-          <button class="btn btn-primary" hover-class="btn-primary-active" @click="goLogin">登录</button>
+          <view class="primary-surface">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goLogin">登录</button>
+          </view>
           <button class="btn btn-secondary btn-spaced" hover-class="btn-active" @click="goRegister">创建账户</button>
           <button class="quiet-action" @click="goPermission">先了解任务通知</button>
           <button class="privacy-link" @click="goPrivacy">默认使用隐私模式 · 了解详情</button>

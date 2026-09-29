@@ -49,7 +49,9 @@
             </view>
           </view>
           <button v-if="facts.login == 'signedIn'" :class="['btn', 'btn-danger', 'section', updating ? 'btn-disabled' : '']" hover-class="btn-active" :disabled="updating" @click="confirmLogout">退出登录</button>
-          <button v-else class="btn btn-primary section" hover-class="btn-primary-active" @click="goLogin">登录 Potato</button>
+          <view v-else class="primary-surface section">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goLogin">登录 Potato</button>
+          </view>
         </view>
       </view>
     </scroll-view>

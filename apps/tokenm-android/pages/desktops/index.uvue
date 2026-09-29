@@ -38,7 +38,9 @@
               </view>
             </view>
           </view>
-          <button class="btn btn-primary section" hover-class="btn-primary-active" @click="goPairing">绑定另一台电脑</button>
+          <view class="primary-surface section">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goPairing">绑定另一台电脑</button>
+          </view>
         </view>
 
         <view v-if="revoked.length > 0" class="section">

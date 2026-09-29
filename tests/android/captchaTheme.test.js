@@ -315,7 +315,7 @@ test('no saved theme preference means the complete Android default is light', ()
   assert.match(tokens, /\$tm-bg:\s*#f5f3ee/);
   assert.match(tokens, /\$tm-surface-1:\s*#fffdf9/);
   assert.match(tokens, /\$tm-text-1:\s*#202a36/);
-  assert.match(app, /\.btn-primary\s*\{[^}]*color:\s*#ffffff/);
+  assert.match(app, /\.primary-surface\s*\{[^}]*background-color:\s*\$tm-accent/);
   assert.doesNotMatch(`${tokens}\n${app}\n${JSON.stringify(pages)}`, /#07111f|#0d1b2b|#122238|#f2f7ff|#b4c2d4/);
   assert.doesNotMatch(app, /theme[^\n]{0,80}(?:getStorageSync|setStorageSync)/i);
 });

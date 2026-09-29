@@ -13,7 +13,9 @@
             <text class="pair-code" :selectable="true">{{ displayCode }}</text>
             <text class="pair-time">{{ expired ? '配对码已失效' : countdown + ' 后失效' }}</text>
           </view>
-          <button v-if="!paired" :class="['btn', 'btn-primary', 'section', expired || paired ? 'btn-disabled' : '']" hover-class="btn-primary-active" :disabled="expired || paired" @click="copyCode">复制配对码</button>
+          <view v-if="!paired" class="primary-surface section" :class="(expired || paired) ? 'primary-surface-disabled' : ''">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="expired || paired" @click="copyCode">复制配对码</button>
+          </view>
           <button v-if="!paired" class="btn btn-secondary btn-spaced" hover-class="btn-active" @click="confirmRefresh">刷新配对码</button>
           <view v-if="!paired" class="section steps">
             <text class="section-title">如何绑定</text>
@@ -22,7 +24,10 @@
             <view class="step step-last"><text class="step-number">3</text><text class="step-copy">输入这组 6 位配对码</text></view>
           </view>
           <text v-if="!paired" class="privacy-caption">离开后，配对码仍在显示的有效期内可用。</text>
-          <button :class="paired ? 'btn btn-primary section' : 'back-list'" @click="goDesktops">{{ paired ? '查看已绑定电脑' : '取消并返回电脑列表' }}</button>
+          <view v-if="paired" class="primary-surface section">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goDesktops">查看已绑定电脑</button>
+          </view>
+          <button v-else class="back-list" @click="goDesktops">取消并返回电脑列表</button>
         </view>
       </view>
     </scroll-view>

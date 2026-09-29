@@ -22,26 +22,19 @@
             <switch :checked="settings.notificationsEnabled" :disabled="working || facts.login != 'signedIn' || facts.privacyConsent != 'current'" color="#2869c9" aria-label="任务通知开关" @change="toggleEnabled" />
           </view>
 
-          <button
-            v-if="facts.login != 'signedIn'"
-            class="btn btn-primary section"
-            hover-class="btn-primary-active"
-            @click="goLogin"
-          >前往登录</button>
-          <button
-            v-else-if="facts.privacyConsent != 'current'"
-            class="btn btn-primary section"
-            hover-class="btn-primary-active"
-            @click="goPermission"
-          >前往隐私确认</button>
-          <button
-            v-else-if="facts.notificationPermission != 'authorized'"
-            :class="['btn', 'btn-primary', 'section', working ? 'btn-disabled' : '']"
-            hover-class="btn-primary-active"
-            :disabled="working"
-            @click="requestNotificationPermissionFromCtaAction"
-          >{{ working ? '正在更新…' : (facts.notificationPermission == 'denied' ? '打开系统通知设置' : '开启系统通知') }}</button>
-          <button v-else-if="facts.mobileRegistration != 'ready'" class="btn btn-primary section" hover-class="btn-primary-active" :disabled="working" @click="retryRegistration">恢复通知服务</button>
+          <view v-if="facts.login != 'signedIn'" class="primary-surface section">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goLogin">前往登录</button>
+          </view>
+          <view v-else-if="facts.privacyConsent != 'current'" class="primary-surface section">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goPermission">前往隐私确认</button>
+          </view>
+          <view v-else-if="facts.notificationPermission != 'authorized'" class="primary-surface section" :class="(working) ? 'primary-surface-disabled' : ''">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="working"
+            @click="requestNotificationPermissionFromCtaAction">{{ working ? '正在更新…' : (facts.notificationPermission == 'denied' ? '打开系统通知设置' : '开启系统通知') }}</button>
+          </view>
+          <view v-else-if="facts.mobileRegistration != 'ready'" class="primary-surface section" :class="(working) ? 'primary-surface-disabled' : ''">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="working" @click="retryRegistration">恢复通知服务</button>
+          </view>
           <text v-else class="notification-help">通知服务已就绪</text>
 
           <notice-banner

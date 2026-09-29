@@ -93,8 +93,36 @@ export default {
   text-align: center;
 }
 .btn-active { opacity: 0.9; }
-.btn-primary { color: #ffffff; background-color: $tm-accent; box-shadow: 0 5px 12px rgba(40, 105, 201, 0.15); }
-.btn-primary-active { color: #ffffff; background-color: $tm-accent-pressed; opacity: 0.9; }
+.primary-surface {
+  width: 100%;
+  min-height: $tm-touch;
+  border-radius: $tm-radius-md;
+  background-color: $tm-accent;
+  overflow: hidden;
+  box-shadow: 0 5px 12px rgba(40, 105, 201, 0.15);
+}
+.primary-surface-disabled { background-color: #e9eef5; box-shadow: none; }
+.primary-hitbox {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: $tm-touch;
+  margin-left: 0;
+  margin-right: 0;
+  padding-top: 0;
+  padding-right: 14px;
+  padding-bottom: 0;
+  padding-left: 14px;
+  border-width: 0;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: 0;
+  color: #ffffff;
+  background-color: transparent;
+  box-shadow: none;
+}
+.primary-hitbox-active { background-color: $tm-accent-pressed; }
+.primary-surface-disabled .primary-hitbox { color: #7a8798; }
+.primary-surface-disabled .primary-hitbox-active { background-color: transparent; }
 .btn-secondary { border-width: 1px; border-style: solid; border-color: $tm-line-strong; background-color: transparent; }
 .btn-danger { border-width: 1px; border-style: solid; border-color: $tm-line; color: $tm-danger; background-color: transparent; }
 .btn-disabled { border-color: $tm-line; color: #7a8798; background-color: #e9eef5; }

@@ -20,7 +20,9 @@
               <status-marker :tone="!dashboard.notifications.notificationsEnabled ? 'neutral' : pushReadinessView(runtimeFacts.pushReadiness).tone" :label="!dashboard.notifications.notificationsEnabled ? '任务记录仍会保存' : pushReadinessView(runtimeFacts.pushReadiness).label" />
               <text class="focus-detail">{{ dashboard.activeDesktopCount > 0 ? 'Codex 完成后，在这里查看最近任务。' : '绑定一台电脑，开始接收任务完成记录。' }}</text>
             </view>
-            <button class="focus-action" hover-class="focus-action-active" @click="goNotifications">通知设置</button>
+            <view class="primary-surface focus-action-space">
+              <button class="btn primary-hitbox" style="font-size: 13px" hover-class="primary-hitbox-active" @click="goNotifications">通知设置</button>
+            </view>
           </view>
 
           <view class="summary-line">
@@ -231,13 +233,12 @@ onReady(() => {
 </script>
 
 <style lang="scss">
+.focus-action-space { margin-top: 12px; }
 .notification-focus { margin-top: 18px; padding: 20px; border-color: #d8e4f4; background-color: #edf3fb; }
 .focus-copy { min-width: 0; flex: 1; }
 .focus-title { margin-bottom: 8px; color: $tm-text-1; font-size: 22px; font-weight: 700; line-height: 29px; }
 .focus-detail { margin-top: 8px; color: $tm-text-2; font-size: 13px; line-height: 20px; }
 .push-marker { margin-top: 8px; }
-.focus-action { min-height: 48px; margin-top: 12px; border-radius: $tm-radius-md; color: #ffffff; background-color: $tm-accent; font-size: 13px; font-weight: 600; line-height: 48px; }
-.focus-action-active { opacity: 0.8; }
 .summary-line { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 18px; padding-right: 4px; padding-left: 4px; }
 .summary-text { color: $tm-text-2; font-size: 13px; line-height: 20px; }
 .summary-divider { margin-right: 6px; margin-left: 6px; color: $tm-line-strong; font-size: 13px; }

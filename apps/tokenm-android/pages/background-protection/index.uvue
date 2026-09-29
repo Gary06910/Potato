@@ -26,7 +26,9 @@
           <button class="btn section" @click="openApp">打开应用系统设置</button>
           <button class="btn section" @click="openSystem">打开系统设置</button>
           <text class="guide-state">{{ manualProtectionLabel(confirmations.guideConfirmed) }}</text>
-          <button class="btn btn-primary section" @click="toggleGuide">{{ confirmations.guideConfirmed ? '撤销我的确认' : '我已完成这些设置' }}</button>
+          <view class="primary-surface section">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="toggleGuide">{{ confirmations.guideConfirmed ? '撤销我的确认' : '我已完成这些设置' }}</button>
+          </view>
         </view>
         <button class="btn section" @click="refresh">重新检查系统状态</button>
         <text class="guide-note">品牌选择和手动确认仅保存在本机，不上传云端。更改品牌后，各自的确认状态分别保存。</text>

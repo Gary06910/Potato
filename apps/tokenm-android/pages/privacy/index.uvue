@@ -21,7 +21,9 @@
         <view class="section danger-zone">
           <text class="section-title">管理数据</text>
           <notice-banner v-if="!authenticated" class="danger-action" tone="info" text="登录后可以清除任务记录或删除账户。" />
-          <button v-if="!authenticated" class="btn btn-primary btn-spaced" hover-class="btn-primary-active" @click="goLogin">前往登录</button>
+          <view v-if="!authenticated" class="primary-surface btn-spaced">
+            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goLogin">前往登录</button>
+          </view>
           <template v-else>
             <button :class="['btn', 'btn-danger', 'danger-action', working ? 'btn-disabled' : '']" hover-class="btn-active" :disabled="working" @click="confirmClear">清除任务记录</button>
             <button :class="['btn', 'btn-danger', 'btn-spaced', working ? 'btn-disabled' : '']" hover-class="btn-active" :disabled="working" @click="confirmDelete">删除账户</button>
