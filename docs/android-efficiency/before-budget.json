@@ -1,0 +1,147 @@
+{
+  "A": {
+    "counts": {
+      "getPrivacyConsent": 2,
+      "getPushClientId": 1,
+      "setPushCid": 1,
+      "registerMobileDevice": 1,
+      "getDashboard": 1,
+      "listTasks": 1,
+      "listDesktops": 1
+    },
+    "cloud": 7,
+    "cid": 1,
+    "writes": 1,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "miss": 2
+    }
+  },
+  "B": {
+    "counts": {
+      "getPrivacyConsent": 2,
+      "getPushClientId": 1,
+      "setPushCid": 1,
+      "registerMobileDevice": 1,
+      "getDashboard": 1,
+      "listTasks": 1,
+      "listDesktops": 1
+    },
+    "cloud": 7,
+    "cid": 1,
+    "writes": 1,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "stale": 2
+    }
+  },
+  "C": {
+    "counts": {
+      "getPrivacyConsent": 2,
+      "getPushClientId": 1,
+      "setPushCid": 1,
+      "registerMobileDevice": 1,
+      "getDashboard": 1,
+      "listTasks": 1,
+      "listDesktops": 1
+    },
+    "cloud": 7,
+    "cid": 1,
+    "writes": 1,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "stale": 2
+    }
+  },
+  "D": {
+    "counts": {
+      "getPrivacyConsent": 5,
+      "listTasks": 2,
+      "listDesktops": 3,
+      "getDashboard": 2
+    },
+    "cloud": 12,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "hit": 1,
+      "miss": 1,
+      "stale": 5
+    }
+  },
+  "E": {
+    "counts": {
+      "getPrivacyConsent": 1,
+      "getDashboard": 1,
+      "listTasks": 1,
+      "listDesktops": 1
+    },
+    "cloud": 4,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "stale": 2
+    }
+  },
+  "F": {
+    "counts": {},
+    "cloud": 0,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {}
+  },
+  "G": {
+    "counts": {
+      "getPrivacyConsent": 2,
+      "getPushClientId": 1,
+      "setPushCid": 1,
+      "registerMobileDevice": 1
+    },
+    "cloud": 4,
+    "cid": 1,
+    "writes": 1,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "hit": 2
+    }
+  },
+  "H": {
+    "counts": {
+      "getPrivacyConsent": 1,
+      "createPairingCode": 1,
+      "getPairingStatus": 12
+    },
+    "cloud": 14,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 1,
+      "remote": 1
+    },
+    "cache": {}
+  }
+}

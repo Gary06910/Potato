@@ -1,0 +1,121 @@
+{
+  "A": {
+    "counts": {
+      "getPrivacyConsent": 1,
+      "getPushClientId": 1,
+      "setPushCid": 1,
+      "registerMobileDevice": 1,
+      "getAndroidDashboard": 1
+    },
+    "cloud": 4,
+    "cid": 1,
+    "writes": 1,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "miss": 1
+    }
+  },
+  "B": {
+    "counts": {},
+    "cloud": 0,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "hit": 1
+    }
+  },
+  "C": {
+    "counts": {
+      "getPrivacyConsent": 1,
+      "getPushClientId": 1,
+      "getAndroidDashboard": 1
+    },
+    "cloud": 2,
+    "cid": 1,
+    "writes": 0,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "stale": 1
+    }
+  },
+  "D": {
+    "counts": {
+      "listTasks": 1,
+      "listDesktops": 1
+    },
+    "cloud": 2,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "hit": 4,
+      "miss": 2
+    }
+  },
+  "E": {
+    "counts": {
+      "getAndroidDashboard": 1
+    },
+    "cloud": 1,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "stale": 1
+    }
+  },
+  "F": {
+    "counts": {},
+    "cloud": 0,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {}
+  },
+  "G": {
+    "counts": {},
+    "cloud": 0,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 0,
+      "remote": 0
+    },
+    "cache": {
+      "hit": 2
+    }
+  },
+  "H": {
+    "counts": {
+      "createPairingCode": 1,
+      "getPairingStatus": 12
+    },
+    "cloud": 13,
+    "cid": 0,
+    "writes": 0,
+    "timers": {
+      "local": 1,
+      "remote": 1
+    },
+    "cache": {}
+  }
+}
