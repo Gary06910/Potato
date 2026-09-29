@@ -12,6 +12,7 @@ const page = fs.readFileSync(path.join(root, 'pages/notifications/index.uvue'), 
 test('active inspector queries only this package and selects the latest posted notification', () => {
   assert.match(inspector, /manager\.getActiveNotifications\(\)/);
   assert.match(inspector, /posted\.getPackageName\(\) != packageName/);
+  assert.match(inspector, /posted\.getTag\(\) == 'potato-native-icon-diagnostic' && posted\.getId\(\) == 91001/);
   assert.match(inspector, /posted\.getPostTime\(\) > latestPostTime/);
   assert.match(inspector, /if \(latestIndex < 0\) return result/);
   assert.match(inspector, /state: 'NO_ACTIVE_NOTIFICATION'/);

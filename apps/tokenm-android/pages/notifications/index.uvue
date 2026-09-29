@@ -84,26 +84,6 @@
             <button class="btn btn-secondary section" :disabled="bindingIcons" @click="rebindIcons">{{ bindingIcons ? '正在绑定…' : '重新绑定通知图标' }}</button>
             <button class="btn btn-secondary section" @click="readCurrentNotificationIcons">读取当前通知图标</button>
             <!-- #ifdef APP-ANDROID -->
-            <text class="setting-detail">临时 forensic 实验：根因定位后删除此控制 UI。</text>
-            <button class="btn btn-secondary section" @click="sendLocalNotification">发送本地图标测试通知</button>
-            <button class="btn btn-secondary section" @click="readLocalNotificationIcons">读取本地图标测试通知</button>
-            <view v-if="nativeDiagnostic != null" class="section">
-              <view class="detail-row"><text class="detail-key">push_small resource ID</text><text class="detail-value">{{ iconResourceIdView(nativeDiagnostic.pushSmallResourceId) }}</text></view>
-              <view class="detail-row"><text class="detail-key">notify result</text><text class="detail-value">{{ nativeDiagnostic.state }}</text></view>
-            </view>
-            <view v-if="localIconInspection != null" class="section">
-              <text class="setting-title">Local native notification</text>
-              <view class="detail-row"><text class="detail-key">读取状态</text><text class="detail-value">{{ localIconInspection.state }}</text></view>
-              <view class="detail-row"><text class="detail-key">Channel</text><text class="detail-value">{{ localIconInspection.channelId }}</text></view>
-              <view class="detail-row"><text class="detail-key">SmallIcon type</text><text class="detail-value">{{ localIconInspection.smallIcon.type }}</text></view>
-              <view class="detail-row"><text class="detail-key">SmallIcon package</text><text class="detail-value">{{ localIconInspection.smallIcon.resourcePackage }}</text></view>
-              <view class="detail-row"><text class="detail-key">SmallIcon ID</text><text class="detail-value">{{ iconResourceIdView(localIconInspection.smallIcon.resourceId) }}</text></view>
-              <view class="detail-row"><text class="detail-key">SmallIcon name</text><text class="detail-value">{{ localIconInspection.smallIcon.resourceName }}</text></view>
-              <view class="detail-row"><text class="detail-key">匹配 push_small</text><text class="detail-value">{{ localIconInspection.matchPushSmall }}</text></view>
-              <text class="setting-title">Actual preview</text>
-              <image v-if="localIconInspection.smallIcon.previewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="localIconInspection.smallIcon.previewDataUrl" />
-              <text class="setting-detail">LARGE_ICON: NONE · SystemUI visual：由用户观察</text>
-            </view>
             <button class="btn btn-secondary section" @click="readApplicationIcons">读取应用与启动图标</button>
             <view v-if="applicationIconInspection != null" class="section">
               <view class="detail-row"><text class="detail-key">应用图标状态</text><text class="detail-value">{{ applicationIconInspection.state }}</text></view>
@@ -201,10 +181,8 @@ import {
 import type { NotificationSettings, RuntimeFacts, UiLoadState } from '../../types/models.uts'
 import { getGetuiNotificationIconDiagnostics, rebindGetuiNotificationIconsForDiagnostics } from '../../services/push-runtime.uts'
 import type { PushIconDiagnostics } from '../../services/push-runtime.uts'
-import { inspectActiveNotificationIcons, inspectLocalNotificationIcons } from '../../services/active-notification-icon-inspector.uts'
+import { inspectActiveNotificationIcons } from '../../services/active-notification-icon-inspector.uts'
 import type { ActiveNotificationIconInspection } from '../../services/active-notification-icon-inspector.uts'
-import { sendNativeNotificationIconDiagnostic } from '../../services/native-notification-icon-diagnostic.uts'
-import type { NativeNotificationIconDiagnostic } from '../../services/native-notification-icon-diagnostic.uts'
 import { inspectApplicationIcons } from '../../services/application-icon-inspector.uts'
 import type { ApplicationIconInspection } from '../../services/application-icon-inspector.uts'
 
@@ -222,15 +200,6 @@ const iconDiagnostics = ref<PushIconDiagnostics>(getGetuiNotificationIconDiagnos
 const bindingIcons = ref(false)
 const activeIconInspection = ref<ActiveNotificationIconInspection | null>(null)
 const applicationIconInspection = ref<ApplicationIconInspection | null>(null)
-
-const nativeDiagnostic = ref<NativeNotificationIconDiagnostic | null>(null)
-const localIconInspection = ref<ActiveNotificationIconInspection | null>(null)
-const sendLocalNotification = () => {
-  nativeDiagnostic.value = sendNativeNotificationIconDiagnostic()
-}
-const readLocalNotificationIcons = () => {
-  localIconInspection.value = inspectLocalNotificationIcons()
-}
 
 const resourceView = (id: number): string => id > 0 ? `found (${id})` : 'missing'
 const iconResourceIdView = (id: number): string => id > 0 ? '0x' + id.toString(16) : 'unavailable'
