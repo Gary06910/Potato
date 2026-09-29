@@ -22,7 +22,12 @@ class MemoryRepository {
     return { ownerId, userDeletedAtMs: { taskAbsent: true },
       ...(Number.isFinite(options.after) ? { createdAtMs: { taskAfter: options.after } } : {}),
       ...(Number.isFinite(options.through) ? { createdAtMs: { taskThrough: options.through } } : {}),
-      ...(options.day ? { occurredAt: { taskDay: options.day } } : {}) };
+      ...(options.day ? { occurredAt: { taskDay: options.day } } : {}),
+      ...(options.cursor ? { $taskCursor: options.cursor } : {}),
+      ...(options.desktopId !== undefined ? { desktopId: options.desktopId } : {}),
+      ...(options.notificationStatus !== undefined ? { notificationStatus: options.notificationStatus } : {}),
+      ...(options.notificationStatuses ? { notificationStatus: { taskIn: options.notificationStatuses } } : {}),
+      ...(options.privacyMode !== undefined ? { privacyMode: options.privacyMode } : {}) };
   }
 
   async countWhere(collection, criteria) {
@@ -173,10 +178,13 @@ function collectionMap(collections, collection) {
 }
 
 function matches(document, criteria) {
-  return Object.entries(criteria).every(([field, expected]) => (field === '$usageAfter'
+  return Object.entries(criteria).every(([field, expected]) => (field === '$taskCursor'
+    ? document.createdAtMs < expected.createdAtMs || (document.createdAtMs === expected.createdAtMs && document._id < expected.taskId)
+    : field === '$usageAfter'
     ? document.updatedAtMs < expected.updatedAtMs || (document.updatedAtMs === expected.updatedAtMs && document._id < expected._id)
     : expected && typeof expected === 'object'
-    ? (expected.taskAbsent === true ? document[field] == null
+    ? (expected.taskIn ? expected.taskIn.includes(document[field])
+      : expected.taskAbsent === true ? document[field] == null
       : expected.taskAfter !== undefined ? document[field] > expected.taskAfter
       : expected.taskThrough !== undefined ? document[field] <= expected.taskThrough
       : expected.taskDay ? document[field] >= expected.taskDay.start && document[field] < expected.taskDay.end

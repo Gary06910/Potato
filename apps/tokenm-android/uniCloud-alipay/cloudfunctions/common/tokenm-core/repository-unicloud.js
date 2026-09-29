@@ -37,10 +37,18 @@ class UniCloudRepository {
 
   taskHistoryCriteria(ownerId, options = {}) {
     const cmd = this.database.command;
-    return { ownerId, userDeletedAtMs: cmd.exists(false).or(cmd.eq(null)),
+    const criteria = { ownerId, userDeletedAtMs: cmd.exists(false).or(cmd.eq(null)),
       ...(Number.isFinite(options.after) ? { createdAtMs: cmd.gt(options.after) } : {}),
       ...(Number.isFinite(options.through) ? { createdAtMs: cmd.lte(options.through) } : {}),
-      ...(options.day ? { occurredAt: cmd.gte(options.day.start).and(cmd.lt(options.day.end)) } : {}) };
+      ...(options.day ? { occurredAt: cmd.gte(options.day.start).and(cmd.lt(options.day.end)) } : {}),
+      ...(options.desktopId !== undefined ? { desktopId: options.desktopId } : {}),
+      ...(options.notificationStatus !== undefined ? { notificationStatus: options.notificationStatus } : {}),
+      ...(options.notificationStatuses ? { notificationStatus: cmd.in(options.notificationStatuses) } : {}),
+      ...(options.privacyMode !== undefined ? { privacyMode: options.privacyMode } : {}) };
+    return options.cursor ? cmd.and(criteria, cmd.or(
+      { createdAtMs: cmd.lt(options.cursor.createdAtMs) },
+      { createdAtMs: options.cursor.createdAtMs, _id: cmd.lt(options.cursor.taskId) }
+    )) : criteria;
   }
 
   async countWhere(collection, criteria) {

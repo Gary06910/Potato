@@ -66,6 +66,14 @@ module.exports = {
     return this.tokenmApplication.bootstrap(this.tokenmUid, input);
   },
 
+  async getAndroidDashboard(input = {}) {
+    return this.tokenmApplication.getAndroidDashboard(this.tokenmUid, input);
+  },
+
+  async getSettings(input = {}) {
+    return this.tokenmApplication.getSettings(this.tokenmUid, input);
+  },
+
   async getDashboard(input = {}) {
     return this.tokenmApplication.getDashboard(this.tokenmUid, input);
   },
@@ -135,3 +143,13 @@ module.exports = {
     return this.tokenmApplication.deleteAccount(this.tokenmUid, input);
   }
 };
+
+// Consent and account/device teardown remain reachable when consent is stale.
+const PROTECTED_OPERATIONS = Object.freeze(["bootstrap","getDashboard","listTasks","getTask","listDesktops","createPairingCode","getPairingStatus","renameDesktop","unbindDesktop","updateSettings","deleteTask","clearTasks"]);
+for (const method of PROTECTED_OPERATIONS) {
+  const operation = module.exports[method];
+  module.exports[method] = async function (...args) {
+    await this.tokenmApplication.requireCurrentPrivacyConsent(this.tokenmUid);
+    return operation.apply(this, args);
+  };
+}

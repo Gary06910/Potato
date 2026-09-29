@@ -84,6 +84,42 @@ class TokenMApplication {
     };
   }
 
+  async requireCurrentPrivacyConsent(ownerId) {
+    assertOwner(ownerId);
+    const user = await this.ensureUser(ownerId);
+    if (!hasCurrentPrivacyConsent(user)) throw new AppError('privacy_consent_required');
+    return user;
+  }
+
+  // Android needs no total-history/device scan or legacy latestTask projection.
+  async getAndroidDashboard(ownerId, input = {}) {
+    assertOwner(ownerId);
+    assertExactObject(input, ['dayStart', 'dayEnd']);
+    const dayRange = dashboardDayRange(input, this.now());
+    const user = await this.requireCurrentPrivacyConsent(ownerId);
+    const [tasks, desktops, activeDesktops, todayTasks] = await Promise.all([
+      this.repository.findMany(COLLECTIONS.tasks, this.repository.taskHistoryCriteria(ownerId, { after: user.historyClearedAtMs }), {
+        sort: [{ field: 'createdAtMs', direction: 'desc' }, { field: '_id', direction: 'desc' }], limit: 3
+      }),
+      this.repository.findMany(COLLECTIONS.desktops, { ownerId, status: 'active' }, { sortBy: 'createdAtMs', direction: 'desc', limit: 2 }),
+      this.repository.countWhere(COLLECTIONS.desktops, { ownerId, status: 'active' }),
+      this.repository.countWhere(COLLECTIONS.tasks, this.repository.taskHistoryCriteria(ownerId, {
+        after: user.historyClearedAtMs, day: { start: toIso(dayRange.startMs), end: toIso(dayRange.endMs) }
+      }))
+    ]);
+    const recentTasks = await Promise.all(tasks.map(async task => {
+      const desktop = await this.repository.findById(COLLECTIONS.desktops, task.desktopId);
+      return { task: publicTask(task), desktopName: desktop?.ownerId === ownerId ? desktop.name : '未知电脑' };
+    }));
+    return { settings: publicSettings(user), counts: { activeDesktops, todayTasks }, recentTasks, recentDesktops: desktops.map(publicDesktop) };
+  }
+
+  async getSettings(ownerId, input = {}) {
+    assertOwner(ownerId);
+    assertExactObject(input, []);
+    return { settings: publicSettings(await this.requireCurrentPrivacyConsent(ownerId)) };
+  }
+
   async getDashboard(ownerId, input = {}) {
     assertOwner(ownerId);
     assertExactObject(input, ['dayStart', 'dayEnd']);
@@ -149,34 +185,14 @@ class TokenMApplication {
     }
     const cursor = validateTaskCursor(input.cursor);
     const user = await this.ensureUser(ownerId);
-    const filtered = [];
-    let skip = 0;
-    let exhausted = false;
-    while (filtered.length < limit + 1 && !exhausted) {
-      const batch = await this.repository.findMany(COLLECTIONS.tasks, this.repository.taskHistoryCriteria(ownerId, { after: user.historyClearedAtMs }), {
-        sort: [
-          { field: 'createdAtMs', direction: 'desc' },
-          { field: '_id', direction: 'desc' }
-        ],
-        skip,
-        limit: 100
-      });
-      skip += batch.length;
-      exhausted = batch.length < 100;
-      for (const task of batch) {
-        if (!isVisibleTask(task, user)) continue;
-        if (!taskAfterCursor(task, cursor)) continue;
-        if (input.desktopId !== undefined && task.desktopId !== input.desktopId) continue;
-        if (
-          input.notificationStatus !== undefined
-          && task.notificationStatus !== input.notificationStatus
-        ) continue;
-        if (notificationStatuses !== null && !notificationStatuses.includes(task.notificationStatus)) continue;
-        if (input.privacyMode !== undefined && task.privacyMode !== input.privacyMode) continue;
-        filtered.push(task);
-        if (filtered.length >= limit + 1) break;
-      }
-    }
+    const filtered = await this.repository.findMany(COLLECTIONS.tasks, this.repository.taskHistoryCriteria(ownerId, {
+      after: user.historyClearedAtMs, cursor,
+      desktopId: input.desktopId, notificationStatus: input.notificationStatus,
+      notificationStatuses, privacyMode: input.privacyMode
+    }), {
+      sort: [{ field: 'createdAtMs', direction: 'desc' }, { field: '_id', direction: 'desc' }],
+      limit: limit + 1
+    });
     const page = filtered.slice(0, limit);
     const hasMore = filtered.length > limit;
     return {
@@ -1053,11 +1069,6 @@ function dashboardDayRange(input, nowMs) {
   return { startMs, endMs };
 }
 
-function taskAfterCursor(task, cursor) {
-  if (!cursor) return true;
-  return task.createdAtMs < cursor.createdAtMs
-    || (task.createdAtMs === cursor.createdAtMs && task._id < cursor.taskId);
-}
 
 function taskTombstone(nowMs) {
   return { userDeletedAtMs: nowMs, project: null, model: null, summary: null,
