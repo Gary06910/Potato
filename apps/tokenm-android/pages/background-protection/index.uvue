@@ -5,17 +5,17 @@
         <tm-header title="后台通知保护" :back="true" />
         <text class="guide-intro">帮助后台和锁屏时及时收到提醒</text>
         <text class="section-title">手机品牌</text>
-        <button class="btn section" @click="selectBrand">{{ guide.label }} ▼</button>
+        <view class="secondary-surface section" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">{{ guide.label }} ▼</text></view><button class="button-hitbox" @click="selectBrand" aria-label="{{ guide.label }} ▼"></button></view>
         <text class="guide-note">不同系统版本名称可能略有不同，请以本机菜单为准。</text>
         <status-marker :label="summary" tone="info" />
         <notice-banner v-if="message.length > 0" tone="warning" :text="message" />
         <view class="surface guide-card">
           <text class="section-title">系统状态</text>
           <text class="guide-state">系统通知 · {{ notificationProtectionLabel(notification) }}</text>
-          <button class="btn section" @click="openNotifications">打开系统通知设置</button>
+          <view class="secondary-surface section" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">打开系统通知设置</text></view><button class="button-hitbox" @click="openNotifications" aria-label="打开系统通知设置"></button></view>
           <text class="guide-state">电池优化 · {{ batteryProtectionLabel(battery) }}</text>
           <text class="guide-note">此项只检测 Android 标准电池优化；品牌后台管理设置需自行检查。</text>
-          <button v-if="battery != 'unsupported'" class="btn section" @click="openBattery">打开电池优化设置</button>
+          <view v-if="battery != 'unsupported'" class="secondary-surface section" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">打开电池优化设置</text></view><button class="button-hitbox" @click="openBattery" aria-label="打开电池优化设置"></button></view>
         </view>
         <view class="surface guide-card">
           <text class="section-title">{{ guide.label }} 后台运行设置</text>
@@ -23,14 +23,14 @@
             <text class="section-title">{{ index + 1 }}. {{ step.title }}</text>
             <text class="guide-copy">{{ step.text }}</text>
           </view>
-          <button class="btn section" @click="openApp">打开应用系统设置</button>
-          <button class="btn section" @click="openSystem">打开系统设置</button>
+          <view class="secondary-surface section" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">打开应用系统设置</text></view><button class="button-hitbox" @click="openApp" aria-label="打开应用系统设置"></button></view>
+          <view class="secondary-surface section" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">打开系统设置</text></view><button class="button-hitbox" @click="openSystem" aria-label="打开系统设置"></button></view>
           <text class="guide-state">{{ manualProtectionLabel(confirmations.guideConfirmed) }}</text>
-          <view class="primary-surface section">
-            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="toggleGuide">{{ confirmations.guideConfirmed ? '撤销我的确认' : '我已完成这些设置' }}</button>
+          <view class="primary-surface section" hover-class="primary-surface-active">
+            <view class="button-label-layer"><text class="button-label">{{ confirmations.guideConfirmed ? '撤销我的确认' : '我已完成这些设置' }}</text></view><button class="button-hitbox" @click="toggleGuide" :aria-label="confirmations.guideConfirmed ? '撤销我的确认' : '我已完成这些设置'"></button>
           </view>
         </view>
-        <button class="btn section" @click="refresh">重新检查系统状态</button>
+        <view class="secondary-surface section" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">重新检查系统状态</text></view><button class="button-hitbox" @click="refresh" aria-label="重新检查系统状态"></button></view>
         <text class="guide-note">品牌选择和手动确认仅保存在本机，不上传云端。更改品牌后，各自的确认状态分别保存。</text>
         <view class="surface guide-card">
           <text class="section-title">重要提示</text>

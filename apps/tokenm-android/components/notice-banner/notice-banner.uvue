@@ -1,7 +1,10 @@
 <template>
   <view :class="['notice', 'notice-' + tone]">
     <text class="notice-text">{{ text }}</text>
-    <button v-if="actionText.length > 0" class="notice-action" @click="emitAction">{{ actionText }}</button>
+    <view v-if="actionText.length > 0" class="notice-action compact-action-surface">
+      <view class="compact-label-layer"><text class="compact-label">{{ actionText }}</text></view>
+      <button class="button-hitbox" :aria-label="actionText" @click="emitAction"></button>
+    </view>
   </view>
 </template>
 
@@ -40,7 +43,7 @@ const emitAction = () => {
   background-color: $tm-bg-raised;
 }
 .notice-text { min-width: 0; flex: 1; color: $tm-text-2; font-size: 13px; line-height: 20px; }
-.notice-action { min-width: 48px; min-height: 48px; margin-left: 6px; padding-right: 4px; padding-left: 4px; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; }
+.notice-action { min-width: 48px; margin-left: 6px; }
 .notice-success { border-left-color: $tm-success; }
 .notice-warning { border-left-color: $tm-warning; }
 .notice-danger { border-left-color: $tm-danger; }

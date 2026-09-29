@@ -13,10 +13,10 @@
             <text class="pair-code" :selectable="true">{{ displayCode }}</text>
             <text class="pair-time">{{ expired ? '配对码已失效' : countdown + ' 后失效' }}</text>
           </view>
-          <view v-if="!paired" class="primary-surface section" :class="(expired || paired) ? 'primary-surface-disabled' : ''">
-            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="expired || paired" @click="copyCode">复制配对码</button>
+          <view v-if="!paired" class="primary-surface section" :class="(expired || paired) ? 'primary-surface-disabled' : ''" hover-class="primary-surface-active">
+            <view class="button-label-layer"><text class="button-label">复制配对码</text></view><button class="button-hitbox" :disabled="expired || paired" @click="copyCode" aria-label="复制配对码"></button>
           </view>
-          <button v-if="!paired" class="btn btn-secondary btn-spaced" hover-class="btn-active" @click="confirmRefresh">刷新配对码</button>
+          <view v-if="!paired" class="secondary-surface btn-spaced" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">刷新配对码</text></view><button class="button-hitbox" @click="confirmRefresh" aria-label="刷新配对码"></button></view>
           <view v-if="!paired" class="section steps">
             <text class="section-title">如何绑定</text>
             <view class="step"><text class="step-number">1</text><text class="step-copy">打开 Potato Desktop 设置</text></view>
@@ -24,10 +24,10 @@
             <view class="step step-last"><text class="step-number">3</text><text class="step-copy">输入这组 6 位配对码</text></view>
           </view>
           <text v-if="!paired" class="privacy-caption">离开后，配对码仍在显示的有效期内可用。</text>
-          <view v-if="paired" class="primary-surface section">
-            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goDesktops">查看已绑定电脑</button>
+          <view v-if="paired" class="primary-surface section" hover-class="primary-surface-active">
+            <view class="button-label-layer"><text class="button-label">查看已绑定电脑</text></view><button class="button-hitbox" @click="goDesktops" aria-label="查看已绑定电脑"></button>
           </view>
-          <button v-else class="back-list" @click="goDesktops">取消并返回电脑列表</button>
+          <view v-else class="back-list compact-action-surface"><view class="compact-label-layer"><text class="text-action-label text-action-muted">取消并返回电脑列表</text></view><button class="button-hitbox" aria-label="取消并返回电脑列表" @click="goDesktops"></button></view>
         </view>
       </view>
     </scroll-view>
@@ -184,5 +184,5 @@ onUnload(() => {
 .step-last { border-bottom-width: 0; }
 .step-number { width: 28px; height: 28px; margin-right: 10px; border-width: 1px; border-style: solid; border-color: $tm-line-strong; border-radius: 14px; color: $tm-info; font-size: 12px; line-height: 28px; text-align: center; }
 .step-copy { flex: 1; color: $tm-text-2; font-size: 14px; line-height: 22px; }
-.back-list { width: 100%; min-height: 48px; margin-top: 12px; color: $tm-text-3; background-color: transparent; font-size: 13px; line-height: 48px; }
+.back-list { width: 100%; margin-top: 12px; }
 </style>

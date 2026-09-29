@@ -20,8 +20,8 @@
               <status-marker :tone="!dashboard.notifications.notificationsEnabled ? 'neutral' : pushReadinessView(runtimeFacts.pushReadiness).tone" :label="!dashboard.notifications.notificationsEnabled ? '任务记录仍会保存' : pushReadinessView(runtimeFacts.pushReadiness).label" />
               <text class="focus-detail">{{ dashboard.activeDesktopCount > 0 ? 'Codex 完成后，在这里查看最近任务。' : '绑定一台电脑，开始接收任务完成记录。' }}</text>
             </view>
-            <view class="primary-surface focus-action-space">
-              <button class="btn primary-hitbox" style="font-size: 13px" hover-class="primary-hitbox-active" @click="goNotifications">通知设置</button>
+            <view class="primary-surface focus-action-space" hover-class="primary-surface-active">
+              <view class="button-label-layer"><text class="button-label button-label-small">通知设置</text></view><button class="button-hitbox" @click="goNotifications" aria-label="通知设置"></button>
             </view>
           </view>
 
@@ -34,7 +34,10 @@
           <view class="section">
             <view class="section-head">
               <text class="section-title">最近任务</text>
-              <button class="section-link" @click="goTasks">查看全部</button>
+              <view class="section-link compact-action-surface">
+                <view class="compact-label-layer"><text class="compact-label">查看全部</text></view>
+                <button class="button-hitbox" aria-label="查看全部任务" @click="goTasks"></button>
+              </view>
             </view>
             <view v-if="dashboard.recentTasks.length > 0" class="plain-list surface">
               <view
@@ -56,7 +59,10 @@
           <view class="section">
             <view class="section-head">
               <text class="section-title">电脑</text>
-              <button class="section-link" @click="goDesktops">查看全部</button>
+              <view class="section-link compact-action-surface">
+                <view class="compact-label-layer"><text class="compact-label">查看全部</text></view>
+                <button class="button-hitbox" aria-label="查看全部电脑" @click="goDesktops"></button>
+              </view>
             </view>
             <view v-if="dashboard.desktops.length > 0" class="plain-list surface">
               <view v-for="(item, index) in dashboard.desktops.slice(0, 3)" :key="item.desktopId" :class="['row', index == Math.min(dashboard.desktops.length, 3) - 1 ? 'row-last' : '']">

@@ -15,7 +15,10 @@
     </view>
     <text class="state-title">{{ title }}</text>
     <text v-if="detail.length > 0" class="state-detail">{{ detail }}</text>
-    <button v-if="actionText.length > 0" class="state-action" @click="emitAction">{{ actionText }}</button>
+    <view v-if="actionText.length > 0" class="state-action compact-action-surface">
+      <view class="compact-label-layer"><text class="compact-label">{{ actionText }}</text></view>
+      <button class="button-hitbox" :aria-label="actionText" @click="emitAction"></button>
+    </view>
   </view>
 </template>
 
@@ -64,5 +67,5 @@ const emitAction = () => {
 .empty-line-two { width: 8px; margin-top: 4px; }
 .state-title { color: $tm-text-1; font-size: 15px; font-weight: 600; line-height: 22px; text-align: center; }
 .state-detail { max-width: 290px; margin-top: 4px; color: $tm-text-2; font-size: 13px; line-height: 20px; text-align: center; }
-.state-action { min-width: 48px; min-height: 48px; margin-top: 8px; padding-right: 12px; padding-left: 12px; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; }
+.state-action { min-width: 48px; margin-top: 8px; }
 </style>

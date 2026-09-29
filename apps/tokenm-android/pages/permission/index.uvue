@@ -31,8 +31,8 @@
             tone="warning"
             text="请先登录，再确认隐私说明并设置任务通知。"
           />
-          <view v-if="facts.login != 'signedIn'" class="primary-surface section">
-            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goLogin">前往登录</button>
+          <view v-if="facts.login != 'signedIn'" class="primary-surface section" hover-class="primary-surface-active">
+            <view class="button-label-layer"><text class="button-label">前往登录</text></view><button class="button-hitbox" @click="goLogin" aria-label="前往登录"></button>
           </view>
 
           <view v-else-if="facts.privacyConsent != 'current'" class="consent-block">
@@ -44,28 +44,28 @@
               </view>
               <switch :checked="privacyConfirmed" color="#2869c9" aria-label="隐私确认" @change="toggleConsent" />
             </view>
-            <button class="privacy-link" @click="goPrivacy">查看数据与隐私说明</button>
-            <view class="primary-surface" :class="(!privacyConfirmed || working) ? 'primary-surface-disabled' : ''">
-              <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="!privacyConfirmed || working"
-              @click="acceptConsent">{{ working ? '正在保存…' : '同意当前隐私版本' }}</button>
+            <view class="privacy-link compact-action-surface"><view class="compact-label-layer"><text class="text-action-label">查看数据与隐私说明</text></view><button class="button-hitbox" aria-label="查看数据与隐私说明" @click="goPrivacy"></button></view>
+            <view class="primary-surface" :class="(!privacyConfirmed || working) ? 'primary-surface-disabled' : ''" hover-class="primary-surface-active">
+              <view class="button-label-layer"><text class="button-label">{{ working ? '正在保存…' : '同意当前隐私版本' }}</text></view><button class="button-hitbox" :disabled="!privacyConfirmed || working"
+              @click="acceptConsent" :aria-label="working ? '正在保存…' : '同意当前隐私版本'"></button>
             </view>
           </view>
 
           <view v-else class="permission-actions">
             <notice-banner v-if="facts.notificationPermission != 'authorized'" class="section" tone="info" text="点击开启后，按系统提示允许通知。你也可以稍后设置。" />
             <view class="computer-actions section">
-              <button class="btn btn-secondary" hover-class="btn-active" :disabled="working" @click="goPairing">绑定电脑</button>
-              <button class="btn btn-secondary btn-spaced" hover-class="btn-active" :disabled="working" @click="goDesktops">查看电脑</button>
+              <view class="secondary-surface" :class="(working) ? 'button-surface-disabled' : ''" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">绑定电脑</text></view><button class="button-hitbox" :disabled="working" @click="goPairing" aria-label="绑定电脑"></button></view>
+              <view class="secondary-surface btn-spaced" :class="(working) ? 'button-surface-disabled' : ''" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">查看电脑</text></view><button class="button-hitbox" :disabled="working" @click="goDesktops" aria-label="查看电脑"></button></view>
             </view>
-            <view v-if="facts.notificationPermission != 'authorized' || facts.mobileRegistration != 'ready'" class="primary-surface section" :class="(working) ? 'primary-surface-disabled' : ''">
-              <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="working"
-              @click="requestNotificationPermissionFromCtaAction">{{ permissionActionLabel }}</button>
+            <view v-if="facts.notificationPermission != 'authorized' || facts.mobileRegistration != 'ready'" class="primary-surface section" :class="(working) ? 'primary-surface-disabled' : ''" hover-class="primary-surface-active">
+              <view class="button-label-layer"><text class="button-label">{{ permissionActionLabel }}</text></view><button class="button-hitbox" :disabled="working"
+              @click="requestNotificationPermissionFromCtaAction" :aria-label="permissionActionLabel"></button>
             </view>
-            <view v-if="facts.notificationPermission == 'authorized' && facts.mobileRegistration == 'ready'" class="primary-surface btn-spaced" :class="working ? 'primary-surface-disabled' : ''">
-              <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="working" @click="continueToApp">进入 App</button>
+            <view v-if="facts.notificationPermission == 'authorized' && facts.mobileRegistration == 'ready'" class="primary-surface btn-spaced" :class="working ? 'primary-surface-disabled' : ''" hover-class="primary-surface-active">
+              <view class="button-label-layer"><text class="button-label">进入 App</text></view><button class="button-hitbox" :disabled="working" @click="continueToApp" aria-label="进入 App"></button>
             </view>
-            <button v-else class="btn btn-secondary btn-spaced" hover-class="btn-active" :disabled="working" @click="continueToApp">进入 App</button>
-            <button v-if="facts.mobileRegistration == 'error'" class="btn btn-secondary btn-spaced" hover-class="btn-active" :disabled="working" @click="retryRegistration">恢复通知服务</button>
+            <view v-else class="secondary-surface btn-spaced" :class="(working) ? 'button-surface-disabled' : ''" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">进入 App</text></view><button class="button-hitbox" :disabled="working" @click="continueToApp" aria-label="进入 App"></button></view>
+            <view v-if="facts.mobileRegistration == 'error'" class="secondary-surface btn-spaced" :class="(working) ? 'button-surface-disabled' : ''" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">恢复通知服务</text></view><button class="button-hitbox" :disabled="working" @click="retryRegistration" aria-label="恢复通知服务"></button></view>
             <text class="permission-help">任务通知开关可在设置中管理。</text>
           </view>
         </view>
@@ -295,5 +295,5 @@ onReady(() => {
 .consent-copy { min-width: 0; flex: 1; margin-right: 12px; }
 .consent-title { color: $tm-text-1; font-size: 14px; font-weight: 500; line-height: 21px; }
 .consent-detail { margin-top: 2px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
-.privacy-link { width: 100%; min-height: 48px; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; text-align: center; }
+.privacy-link { width: 100%; }
 </style>

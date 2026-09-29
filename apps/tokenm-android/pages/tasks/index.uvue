@@ -12,40 +12,34 @@
     >
       <view class="page-content page-content-with-tabs">
         <tm-header title="任务" />
-        <button class="filter-toggle" :disabled="mutation.length > 0" @click="confirmClear">{{ mutation.length > 0 ? mutation : '清除全部任务记录' }}</button>
+        <view class="filter-toggle compact-action-surface"><view class="compact-label-layer"><text class="filter-toggle-label">{{ mutation.length > 0 ? mutation : '清除全部任务记录' }}</text></view><button class="button-hitbox" :disabled="mutation.length > 0" :aria-label="mutation.length > 0 ? mutation : '清除全部任务记录'" @click="confirmClear"></button></view>
         <text class="filter-label">长按任务可删除记录</text>
         <notice-banner v-if="banner.length > 0" tone="warning" :text="banner" action-text="重试" @action="refresh" />
         <text class="filter-label">内容</text>
         <view class="filter-row" role="tablist" aria-label="任务内容筛选">
-          <button
+          <view
             v-for="item in filters"
             :key="item.value"
             :class="['filter-chip', filter == item.value ? 'filter-active' : '']"
-            :aria-selected="filter == item.value"
-            @click="changeFilter(item.value)"
-          >{{ item.label }}</button>
+          ><view class="filter-chip-label-layer"><text class="filter-chip-label">{{ item.label }}</text></view><button class="button-hitbox" :aria-label="item.label" :aria-selected="filter == item.value" @click="changeFilter(item.value)"></button></view>
         </view>
-        <button class="filter-toggle" @click="showFilters = !showFilters">{{ showFilters ? '收起筛选' : '筛选电脑与通知' }}{{ desktopId != 'all' || deliveryFilter != 'all' ? ' · 已筛选' : '' }}</button>
+        <view class="filter-toggle compact-action-surface"><view class="compact-label-layer"><text class="filter-toggle-label">{{ showFilters ? '收起筛选' : '筛选电脑与通知' }}{{ desktopId != 'all' || deliveryFilter != 'all' ? ' · 已筛选' : '' }}</text></view><button class="button-hitbox" :aria-label="showFilters ? '收起筛选' : '筛选电脑与通知'" @click="showFilters = !showFilters"></button></view>
         <view v-show="showFilters">
         <text class="filter-label">电脑</text>
         <view class="filter-row filter-row-wrap" role="tablist" aria-label="电脑筛选">
-          <button
+          <view
             v-for="item in desktopOptions"
             :key="item.value"
             :class="['filter-chip', desktopId == item.value ? 'filter-active' : '']"
-            :aria-selected="desktopId == item.value"
-            @click="changeDesktop(item.value)"
-          >{{ item.label }}</button>
+          ><view class="filter-chip-label-layer"><text class="filter-chip-label">{{ item.label }}</text></view><button class="button-hitbox" :aria-label="item.label" :aria-selected="desktopId == item.value" @click="changeDesktop(item.value)"></button></view>
         </view>
         <text class="filter-label">通知状态</text>
         <view class="filter-row filter-row-wrap" role="tablist" aria-label="通知状态筛选">
-          <button
+          <view
             v-for="item in deliveryFilters"
             :key="item.value"
             :class="['filter-chip', deliveryFilter == item.value ? 'filter-active' : '']"
-            :aria-selected="deliveryFilter == item.value"
-            @click="changeDeliveryFilter(item.value)"
-          >{{ item.label }}</button>
+          ><view class="filter-chip-label-layer"><text class="filter-chip-label">{{ item.label }}</text></view><button class="button-hitbox" :aria-label="item.label" :aria-selected="deliveryFilter == item.value" @click="changeDeliveryFilter(item.value)"></button></view>
         </view>
         </view>
         <ui-state v-if="state == 'loading'" mode="loading" variant="list" />
@@ -68,7 +62,7 @@
           <ui-state v-if="loadingMore" mode="loading" :compact="true" variant="list" />
           <notice-banner v-else-if="paginationError.length > 0" class="pagination-state" tone="warning" :text="paginationError" action-text="重试" @action="loadMore" />
           <text v-else-if="nextCursor == null" class="list-footer">已显示全部任务</text>
-          <button v-else class="load-more" @click="loadMore">加载更多</button>
+          <view v-else class="load-more compact-action-surface"><view class="compact-label-layer"><text class="load-more-label">加载更多</text></view><button class="button-hitbox" aria-label="加载更多" @click="loadMore"></button></view>
         </view>
       </view>
     </scroll-view>
@@ -336,8 +330,15 @@ onReady(() => { timing.shellReady() })
 .filter-label { margin-top: 10px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
 .filter-row { flex-direction: row; flex-wrap: wrap; margin-top: 4px; margin-bottom: 2px; }
 .filter-row-wrap { flex-wrap: wrap; }
-.filter-chip { min-width: 72px; max-width: 280px; min-height: 48px; margin-right: 6px; margin-bottom: 4px; padding-right: 12px; padding-left: 12px; border-width: 1px; border-style: solid; border-color: $tm-line; border-radius: $tm-radius-md; color: $tm-text-2; background-color: transparent; font-size: 13px; line-height: 46px; }
+.filter-chip { position: relative; box-sizing: border-box; min-width: 72px; max-width: 280px; height: 48px; margin-right: 6px; margin-bottom: 4px; border-width: 1px; border-style: solid; border-color: $tm-line; border-radius: $tm-radius-md; background-color: transparent; }
+.filter-chip-label-layer { min-height: 46px; align-items: center; justify-content: center; padding-right: 12px; padding-left: 12px; }
+.filter-chip-label { color: $tm-text-2; font-size: 13px; line-height: 18px; text-align: center; }
 .filter-active { border-color: $tm-accent; color: $tm-text-1; background-color: $tm-accent-soft; }
+.filter-active .filter-chip-label { color: $tm-text-1; }
+.filter-toggle { width: 100%; }
+.filter-toggle-label { color: $tm-info; font-size: 13px; line-height: 18px; text-align: center; }
+.load-more { width: 100%; }
+.load-more-label { color: $tm-info; font-size: 13px; line-height: 18px; text-align: center; }
 .task-list { margin-top: 4px; }
 .task-row { margin-top: 12px; padding: 16px; }
 .task-top, .task-bottom { flex-direction: row; align-items: center; justify-content: space-between; }
@@ -348,8 +349,6 @@ onReady(() => { timing.shellReady() })
 .task-desktop { margin-left: 10px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
 .pagination-state { margin-top: 12px; }
 .list-footer { min-height: 48px; color: $tm-text-3; font-size: 12px; line-height: 48px; text-align: center; }
-.load-more { width: 100%; min-height: 48px; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; }
-.filter-toggle { min-height: 48px; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; }
 .task-complete { margin-left: 8px; color: $tm-text-2; font-size: 12px; line-height: 18px; }
 .task-meta { margin-top: 8px; color: $tm-text-2; font-size: 12px; line-height: 20px; }
 </style>

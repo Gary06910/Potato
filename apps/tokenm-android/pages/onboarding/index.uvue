@@ -16,12 +16,12 @@
           <text class="brand">Potato</text>
           <text class="onboarding-title">Codex 完成时，让手机告诉你。</text>
           <text class="onboarding-copy">绑定 Potato Desktop 后，任务记录会保存在你的账户；开启系统通知后，再在手机上显示完成提醒。</text>
-          <view class="primary-surface">
-            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goLogin">登录</button>
+          <view class="primary-surface" hover-class="primary-surface-active">
+            <view class="button-label-layer"><text class="button-label">登录</text></view><button class="button-hitbox" @click="goLogin" aria-label="登录"></button>
           </view>
-          <button class="btn btn-secondary btn-spaced" hover-class="btn-active" @click="goRegister">创建账户</button>
-          <button class="quiet-action" @click="goPermission">先了解任务通知</button>
-          <button class="privacy-link" @click="goPrivacy">默认使用隐私模式 · 了解详情</button>
+          <view class="secondary-surface btn-spaced" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">创建账户</text></view><button class="button-hitbox" @click="goRegister" aria-label="创建账户"></button></view>
+          <view class="quiet-action compact-action-surface"><view class="compact-label-layer"><text class="text-action-label">先了解任务通知</text></view><button class="button-hitbox" aria-label="先了解任务通知" @click="goPermission"></button></view>
+          <view class="privacy-link compact-action-surface"><view class="compact-label-layer"><text class="text-action-label text-action-muted">默认使用隐私模式 · 了解详情</text></view><button class="button-hitbox" aria-label="了解隐私模式" @click="goPrivacy"></button></view>
         </view>
       </view>
     </scroll-view>
@@ -93,7 +93,6 @@ onReady(() => {
 .brand { margin-bottom: 8px; color: $tm-info; font-size: 13px; font-weight: 600; line-height: 19px; }
 .onboarding-title { max-width: 310px; color: $tm-text-1; font-size: 26px; font-weight: 700; line-height: 31px; }
 .onboarding-copy { max-width: 310px; margin-top: 14px; margin-bottom: 20px; color: $tm-text-2; font-size: 14px; line-height: 23px; }
-.quiet-action, .privacy-link { width: 100%; min-height: 48px; background-color: transparent; font-size: 13px; line-height: 48px; text-align: center; }
-.quiet-action { margin-top: 6px; color: $tm-info; }
-.privacy-link { color: $tm-text-3; }
+.quiet-action, .privacy-link { width: 100%; }
+.quiet-action { margin-top: 6px; }
 </style>

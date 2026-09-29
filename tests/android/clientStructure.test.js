@@ -93,11 +93,11 @@ test('shared back control has a visible direct label and preserves its navigatio
   const register = read('pages/register/index.uvue');
   const login = read('pages/login/index.uvue');
 
-  assert.match(header, /<button[^>]+class=["']header-control["'][^>]+aria-label=["']返回上一页["'][^>]+@click=["']goBack["'][^>]*>返回<\/button>/);
+  assert.match(header, /<view[^>]+class=["']header-control["'][^>]*>[\s\S]*?<text[^>]*>返回<\/text>[\s\S]*?<button[^>]+aria-label=["']返回上一页["'][^>]+@click=["']goBack["'][^>]*><\/button>/);
   assert.doesNotMatch(header, /class=["']back-icon["']|iconfont|uni-icons|::before|::after|(?:^|\n)\s*content\s*:/i);
   assert.doesNotMatch(header, /[\uE000-\uF8FF]/u);
   assert.match(header, /const goBack\s*=\s*\(\)\s*=>\s*\{[\s\S]*uni\.navigateBack\(\{[\s\S]*fail:[\s\S]*uni\.reLaunch\(\{\s*url:\s*['"]\/pages\/dashboard\/index['"]\s*\}\)/);
-  assert.match(header, /\.header-control\s*\{[\s\S]*border-color:\s*\$tm-line[\s\S]*color:\s*\$tm-text-1[\s\S]*background-color:\s*\$tm-surface-1/);
+  assert.match(header, /\.header-control\s*\{[\s\S]*border-color:\s*\$tm-line[\s\S]*background-color:\s*\$tm-surface-1/);
   assert.match(register, /<tm-header title=["']创建账户["'] :back=["']true["'] \/>/);
   assert.match(login, /<tm-header title=["']登录["'] :back=["']true["'] \/>/);
 });

@@ -21,8 +21,8 @@
                 <text class="form-label rename-label">电脑名称</text>
                 <input v-model="editingName" class="input" type="text" :maxlength="80" />
                 <view class="inline-actions">
-                  <button class="small-action" @click="cancelRename">取消</button>
-                  <button class="small-action primary" @click="saveRename(item.desktopId)">保存</button>
+                  <view class="small-action compact-action-surface"><view class="compact-label-layer"><text class="compact-label">取消</text></view><button class="button-hitbox" aria-label="取消重命名" @click="cancelRename"></button></view>
+                  <view class="small-action compact-action-surface"><view class="compact-label-layer"><text class="compact-label compact-label-strong">保存</text></view><button class="button-hitbox" aria-label="保存电脑名称" @click="saveRename(item.desktopId)"></button></view>
                 </view>
               </view>
               <view v-else>
@@ -32,21 +32,19 @@
                 <text class="desktop-meta">创建于 {{ formatDateTime(item.createdAt) }}</text>
                 <text class="desktop-meta">{{ item.lastEventAt == null ? '尚未上报任务' : '最后上报 ' + formatRelativeTime(item.lastEventAt, Date.now()) }}</text>
                 <view class="inline-actions">
-                  <button class="small-action" @click="beginRename(item)">重命名</button>
-                  <button class="small-action danger" @click="confirmUnbind(item)">解除绑定</button>
+                  <view class="small-action compact-action-surface"><view class="compact-label-layer"><text class="compact-label">重命名</text></view><button class="button-hitbox" aria-label="重命名电脑" @click="beginRename(item)"></button></view>
+                  <view class="small-action small-action-danger compact-action-surface"><view class="compact-label-layer"><text class="compact-label compact-label-danger">解除绑定</text></view><button class="button-hitbox" aria-label="解除绑定电脑" @click="confirmUnbind(item)"></button></view>
                 </view>
               </view>
             </view>
           </view>
-          <view class="primary-surface section">
-            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goPairing">绑定另一台电脑</button>
+          <view class="primary-surface section" hover-class="primary-surface-active">
+            <view class="button-label-layer"><text class="button-label">绑定另一台电脑</text></view><button class="button-hitbox" @click="goPairing" aria-label="绑定另一台电脑"></button>
           </view>
         </view>
 
         <view v-if="revoked.length > 0" class="section">
-          <button class="revoked-toggle" @click="showRevoked = !showRevoked">
-            {{ showRevoked ? '收起' : '查看' }}已解绑电脑（{{ revoked.length }}）
-          </button>
+          <view class="revoked-toggle compact-action-surface"><view class="compact-label-layer"><text class="revoked-toggle-label">{{ showRevoked ? '收起' : '查看' }}已解绑电脑（{{ revoked.length }}）</text></view><button class="button-hitbox" :aria-label="(showRevoked ? '收起' : '查看') + '已解绑电脑'" @click="showRevoked = !showRevoked"></button></view>
           <view v-if="showRevoked" class="plain-list">
             <view v-for="(item, index) in revoked" :key="item.desktopId" :class="['row', index == revoked.length - 1 ? 'row-last' : '']">
               <view class="row-main">
@@ -231,9 +229,9 @@ onReady(() => { timing.shellReady() })
 .desktop-marker { margin-top: 4px; }
 .desktop-meta { margin-top: 5px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
 .inline-actions { flex-direction: row; margin-top: 16px; padding-top: 8px; border-top-width: 1px; border-top-style: solid; border-top-color: $tm-line; }
-.small-action { min-width: 0; min-height: 48px; flex: 1; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; }
-.small-action.primary { color: $tm-text-1; }
-.small-action.danger { flex: 0; min-width: 96px; color: $tm-danger; font-size: 12px; }
+.small-action { min-width: 0; flex: 1; }
+.small-action-danger { flex: 0; min-width: 96px; }
 .rename-label { margin-top: 0; }
-.revoked-toggle { width: 100%; min-height: 48px; color: $tm-text-3; background-color: transparent; font-size: 12px; line-height: 48px; }
+.revoked-toggle { width: 100%; }
+.revoked-toggle-label { color: $tm-text-3; font-size: 12px; line-height: 18px; text-align: center; }
 </style>

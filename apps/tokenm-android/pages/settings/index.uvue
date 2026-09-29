@@ -48,9 +48,9 @@
               <view class="row-main"><text class="row-title">关于 Potato</text><text class="row-meta">版本与通知说明</text></view><text class="chevron">查看</text>
             </view>
           </view>
-          <button v-if="facts.login == 'signedIn'" :class="['btn', 'btn-danger', 'section', updating ? 'btn-disabled' : '']" hover-class="btn-active" :disabled="updating" @click="confirmLogout">退出登录</button>
-          <view v-else class="primary-surface section">
-            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" @click="goLogin">登录 Potato</button>
+          <view v-if="facts.login == 'signedIn'" class="danger-surface section" :class="(updating) ? 'button-surface-disabled' : ''" hover-class="button-surface-active"><view class="button-label-layer"><text class="button-label">退出登录</text></view><button class="button-hitbox" :disabled="updating" @click="confirmLogout" aria-label="退出登录"></button></view>
+          <view v-else class="primary-surface section" hover-class="primary-surface-active">
+            <view class="button-label-layer"><text class="button-label">登录 Potato</text></view><button class="button-hitbox" @click="goLogin" aria-label="登录 Potato"></button>
           </view>
         </view>
       </view>

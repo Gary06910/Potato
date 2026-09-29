@@ -24,12 +24,10 @@
           </view>
           <text v-if="captchaError.length > 0" class="captcha-error" @click="reloadCaptcha">{{ captchaError }}</text>
           <text class="captcha-help">输入图片中的字符；看不清时点击图片更换。</text>
-          <view class="primary-surface section" :class="(submitting || captchaLoading) ? 'primary-surface-disabled' : ''">
-            <button class="btn primary-hitbox" hover-class="primary-hitbox-active" :disabled="submitting || captchaLoading" @click="submit">
-            {{ submitting ? '正在创建…' : '创建账户' }}
-          </button>
+          <view class="primary-surface section" :class="(submitting || captchaLoading) ? 'primary-surface-disabled' : ''" hover-class="primary-surface-active">
+            <view class="button-label-layer"><text class="button-label">{{ submitting ? '正在创建…' : '创建账户' }}</text></view><button class="button-hitbox" :disabled="submitting || captchaLoading" @click="submit" :aria-label="submitting ? '正在创建…' : '创建账户'"></button>
           </view>
-          <button class="auth-link" @click="goLogin">已有账户？登录</button>
+          <view class="auth-link compact-action-surface"><view class="compact-label-layer"><text class="text-action-label">已有账户？登录</text></view><button class="button-hitbox" aria-label="已有账户？登录" @click="goLogin"></button></view>
         </view>
       </view>
     </scroll-view>
@@ -160,7 +158,7 @@ onLoad((_options: OnLoadOptions) => {
 
 <style lang="scss">
 .auth-body { margin-top: 20px; padding-top: 24px; padding-right: 20px; padding-bottom: 16px; padding-left: 20px; border-width: 1px; border-style: solid; border-color: $tm-line; border-radius: $tm-radius-lg; background-color: $tm-surface-1; box-shadow: 0 7px 22px rgba(50, 43, 32, 0.055); }
-.auth-link { width: 100%; min-height: 48px; margin-top: 8px; color: $tm-info; background-color: transparent; font-size: 13px; line-height: 48px; }
+.auth-link { width: 100%; margin-top: 8px; }
 .input-placeholder { color: $tm-text-3; }
 .captcha-row { width: 100%; flex-direction: row; align-items: center; }
 .captcha-input { min-width: 0; flex: 1; }
