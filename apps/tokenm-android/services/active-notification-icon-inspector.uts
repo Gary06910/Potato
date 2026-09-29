@@ -1,4 +1,5 @@
 // Local Android notification metadata only. Keep this separate from push registration and delivery.
+import { NATIVE_ICON_DIAGNOSTIC_TAG, NATIVE_ICON_DIAGNOSTIC_ID } from './native-notification-icon-diagnostic.uts'
 // #ifdef APP-ANDROID
 import Build from 'android.os.Build'
 import Context from 'android.content.Context'
@@ -102,7 +103,7 @@ const inspectIcon = (context: Context, icon: Icon | null): InspectedNotification
 }
 // #endif
 
-export const inspectActiveNotificationIcons = (): ActiveNotificationIconInspection => {
+const inspectNotificationIcons = (localDiagnostic: boolean): ActiveNotificationIconInspection => {
   const result = emptyInspection()
   // #ifdef APP-ANDROID
   try {
@@ -132,6 +133,8 @@ export const inspectActiveNotificationIcons = (): ActiveNotificationIconInspecti
     for (let i = 0; i < active.length; i++) {
       const posted = active[i]
       if (posted.getPackageName() != packageName) continue
+      const isDiagnostic = posted.getTag() == NATIVE_ICON_DIAGNOSTIC_TAG && posted.getId() == NATIVE_ICON_DIAGNOSTIC_ID
+      if (localDiagnostic != isDiagnostic) continue
       result.activeCount++
       if (posted.getPostTime() > latestPostTime) {
         latestPostTime = posted.getPostTime()
@@ -154,3 +157,7 @@ export const inspectActiveNotificationIcons = (): ActiveNotificationIconInspecti
   // #endif
   return result
 }
+
+// Business query excludes the control even when it was posted most recently.
+export const inspectActiveNotificationIcons = (): ActiveNotificationIconInspection => inspectNotificationIcons(false)
+export const inspectLocalNotificationIcons = (): ActiveNotificationIconInspection => inspectNotificationIcons(true)

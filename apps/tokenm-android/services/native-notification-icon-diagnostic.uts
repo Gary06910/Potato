@@ -1,0 +1,66 @@
+// Temporary forensic control. Remove after the device comparison is complete.
+// #ifdef APP-ANDROID
+import Notification from 'android.app.Notification'
+import NotificationManager from 'android.app.NotificationManager'
+import Context from 'android.content.Context'
+import Build from 'android.os.Build'
+import { ensureTaskNotificationChannel } from './push-runtime.uts'
+// #endif
+
+export const NATIVE_ICON_DIAGNOSTIC_TAG = 'potato-native-icon-diagnostic'
+export const NATIVE_ICON_DIAGNOSTIC_ID = 91001
+const CHANNEL_ID = 'DcloudChannelID'
+
+export type NativeNotificationIconDiagnostic = {
+  state: string
+  pushSmallResourceId: number
+}
+
+export const sendNativeNotificationIconDiagnostic = (): NativeNotificationIconDiagnostic => {
+  const result: NativeNotificationIconDiagnostic = { state: 'UNAVAILABLE', pushSmallResourceId: 0 }
+  // #ifdef APP-ANDROID
+  try {
+    const context = UTSAndroid.getAppContext()
+    if (context == null) return result
+    const packageName = context.getPackageName()
+    const resources = context.getResources()
+    const pushSmallId = resources.getIdentifier('push_small', 'drawable', packageName)
+    result.pushSmallResourceId = pushSmallId
+    if (pushSmallId <= 0) {
+      result.state = 'PUSH_SMALL_MISSING'
+      return result
+    }
+    if (Build.VERSION.SDK_INT < 21) {
+      result.state = 'UNSUPPORTED_API'
+      return result
+    }
+    const manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager | null
+    if (manager == null) return result
+    if (Build.VERSION.SDK_INT >= 24 && !manager.areNotificationsEnabled()) {
+      result.state = 'NOTIFICATIONS_DISABLED'
+      return result
+    }
+    if (Build.VERSION.SDK_INT >= 26 && manager.getNotificationChannel(CHANNEL_ID) == null) {
+      ensureTaskNotificationChannel()
+      if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+        result.state = 'CHANNEL_MISSING'
+        return result
+      }
+    }
+    const builder = Build.VERSION.SDK_INT >= 26
+      ? new Notification.Builder(context, CHANNEL_ID)
+      : new Notification.Builder(context)
+    builder.setSmallIcon(pushSmallId)
+    builder.setContentTitle('Potato 图标测试')
+    builder.setContentText('本地 Android 原生通知')
+    builder.setAutoCancel(true)
+    builder.setOnlyAlertOnce(true)
+    manager.notify(NATIVE_ICON_DIAGNOSTIC_TAG, NATIVE_ICON_DIAGNOSTIC_ID.toInt(), builder.build())
+    // notify returns void; submission alone does not prove SystemUI presentation.
+    result.state = 'NOTIFY_SUBMITTED'
+  } catch (_error) {
+    result.state = 'NOTIFY_EXCEPTION'
+  }
+  // #endif
+  return result
+}

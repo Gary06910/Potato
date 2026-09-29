@@ -20,6 +20,8 @@ export type ApplicationIconInspection = {
   state: string
   packageName: string
   applicationIcon: ApplicationIconResource
+  applicationLogo: ApplicationIconResource
+  launcherActivityLogo: ApplicationIconResource
   roundIcon: ApplicationIconResource
   roundIconState: string
   packageManagerIconPreviewDataUrl: string
@@ -37,6 +39,7 @@ const emptyResource = (): ApplicationIconResource => ({
 const emptyInspection = (): ApplicationIconInspection => ({
   state: 'UNAVAILABLE', packageName: 'unavailable',
   applicationIcon: emptyResource(), roundIcon: emptyResource(), roundIconState: 'UNAVAILABLE',
+  applicationLogo: emptyResource(), launcherActivityLogo: emptyResource(),
   packageManagerIconPreviewDataUrl: '', launcherComponent: 'unavailable',
   launcherActivityIcon: emptyResource(), launcherEffectivePreviewDataUrl: '',
   pushSmallIcon: emptyResource(), drawableIcon: emptyResource()
@@ -94,6 +97,7 @@ export const inspectApplicationIcons = (): ApplicationIconInspection => {
 
     // ApplicationInfo.icon is the installed manifest identity selected by Android.
     result.applicationIcon = inspectResource(resources, applicationInfo.icon)
+    result.applicationLogo = inspectResource(resources, applicationInfo.logo)
     result.packageManagerIconPreviewDataUrl = previewDrawable(manager.getApplicationIcon(packageName))
 
     // roundIconRes is a hidden Android field. Reflection may be denied on a device;
@@ -118,6 +122,7 @@ export const inspectApplicationIcons = (): ApplicationIconInspection => {
         result.launcherComponent = component.flattenToString()
         const activityInfo = manager.getActivityInfo(component, 0)
         result.launcherActivityIcon = inspectResource(resources, activityInfo.icon)
+        result.launcherActivityLogo = inspectResource(resources, activityInfo.logo)
         result.launcherEffectivePreviewDataUrl = previewDrawable(activityInfo.loadIcon(manager))
       }
     }
