@@ -12,15 +12,24 @@ const mapConsent = (value: UTSJSONObject): PrivacyConsentRecord => ({
 
 let consentInFlight: Promise<PrivacyConsentRecord> | null = null
 let consentSession = -1
+let currentConsent: PrivacyConsentRecord | null = null
+let checkedAt = 0
+// A business RPC always enforces the current server version, even inside this TTL.
+const CONSENT_FRESH_MS = 30000
 
 const readConsent = async (session: number): Promise<PrivacyConsentRecord> => {
   const result = await tokenmCo.getPrivacyConsent({})
   if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
-  return mapConsent(result.privacyConsent as UTSJSONObject)
+  const consent = mapConsent(result.privacyConsent as UTSJSONObject)
+  currentConsent = consent.isCurrent ? consent : null
+  checkedAt = Date.now()
+  return consent
 }
 
 export const getCurrentPrivacyConsent = (): Promise<PrivacyConsentRecord> => {
   const session = getPageCacheSession()
+  if (consentSession == session && currentConsent != null && Date.now() - checkedAt < CONSENT_FRESH_MS) return Promise.resolve(currentConsent!)
+  if (consentSession != session) currentConsent = null
   if (consentInFlight != null && consentSession == session) return consentInFlight!
   const task = readConsent(session)
   consentInFlight = task

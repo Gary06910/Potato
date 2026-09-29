@@ -1,9 +1,30 @@
+import { getPageCacheSession, isPageCacheSessionCurrent } from './page-cache.uts'
+import { getCurrentAccountProfile } from './auth-service.uts'
 import { uniIdCo } from './auth-service.uts'
 import { getOfficialPushClientId } from './push-runtime.uts'
 import type { MobileRegistrationFact, NotificationPermissionState } from '../types/models.uts'
 
 const tokenmCo = uniCloud.importObject('tokenm-co', { customUI: true })
 const DEVICE_LABEL_KEY = 'tokenm.device.label.v1'
+const REGISTRATION_HEARTBEAT_MS = 6 * 60 * 60 * 1000
+const CID_DISCOVERY_MS = 30000
+let registeredSession = -1
+let registeredFingerprint = ''
+let registeredCid = ''
+let registeredAt = 0
+let cidCheckedAt = 0
+let registrationInFlight: Promise<void> | null = null
+let inFlightSession = -1
+let inFlightFingerprint = ''
+
+export const resetMobileRegistrationFreshness = (): void => {
+  registeredSession = -1
+  registeredFingerprint = ''
+  registeredCid = ''
+  registeredAt = 0
+  cidCheckedAt = 0
+}
+
 
 export const currentDeviceLabel = (): string => {
   const stored = uni.getStorageSync(DEVICE_LABEL_KEY)
@@ -24,32 +45,73 @@ const writeBusinessDevice = async (
   })
 }
 
-export const registerCurrentMobileDevice = async (
-  permissionState: NotificationPermissionState
+const runRegistration = async (
+  permissionState: NotificationPermissionState, session: number, fingerprint: string
 ): Promise<void> => {
   try {
     const cid = await getOfficialPushClientId()
-    await uniIdCo.setPushCid({ pushClientId: cid })
+    if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
+    cidCheckedAt = Date.now()
+    if (registeredSession == session && registeredFingerprint == fingerprint
+      && registeredCid == cid && Date.now() - registeredAt < REGISTRATION_HEARTBEAT_MS) return
+    if (registeredSession != session || registeredCid != cid) {
+      await uniIdCo.setPushCid({ pushClientId: cid })
+    }
+    if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
     await tokenmCo.registerMobileDevice({
       enabled: true,
       deviceLabel: currentDeviceLabel(),
       notificationPermissionState: permissionState,
       pushRegistrationStatus: 'ready'
     })
+    if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
+    registeredSession = session
+    registeredFingerprint = fingerprint
+    registeredCid = cid
+    registeredAt = Date.now()
   } catch (error) {
-    try {
-      await writeBusinessDevice(true, permissionState, 'error')
-    } catch (_registrationError) {
-      // Preserve the original CID or uni-id binding failure for the caller.
+    if (isPageCacheSessionCurrent(session)) {
+      resetMobileRegistrationFreshness()
+      try {
+        await writeBusinessDevice(true, permissionState, 'error')
+      } catch (_registrationError) {
+        // Preserve the original failure. The next eligible action retries.
+      }
     }
     throw error
   }
+}
+
+// CID is memory-only. Ordinary foreground checks make no binding/database write.
+// Discover changed CID opportunistically on foreground after 30s, never on a timer.
+export const registerCurrentMobileDevice = (
+  permissionState: NotificationPermissionState
+): Promise<void> => {
+  const session = getPageCacheSession()
+  const fingerprint = JSON.stringify([
+    getCurrentAccountProfile().userId, permissionState,
+    uni.getSystemInfoSync().appVersion, currentDeviceLabel()
+  ])
+  if (registrationInFlight != null && inFlightSession == session && inFlightFingerprint == fingerprint) return registrationInFlight!
+  if (registeredSession == session && registeredFingerprint == fingerprint
+    && Date.now() - registeredAt < REGISTRATION_HEARTBEAT_MS
+    && Date.now() - cidCheckedAt < CID_DISCOVERY_MS) return Promise.resolve()
+  const task = runRegistration(permissionState, session, fingerprint)
+  registrationInFlight = task
+  inFlightSession = session
+  inFlightFingerprint = fingerprint
+  task.then(
+    () => { if (registrationInFlight == task) registrationInFlight = null },
+    () => { if (registrationInFlight == task) registrationInFlight = null }
+  )
+  return task
 }
 
 export const disableCurrentMobileDevice = async (
   permissionState: NotificationPermissionState,
   previousStatus: MobileRegistrationFact
 ): Promise<void> => {
+  resetMobileRegistrationFreshness()
   const status: MobileRegistrationFact = previousStatus == 'ready' ? 'ready' : 'notStarted'
   await writeBusinessDevice(false, permissionState, status)
 }

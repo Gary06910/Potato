@@ -3,7 +3,7 @@ import { sanitizeTask } from './presentation.uts'
 import {
   dashboardSnapshot, desktopsSnapshot, settingsSnapshot, tasksSnapshot,
   getPageCacheSession, isPageCacheSessionCurrent,
-  invalidateDesktopViews, invalidateSettingsViews
+  invalidateDesktopViews, invalidateSettingsViews, handleProtectedReadError
 } from './page-cache.uts'
 import type {
   ClientRegistrationState,
@@ -73,17 +73,11 @@ type CloudBootstrapCounts = {
   activeMobileDevices: number
 }
 
-type CloudDashboardCounts = {
-  activeDesktops: number,
-  tasks: number,
-  activeMobileDevices: number,
-  todayTasks: number
-}
-
-type CloudDashboardResult = {
+type CloudAndroidDashboardResult = {
   settings: CloudSettings,
-  counts: CloudDashboardCounts,
-  latestTask: CloudTask | null
+  counts: { activeDesktops: number, todayTasks: number },
+  recentTasks: { task: CloudTask, desktopName: string }[],
+  recentDesktops: CloudDesktop[]
 }
 
 type CloudBootstrapResult = {
@@ -135,7 +129,13 @@ const mapPrivacyConsent = (value: CloudPrivacyConsent): PrivacyConsentRecord => 
 })
 
 export const getClientBootstrapStatus = async (): Promise<ClientBootstrapStatus> => {
-  const result = await tokenmCo.bootstrap<CloudBootstrapResult>({})
+  const session = getPageCacheSession()
+  const result = await tokenmCo.bootstrap<CloudBootstrapResult>({}).catch((error: any | null): CloudBootstrapResult => {
+    if (isPageCacheSessionCurrent(session)) handleProtectedReadError(error)
+    if (error instanceof Error) throw error as Error
+    throw new Error('protected_request_failed')
+  })
+  if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   return {
     backend: 'available',
     activeDesktopCount: result.counts.activeDesktops,
@@ -200,23 +200,17 @@ const readDashboard = async (): Promise<DashboardView> => {
   const range = localDayRange()
   const session = getPageCacheSession()
   const settingsRevision = settingsSnapshot.revision
-  let dashboard: CloudDashboardResult | null = null
-  let taskPage: CloudTaskPageResult | null = null
-  let desktops: DesktopRecord[] = []
-  // Each callback returns void: no heterogeneous UTS Promise.all result array.
-  await Promise.all<void>([
-    tokenmCo.getDashboard<CloudDashboardResult>(range).then((value: CloudDashboardResult): void => { dashboard = value }),
-    tokenmCo.listTasks<CloudTaskPageResult>({ limit: 5 }).then((value: CloudTaskPageResult): void => { taskPage = value }),
-    listDesktops().then((value: DesktopRecord[]): void => { desktops = value })
-  ])
-  const summary = dashboard!
-  const recent = taskPage!
+  const summary = await tokenmCo.getAndroidDashboard<CloudAndroidDashboardResult>(range)
+  const desktops = summary.recentDesktops.map(mapDesktop)
   settingsSnapshot.seed(summary.settings.notificationsEnabled, session, settingsRevision)
   return {
     todayCompletedCount: summary.counts.todayTasks,
     activeDesktopCount: summary.counts.activeDesktops,
-    desktops: desktops.filter((item) => item.status == 'active').slice(0, 2),
-    recentTasks: recent.tasks.map((item) => mapTask(item, desktops)),
+    desktops,
+    recentTasks: summary.recentTasks.map((item) => mapTask(item.task, [{
+      desktopId: item.task.desktopId, name: item.desktopName, status: 'active',
+      createdAt: null, lastSeenAt: null, lastEventAt: null
+    }])),
     notifications: notificationSettings(summary.settings.notificationsEnabled)
   }
 }
@@ -266,7 +260,11 @@ export const listTasks = (
 
 export const getTask = async (taskId: string): Promise<TaskRecord> => {
   const session = getPageCacheSession()
-  const taskResult = await tokenmCo.getTask<CloudTaskResult>({ taskId })
+  const taskResult = await tokenmCo.getTask<CloudTaskResult>({ taskId }).catch((error: any | null): CloudTaskResult => {
+    if (isPageCacheSessionCurrent(session)) handleProtectedReadError(error)
+    if (error instanceof Error) throw error as Error
+    throw new Error('protected_request_failed')
+  })
   if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   const task = taskResult.task
   const desktops = await listDesktops()
@@ -276,7 +274,11 @@ export const getTask = async (taskId: string): Promise<TaskRecord> => {
 
 export const renameDesktop = async (desktopId: string, name: string): Promise<DesktopRecord> => {
   const session = getPageCacheSession()
-  const result = await tokenmCo.renameDesktop<CloudDesktopResult>({ desktopId, name: name.trim() })
+  const result = await tokenmCo.renameDesktop<CloudDesktopResult>({ desktopId, name: name.trim() }).catch((error: any | null): CloudDesktopResult => {
+    handleProtectedReadError(error)
+    if (error instanceof Error) throw error as Error
+    throw new Error('protected_request_failed')
+  })
   if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   invalidateDesktopViews()
   return mapDesktop(result.desktop)
@@ -287,6 +289,10 @@ export const unbindDesktop = async (desktopId: string): Promise<DesktopRecord> =
   const result = await tokenmCo.unbindDesktop<CloudDesktopResult>({
     desktopId,
     confirmation: 'UNBIND'
+  }).catch((error: any | null): CloudDesktopResult => {
+    handleProtectedReadError(error)
+    if (error instanceof Error) throw error as Error
+    throw new Error('protected_request_failed')
   })
   if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   invalidateDesktopViews()
@@ -294,7 +300,13 @@ export const unbindDesktop = async (desktopId: string): Promise<DesktopRecord> =
 }
 
 export const createPairingCode = async (): Promise<PairingSession> => {
-  const result = await tokenmCo.createPairingCode<CloudPairingSessionResult>({})
+  const session = getPageCacheSession()
+  const result = await tokenmCo.createPairingCode<CloudPairingSessionResult>({}).catch((error: any | null): CloudPairingSessionResult => {
+    handleProtectedReadError(error)
+    if (error instanceof Error) throw error as Error
+    throw new Error('protected_request_failed')
+  })
+  if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   return {
     sessionId: result.sessionId,
     code: result.code,
@@ -306,7 +318,11 @@ export const createPairingCode = async (): Promise<PairingSession> => {
 
 export const getPairingStatus = async (sessionId: string): Promise<PairingStatusRecord> => {
   const session = getPageCacheSession()
-  const result = await tokenmCo.getPairingStatus<CloudPairingStatusResult>({ sessionId })
+  const result = await tokenmCo.getPairingStatus<CloudPairingStatusResult>({ sessionId }).catch((error: any | null): CloudPairingStatusResult => {
+    handleProtectedReadError(error)
+    if (error instanceof Error) throw error as Error
+    throw new Error('protected_request_failed')
+  })
   if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   if (result.status == 'paired') invalidateDesktopViews()
   return {
@@ -319,7 +335,7 @@ export const getPairingStatus = async (sessionId: string): Promise<PairingStatus
 
 export const getNotificationSettings = async (): Promise<NotificationSettings> => {
   const enabled = await settingsSnapshot.read(false, async (): Promise<boolean> => {
-    const result = await tokenmCo.getDashboard<CloudDashboardResult>({})
+    const result = await tokenmCo.getSettings<CloudSettingsResult>({})
     return result.settings.notificationsEnabled
   })
   return notificationSettings(enabled)
@@ -328,7 +344,11 @@ export const getNotificationSettings = async (): Promise<NotificationSettings> =
 export const updateNotificationsEnabled = async (enabled: boolean): Promise<NotificationSettings> => {
   const session = getPageCacheSession()
   invalidateSettingsViews()
-  const result = await tokenmCo.updateSettings<CloudSettingsResult>({ notificationsEnabled: enabled })
+  const result = await tokenmCo.updateSettings<CloudSettingsResult>({ notificationsEnabled: enabled }).catch((error: any | null): CloudSettingsResult => {
+    handleProtectedReadError(error)
+    if (error instanceof Error) throw error as Error
+    throw new Error('protected_request_failed')
+  })
   if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   invalidateSettingsViews()
   settingsSnapshot.seed(result.settings.notificationsEnabled, session, settingsSnapshot.revision)

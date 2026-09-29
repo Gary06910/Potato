@@ -124,7 +124,7 @@ const privacyVersionLabel = computed((): string => {
     return consent.isCurrent ? `当前版本 ${consent.requiredVersion} 已同意` : `需要确认版本 ${consent.requiredVersion}`
   }
   if (status.backend == 'unavailable') return '无法核对当前版本（云端暂不可用）'
-  if (status.backend == 'notApplicable') return '登录后核对当前版本'
+  if (status.backend == 'notApplicable') return facts.value.login == 'signedIn' ? consentFactView(facts.value.privacyConsent).label : '登录后核对当前版本'
   return consentFactView(facts.value.privacyConsent).label
 })
 
@@ -133,7 +133,7 @@ const activeDesktopCountLabel = computed((): string => {
   const count = status.activeDesktopCount
   if (status.backend == 'available' && count != null) return `${count} 台电脑已绑定`
   if (status.backend == 'unavailable') return '无法核对（云端暂不可用）'
-  if (status.backend == 'notApplicable') return '登录后核对云端电脑'
+  if (status.backend == 'notApplicable') return facts.value.login == 'signedIn' ? '确认隐私后核对云端电脑' : '登录后核对云端电脑'
   return '正在核对云端电脑'
 })
 
@@ -142,7 +142,7 @@ const notificationsEnabledLabel = computed((): string => {
   const enabled = status.notificationsEnabled
   if (status.backend == 'available' && enabled != null) return enabled ? '任务通知已开启' : '任务通知已关闭'
   if (status.backend == 'unavailable') return '无法核对（云端暂不可用）'
-  if (status.backend == 'notApplicable') return '登录后核对云端设置'
+  if (status.backend == 'notApplicable') return facts.value.login == 'signedIn' ? '确认隐私后核对云端设置' : '登录后核对云端设置'
   return '正在核对云端设置'
 })
 
@@ -165,7 +165,7 @@ const runLoad = async () => {
   }
   try {
     facts.value = await bootstrapClientRuntime()
-    if (facts.value.login == 'signedIn') {
+    if (facts.value.login == 'signedIn' && facts.value.privacyConsent == 'current') {
       try {
         bootstrapStatus.value = await getClientBootstrapStatus()
       } catch (error) {

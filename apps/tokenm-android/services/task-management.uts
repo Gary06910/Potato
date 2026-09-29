@@ -1,4 +1,4 @@
-import { dashboardSnapshot, tasksSnapshot, getPageCacheSession, isPageCacheSessionCurrent } from './page-cache.uts'
+import { dashboardSnapshot, tasksSnapshot, getPageCacheSession, isPageCacheSessionCurrent, handleProtectedReadError } from './page-cache.uts'
 import type { TaskRecord, TaskPageResult } from '../types/models.uts'
 
 const taskManagementCo = uniCloud.importObject('tokenm-co', { customUI: true })
@@ -39,7 +39,11 @@ export const applyTaskHistoryDeletion = (task: TaskRecord | null): void => {
 
 export const deleteTaskRecord = async (task: TaskRecord): Promise<void> => {
   const session = getPageCacheSession()
-  const result = await taskManagementCo.deleteTask<TaskMutationResult>({ taskId: task.taskId })
+  const result = await taskManagementCo.deleteTask<TaskMutationResult>({ taskId: task.taskId }).catch((error: any | null): TaskMutationResult => {
+    if (isPageCacheSessionCurrent(session)) handleProtectedReadError(error)
+    if (error instanceof Error) throw error as Error
+    throw new Error('task_mutation_failed')
+  })
   if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   if (!result.ok) throw new Error('task_delete_failed')
   applyTaskHistoryDeletion(task)
@@ -47,7 +51,11 @@ export const deleteTaskRecord = async (task: TaskRecord): Promise<void> => {
 
 export const clearTaskRecords = async (): Promise<void> => {
   const session = getPageCacheSession()
-  const result = await taskManagementCo.clearTasks<TaskMutationResult>({ confirmation: 'CLEAR' })
+  const result = await taskManagementCo.clearTasks<TaskMutationResult>({ confirmation: 'CLEAR' }).catch((error: any | null): TaskMutationResult => {
+    if (isPageCacheSessionCurrent(session)) handleProtectedReadError(error)
+    if (error instanceof Error) throw error as Error
+    throw new Error('task_mutation_failed')
+  })
   if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   if (!result.ok) throw new Error('task_clear_failed')
   applyTaskHistoryDeletion(null)

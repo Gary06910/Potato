@@ -4,6 +4,10 @@ import type { DashboardView, DesktopRecord, TaskPageResult } from '../types/mode
 // Four bounded, memory-only snapshots. No session secrets or persistent storage.
 let owner = ''
 let session = 0
+let accessRejected: ((consentRequired: boolean) => void) | null = null
+export const onProtectedAccessRejected = (handler: (consentRequired: boolean) => void): void => {
+  accessRejected = handler
+}
 
 class PageSnapshot<T> {
   value: T | null = null
@@ -80,11 +84,11 @@ class PageSnapshot<T> {
   }
 }
 
-export const dashboardSnapshot = new PageSnapshot<DashboardView>(5000)
-export const tasksSnapshot = new PageSnapshot<TaskPageResult>(5000)
-export const desktopsSnapshot = new PageSnapshot<DesktopRecord[]>(5000)
+export const dashboardSnapshot = new PageSnapshot<DashboardView>(30000)
+export const tasksSnapshot = new PageSnapshot<TaskPageResult>(30000)
+export const desktopsSnapshot = new PageSnapshot<DesktopRecord[]>(60000)
 // Store only the remote setting. Permission and registration are live runtime facts.
-export const settingsSnapshot = new PageSnapshot<boolean>(15000)
+export const settingsSnapshot = new PageSnapshot<boolean>(60000)
 
 export const clearUserPageCache = (): void => {
   session += 1
@@ -116,6 +120,7 @@ export const handleProtectedReadError = (error: any | null): boolean => {
   const consentRequired = code == 'privacy_consent_required'
   if (!loginRequired && !consentRequired) return false
   clearUserPageCache()
+  if (accessRejected != null) accessRejected!(consentRequired)
   uni.reLaunch({ url: loginRequired ? '/pages/login/index' : '/pages/permission/index' })
   return true
 }

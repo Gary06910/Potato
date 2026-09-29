@@ -1,155 +1,7 @@
 'use strict';
-
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const { stripTypeScriptTypes } = require('node:module');
 const test = require('node:test');
-
-const root = path.resolve(__dirname, '../../apps/tokenm-android');
-const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
-const deferred = () => {
-  let resolve;
-  let reject;
-  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
-  return { promise, resolve, reject };
-};
-
-// Execute the actual UTS algorithms with type syntax removed, not a duplicate
-// cache implementation. HBuilderX separately validates UTS/Kotlin generation.
-function environment() {
-  class UniCloudError extends Error {}
-  const env = {
-    now: 100000,
-    uid: 'user-a',
-    expires: 10000000,
-    calls: [],
-    handlers: {},
-    routes: [],
-    hooks: {},
-    logs: [],
-    iconBindings: [],
-    iconBindingSucceeds: true,
-    pushRegistrations: 0,
-    desktop: { desktopId: 'desk-1', name: 'Laptop', status: 'active', createdAt: null, lastSeenAt: null, lastEventAt: null },
-    task: { taskId: 'tsk-1', desktopId: 'desk-1', occurredAt: '2026-09-09T00:00:00Z', privacyMode: false, summary: 'Finished', project: 'App', model: 'model', durationMs: 20, notificationStatus: 'submitted' }
-  };
-  const consent = (current = true) => ({
-    getString(key) { return { requiredVersion: 'v1', acceptedVersion: 'v1', acceptedAt: null }[key]; },
-    getBoolean() { return current; }
-  });
-  const cloud = new Proxy({}, {
-    get(_object, method) {
-      return async (input) => {
-        env.calls.push(method);
-        if (env.handlers[method]) {
-          try {
-            return await env.handlers[method](input);
-          } catch (error) {
-            if (error?.errCode) Object.setPrototypeOf(error, UniCloudError.prototype);
-            throw error;
-          }
-        }
-        if (method === 'getPrivacyConsent' || method === 'updatePrivacyConsent') return { privacyConsent: consent() };
-        if (method === 'listDesktops') return { desktops: [{ ...env.desktop }] };
-        if (method === 'listTasks') return { tasks: [{ ...env.task }], nextCursor: null };
-        if (method === 'getTask') return { task: { ...env.task } };
-        if (method === 'getDashboard') return { counts: { todayTasks: 1, activeDesktops: 1 }, settings: { notificationsEnabled: true }, latestTask: env.task };
-        if (method === 'updateSettings') return { settings: { notificationsEnabled: input.notificationsEnabled } };
-        if (method === 'renameDesktop') return { desktop: { ...env.desktop, name: input.name } };
-        if (method === 'unbindDesktop') return { desktop: { ...env.desktop, status: 'revoked' } };
-        if (method === 'getPairingStatus') return { status: 'paired', sessionId: 'pair-1', desktopId: 'desk-1' };
-        if (method === 'clearTasks' || method === 'deleteTask') return { ok: true };
-        throw new Error(`unhandled fixture method ${method}`);
-      };
-    }
-  });
-  const context = vm.createContext({
-    UniCloudError,
-    Error,
-    Promise,
-    Date: class extends Date { static now() { return env.now; } },
-    console: { info: (...args) => env.logs.push(args), warn: (...args) => env.logs.push(args) },
-    UTSAndroid: { getAppContext: () => ({
-      getPackageName: () => 'com.gary.tokenm',
-      getResources: () => ({ getIdentifier: (name, type, packageName) => {
-        assert.equal(type, 'drawable');
-        assert.equal(packageName, 'com.gary.tokenm');
-        return name === 'push_small' ? 101 : name === 'push' ? 102 : 0;
-      } })
-    }) },
-    PushManager: { getInstance: () => ({ getVersion: () => '3.test', setNotificationIcon: (_context, small, large) => {
-      env.iconBindings.push([small, large]);
-      return env.iconBindingSucceeds;
-    } }) },
-    uniCloud: { importObject: () => cloud },
-    uni: {
-      getPushChannelManager: () => null,
-      getPushClientId: ({ success }) => success({ cid: 'test-cid' }),
-      onPushMessage: (listener) => { env.pushListener = listener; },
-      offPushMessage() {},
-      getAppAuthorizeSetting: () => ({ notificationAuthorized: 'authorized' }),
-      reLaunch: ({ url }) => { env.routes.push(url); },
-      navigateTo() {}, showToast() {}, showModal(options) { env.modal=options; }, showActionSheet(options) { env.actionSheet=options; }, openAppAuthorizeSetting() {}
-    }
-  });
-  vm.runInContext('Object.prototype.set = function (key, value) { this[key] = value; }', context);
-  const modules = new Map();
-  const profile = () => ({ userId: env.uid, username: env.uid, authenticated: !!env.uid && env.expires > env.now });
-  modules.set('services/auth-service.uts', {
-    getCurrentAccountProfile: profile,
-    loginWithUniId: async () => profile(), registerWithUniId: async () => profile(),
-    logoutWithUniId: async () => { env.uid = ''; }, closeAccountWithUniId: async () => {},
-    createOfficialCaptcha() {}, refreshOfficialCaptcha() {}
-  });
-  modules.set('services/push-runtime.uts', {
-    wasPushActivatedByUser: () => true, isPushReconfirmationRequired: () => false,
-    startPushRuntime() {}, stopPushRuntime() {}, requirePushReconfirmation() {},
-    flushPendingPushRoute() {}, markPushNavigationReady() {}, clearPushActivation() {},
-    rememberPushActivation() {}, requestAndroidNotificationPermission: async () => {}
-  });
-  modules.set('services/mobile-device.uts', {
-    registerCurrentMobileDevice: async () => { env.pushRegistrations++; },
-    disableCurrentMobileDevice: async () => {}
-  });
-  modules.set('vue', { ref: (value) => ({ value }), nextTick: (fn) => Promise.resolve().then(fn) });
-  modules.set('@dcloudio/uni-app', Object.fromEntries(['onShow', 'onReady', 'onLoad', 'onHide', 'onUnload'].map((key) => [key, (fn) => { env.hooks[key] = fn; }])));
-
-  function evaluate(file, source, names) {
-    const dependencies = [];
-    source = source.replace(/import PushManager from 'com\.igexin\.sdk\.PushManager'/g, '').replace(/import\s+(type\s+)?\{([\s\S]*?)\}\s+from\s+['"]([^'"]+)['"]/g, (_all, type, bindings, specifier) => {
-      if (type) return '';
-      const dependency = specifier.startsWith('.') ? path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)) : specifier;
-      const index = dependencies.push(load(dependency)) - 1;
-      return `const { ${bindings} } = dependencies[${index}];`;
-    }).replace(/\bexport\s+/g, '');
-    const js = stripTypeScriptTypes(source, { mode: 'transform' });
-    const factory = vm.runInContext(`(function(dependencies) { ${js}\nreturn { ${names.join(', ')} }; })`, context, { filename: file });
-    return factory(dependencies);
-  }
-  function load(file) {
-    if (modules.has(file)) return modules.get(file);
-    if (file === 'services/client.uts') return { ...load('services/tokenm-service.uts'), ...load('services/client-runtime.uts') };
-    const source = read(file);
-    const names = [...source.matchAll(/export (?:const|class|function) (\w+)/g)].map((match) => match[1]);
-    const result = evaluate(file, source, names);
-    modules.set(file, result);
-    return result;
-  }
-  env.load = load;
-  env.loadActualPush = () => {
-    modules.delete('services/push-runtime.uts');
-    return load('services/push-runtime.uts');
-  };
-  env.page = (name, names) => {
-    env.hooks = {};
-    const file = `pages/${name}/index.uvue`;
-    return evaluate(file, read(file).split('<script setup lang="uts">')[1].split('</script>')[0], names);
-  };
-  env.consent = consent;
-  return env;
-}
+const { environment, deferred } = require('./runtime-fixture');
 
 test('page snapshots deduplicate cold reads, reuse fresh values and retain stale data on failure', async () => {
   const env = environment();
@@ -165,7 +17,7 @@ test('page snapshots deduplicate cold reads, reuse fresh values and retain stale
   assert.equal(calls, 1);
   await cache.desktopsSnapshot.read(false, loader);
   assert.equal(calls, 1);
-  env.now += 5001;
+  env.now += 60001;
   assert.deepEqual(cache.desktopsSnapshot.peek(), []);
   await assert.rejects(cache.desktopsSnapshot.read(false, async () => { throw new Error('offline'); }));
   assert.deepEqual(cache.desktopsSnapshot.peek(), []);
@@ -209,20 +61,20 @@ test('invalidation rejects an old read without cancelling or overwriting a newer
   assert.deepEqual(cache.desktopsSnapshot.peek(), []);
 });
 
-test('Home starts independent reads concurrently and supplies Settings without another dashboard request', async () => {
+test('Home uses one bounded bundle and supplies Settings without another dashboard request', async () => {
   const env = environment();
   const service = env.load('services/tokenm-service.uts');
   const pending = deferred();
-  env.handlers.getDashboard = () => pending.promise;
+  env.handlers.getAndroidDashboard = () => pending.promise;
   const result = service.getDashboard();
-  assert.deepEqual(env.calls, ['getDashboard', 'listTasks', 'listDesktops']);
-  pending.resolve({ counts: { todayTasks: 1, activeDesktops: 1 }, settings: { notificationsEnabled: true } });
+  assert.deepEqual(env.calls, ['getAndroidDashboard']);
+  pending.resolve({ counts: { todayTasks: 1, activeDesktops: 1 }, settings: { notificationsEnabled: true }, recentTasks: [], recentDesktops: [] });
   await result;
   assert.equal((await service.getNotificationSettings()).notificationsEnabled, true);
-  assert.equal(env.calls.filter((name) => name === 'getDashboard').length, 1);
+  assert.equal(env.calls.filter((name) => name === 'getAndroidDashboard').length, 1);
 });
 
-test('short settled navigation cycle needs four business reads and five consent reads, no Push registration', async () => {
+test('short settled navigation cycle needs three business reads and one consent read, no Push registration', async () => {
   const env = environment();
   const service = env.load('services/tokenm-service.uts');
   const runtime = env.load('services/client-runtime.uts');
@@ -231,11 +83,11 @@ test('short settled navigation cycle needs four business reads and five consent 
     await runtime.prepareClientPage();
     await operation();
   }
-  // Home has 3 reads, first Tasks adds 1. Settings reuses Home's setting.
-  assert.equal(env.calls.length, 9);
-  assert.equal(env.calls.filter((name) => name === 'getPrivacyConsent').length, 5);
+  // Home has one bundle; Tasks adds task and desktop reads. Settings reuses Home.
+  assert.equal(env.calls.length, 4);
+  assert.equal(env.calls.filter((name) => name === 'getPrivacyConsent').length, 1);
   assert.equal(env.calls.filter((name) => name === 'listDesktops').length, 1);
-  assert.equal(env.calls.filter((name) => name === 'listTasks').length, 2);
+  assert.equal(env.calls.filter((name) => name === 'listTasks').length, 1);
   assert.equal(env.pushRegistrations, 0);
 });
 
@@ -260,7 +112,7 @@ test('desktop mutations, pairing, settings update and task clear invalidate only
   await service.updateNotificationsEnabled(false);
   assert.equal(cache.settingsSnapshot.peek(), false);
   assert.equal(cache.dashboardSnapshot.peek(), null);
-  assert.notEqual(cache.desktopsSnapshot.peek(), null);
+  assert.equal(cache.desktopsSnapshot.peek(), null);
   await service.listTasks(null, 'all', 'all', 'all', 20);
   await env.load('services/account-service.uts').clearCloudTaskHistory();
   assert.equal(cache.tasksSnapshot.peek().items.length, 0);
@@ -272,6 +124,7 @@ test('warm page setup exposes cached content before consent resolves; offline re
   const runtime = env.load('services/client-runtime.uts');
   await runtime.prepareClientPage();
   await env.load('services/tokenm-service.uts').getDashboard();
+  env.now += 30000;
   const pending = deferred();
   env.handlers.getPrivacyConsent = () => pending.promise;
   const page = env.page('dashboard', ['state', 'dashboard', 'runLoad', 'banner']);
@@ -299,7 +152,7 @@ test('cold page fails explicitly and empty cached desktop page survives failed r
   const warm = env.page('desktops', ['state', 'active', 'runLoad', 'banner']);
   assert.equal(warm.state.value, 'ready');
   assert.equal(warm.active.value.length, 0);
-  env.now += 5001;
+  env.now += 60001;
   env.handlers.listDesktops = async () => { throw { errCode: 'NETWORK_ERROR', errMsg: 'offline' }; };
   await warm.runLoad(true);
   assert.equal(warm.state.value, 'ready');
@@ -331,6 +184,7 @@ test('consent revocation removes cached views and route redirects; local expiry 
   const cache = env.load('services/page-cache.uts');
   await runtime.prepareClientPage();
   await env.load('services/tokenm-service.uts').getDashboard();
+  env.now += 30000;
   env.handlers.getPrivacyConsent = async () => ({ privacyConsent: env.consent(false) });
   assert.equal(await runtime.ensureProtectedClientRoute(), false);
   assert.equal(cache.dashboardSnapshot.peek(), null);
@@ -385,7 +239,7 @@ test('settings mutation defeats an older response and cached false remains a val
   const service = env.load('services/tokenm-service.uts');
   const cache = env.load('services/page-cache.uts');
   const pending = deferred();
-  env.handlers.getDashboard = () => pending.promise;
+  env.handlers.getSettings = () => pending.promise;
   const old = service.getNotificationSettings();
   await service.updateNotificationsEnabled(false);
   pending.resolve({ settings: { notificationsEnabled: true } });
@@ -400,7 +254,7 @@ test('server session rejection purges existing cache and redirects instead of re
   const cache = env.load('services/page-cache.uts');
   await service.getDashboard();
   cache.dashboardSnapshot.expire();
-  env.handlers.getDashboard = async () => { throw { errCode: 'uni-id-token-expired', errMsg: 'expired' }; };
+  env.handlers.getAndroidDashboard = async () => { throw { errCode: 'uni-id-token-expired', errMsg: 'expired' }; };
   await assert.rejects(service.getDashboard());
   assert.equal(cache.dashboardSnapshot.peek(), null);
   assert.equal(cache.settingsSnapshot.peek(), null);
@@ -535,7 +389,7 @@ test('single delete and clear reject stale responses, update home, and retain re
   await assert.rejects(management.clearTaskRecords());
   assert.equal(cache.tasksSnapshot.peek().items.length,1);
   const oldHome = deferred(); cache.dashboardSnapshot.expire();
-  env.handlers.getDashboard = () => oldHome.promise;
+  env.handlers.getAndroidDashboard = () => oldHome.promise;
   const lateHome = service.getDashboard();
   env.handlers.clearTasks = async () => ({ok:true});
   await management.clearTaskRecords();

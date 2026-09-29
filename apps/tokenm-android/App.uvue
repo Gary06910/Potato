@@ -1,5 +1,5 @@
 <script lang="uts">
-import { bootstrapClientRuntime } from './services/client-runtime.uts'
+import { bootstrapClientRuntime, reconcileClientForeground } from './services/client-runtime.uts'
 
 export default {
   onLaunch() {
@@ -9,7 +9,7 @@ export default {
     })
   },
   onShow() {
-    bootstrapClientRuntime().catch((_error) => {
+    reconcileClientForeground().catch((_error) => {
       // Foreground checks stop inside the guarded runtime when facts are no longer current.
     })
   }

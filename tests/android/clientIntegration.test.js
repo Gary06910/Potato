@@ -21,7 +21,8 @@ test('production client facade routes every business operation to tokenm-co', ()
 
   for (const method of [
     'bootstrap',
-    'getDashboard',
+    'getAndroidDashboard',
+    'getSettings',
     'listTasks',
     'getTask',
     'listDesktops',

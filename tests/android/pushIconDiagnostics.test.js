@@ -26,7 +26,7 @@ test('Android package and notification delivery contracts remain stable', () => 
   const push = read('services/push-runtime.uts');
   const delivery = read('uniCloud-alipay/cloudfunctions/common/tokenm-core/push-notification.js');
   assert.equal(manifest.versionName, '0.1.1');
-  assert.equal(manifest.versionCode, 5);
+  assert.equal(manifest.versionCode, 6);
   assert.equal(manifest.appid, '__UNI__46C9063');
   assert.match(push, /TASK_NOTIFICATION_CHANNEL_ID = 'DcloudChannelID'/);
   assert.match(delivery, /force_notification: true/);

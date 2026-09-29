@@ -7,8 +7,8 @@ import {
   registerWithUniId
 } from './auth-service.uts'
 import { acceptRequiredPrivacyConsent, getCurrentPrivacyConsent } from './privacy-consent.uts'
-import { clearUserPageCache, getPageCacheSession, isPageCacheSessionCurrent, handleProtectedReadError } from './page-cache.uts'
-import { disableCurrentMobileDevice, registerCurrentMobileDevice } from './mobile-device.uts'
+import { clearUserPageCache, getPageCacheSession, isPageCacheSessionCurrent, handleProtectedReadError, onProtectedAccessRejected } from './page-cache.uts'
+import { disableCurrentMobileDevice, registerCurrentMobileDevice, resetMobileRegistrationFreshness } from './mobile-device.uts'
 import {
   clearPushActivation,
   flushPendingPushRoute,
@@ -41,6 +41,15 @@ let bootstrapInFlight: Promise<RuntimeFacts> | null = null
 let bootstrapSession = -1
 let factsOwner = ''
 let lastConsentCurrent = false
+
+onProtectedAccessRejected((consentRequired: boolean) => {
+  lastConsentCurrent = false
+  facts.privacyConsent = 'required'
+  facts.mobileRegistration = 'notStarted'
+  resetMobileRegistrationFreshness()
+  stopPushRuntime()
+  if (consentRequired) requirePushReconfirmation()
+})
 
 const copyFacts = (): RuntimeFacts => ({ ...facts })
 
@@ -86,8 +95,8 @@ export const settledRuntimeFacts = (): Promise<RuntimeFacts> => {
   return pending == null ? Promise.resolve(copyFacts()) : pending
 }
 
-// Historical data may render immediately; every new protected read still checks
-// consent remotely, and tokenm-co continues to verify the token and ownership.
+// Historical data may render immediately. Every business RPC enforces current
+// consent server-side; the short session preflight cache only avoids round trips.
 export const canReuseProtectedPageData = (): boolean => {
   const account = getCurrentAccountProfile()
   return account.authenticated && account.userId == factsOwner && lastConsentCurrent
@@ -251,6 +260,9 @@ export const bootstrapClientRuntime = (): Promise<RuntimeFacts> => {
   return task
 }
 
+// Shared in-flight guard covers Launch/Show; freshness handles settled resumes.
+export const reconcileClientForeground = (): Promise<RuntimeFacts> => bootstrapClientRuntime()
+
 export const loginWithUsername = async (
   username: string,
   password: string,
@@ -301,6 +313,7 @@ export const refreshCaptcha = (scene: string): Promise<CaptchaChallenge> => refr
 export const acceptCurrentPrivacyConsent = async (): Promise<RuntimeFacts> => {
   if (facts.login != 'signedIn') throw new Error('login required')
   const session = getPageCacheSession()
+  resetMobileRegistrationFreshness()
   const consent = await acceptRequiredPrivacyConsent()
   if (!isPageCacheSessionCurrent(session)) throw new Error('page_session_changed')
   factsOwner = getCurrentAccountProfile().userId
@@ -316,6 +329,7 @@ export const requestNotificationPermissionFromCta = async (): Promise<RuntimeFac
     throw new Error('current login and privacy consent required')
   }
   facts.notificationPermission = notificationPermission()
+  resetMobileRegistrationFreshness()
   rememberPushActivation()
   if (facts.notificationPermission == 'denied') {
     uni.openAppAuthorizeSetting({})
