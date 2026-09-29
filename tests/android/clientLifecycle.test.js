@@ -111,7 +111,7 @@ test('Getui notification icons bind once after Android push SDK initialization w
 
   assert.ok(androidImport, 'the Getui import must be Android-only');
   assert.ok(binding, 'the icon binding must be inside one helper');
-  assert.match(binding[1], /\/\/ #ifdef APP-ANDROID[\s\S]*attemptGetuiNotificationIconBinding\('auto'\)[\s\S]*\/\/ #endif/);
+  assert.match(binding[1], /\/\/ #ifdef APP-ANDROID[\s\S]*PushManager\.getInstance\(\)\.setNotificationIcon\(context, 'push_small', 'push'\)[\s\S]*\/\/ #endif/);
   assert.match(binding[1], /notificationIconBindingAttempted[\s\S]*notificationIconBindingAttempted = true/);
   assert.match(push, /PushManager\.getInstance\(\)\.setNotificationIcon\(context, 'push_small', 'push'\)/);
   assert.equal(occurrenceCount(push, /\.setNotificationIcon\s*\(/g), 1);

@@ -72,86 +72,6 @@
             </view>
           </view>
           <text class="notification-help">若收不到提醒，请检查系统通知权限和手机省电设置。</text>
-          <view class="surface detail-list section icon-diagnostics">
-            <text class="setting-title">通知图标诊断</text>
-            <view class="detail-row"><text class="detail-key">Getui SDK</text><text class="detail-value">{{ iconDiagnostics.sdkVersion }}</text></view>
-            <view class="detail-row"><text class="detail-key">Android package</text><text class="detail-value">{{ iconDiagnostics.packageName }}</text></view>
-            <view class="detail-row"><text class="detail-key">push_small 资源</text><text class="detail-value">{{ resourceView(iconDiagnostics.pushSmallResourceId) }}</text></view>
-            <view class="detail-row"><text class="detail-key">push 资源</text><text class="detail-value">{{ resourceView(iconDiagnostics.pushResourceId) }}</text></view>
-            <view class="detail-row"><text class="detail-key">自动绑定</text><text class="detail-value">{{ bindingView(iconDiagnostics.autoBindingState) }}</text></view>
-            <view class="detail-row"><text class="detail-key">最近绑定</text><text class="detail-value">{{ sourceView(iconDiagnostics.lastBindingSource) }} · {{ bindingView(iconDiagnostics.lastBindingResult) }}</text></view>
-            <view class="detail-row detail-row-last"><text class="detail-key">异常类别</text><text class="detail-value">{{ iconDiagnostics.lastBindingErrorCategory }}</text></view>
-            <button class="btn btn-secondary section" :disabled="bindingIcons" @click="rebindIcons">{{ bindingIcons ? '正在绑定…' : '重新绑定通知图标' }}</button>
-            <button class="btn btn-secondary section" @click="readCurrentNotificationIcons">读取当前通知图标</button>
-            <!-- #ifdef APP-ANDROID -->
-            <button class="btn btn-secondary section" @click="readApplicationIcons">读取应用与启动图标</button>
-            <view v-if="applicationIconInspection != null" class="section">
-              <view class="detail-row"><text class="detail-key">应用图标状态</text><text class="detail-value">{{ applicationIconInspection.state }}</text></view>
-              <view class="detail-row"><text class="detail-key">Package</text><text class="detail-value">{{ applicationIconInspection.packageName }}</text></view>
-              <text class="setting-title">APPLICATION_ICON · ApplicationInfo.icon</text>
-              <view class="detail-row"><text class="detail-key">resource ID</text><text class="detail-value">{{ iconResourceIdView(applicationIconInspection.applicationIcon.resourceId) }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource package</text><text class="detail-value">{{ applicationIconInspection.applicationIcon.resourcePackage }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource name</text><text class="detail-value">{{ applicationIconInspection.applicationIcon.resourceName }}</text></view>
-              <image v-if="applicationIconInspection.applicationIcon.previewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="applicationIconInspection.applicationIcon.previewDataUrl" />
-              <text class="setting-title">APPLICATION_LOGO</text>
-              <view class="detail-row"><text class="detail-key">resource ID</text><text class="detail-value">{{ applicationIconInspection.applicationLogo.resourceId > 0 ? iconResourceIdView(applicationIconInspection.applicationLogo.resourceId) : 'none' }}</text></view>
-              <view v-if="applicationIconInspection.applicationLogo.resourceId > 0" class="detail-row"><text class="detail-key">resource name</text><text class="detail-value">{{ applicationIconInspection.applicationLogo.resourceName }}</text></view>
-              <image v-if="applicationIconInspection.applicationLogo.previewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="applicationIconInspection.applicationLogo.previewDataUrl" />
-              <text class="setting-title">ACTIVITY_LOGO</text>
-              <view class="detail-row"><text class="detail-key">resource ID</text><text class="detail-value">{{ applicationIconInspection.launcherActivityLogo.resourceId > 0 ? iconResourceIdView(applicationIconInspection.launcherActivityLogo.resourceId) : 'none' }}</text></view>
-              <view v-if="applicationIconInspection.launcherActivityLogo.resourceId > 0" class="detail-row"><text class="detail-key">resource name</text><text class="detail-value">{{ applicationIconInspection.launcherActivityLogo.resourceName }}</text></view>
-              <image v-if="applicationIconInspection.launcherActivityLogo.previewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="applicationIconInspection.launcherActivityLogo.previewDataUrl" />
-              <text class="setting-title">PackageManager.getApplicationIcon</text>
-              <image v-if="applicationIconInspection.packageManagerIconPreviewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="applicationIconInspection.packageManagerIconPreviewDataUrl" />
-              <text class="setting-title">ROUND_ICON · ApplicationInfo.roundIconRes</text>
-              <view class="detail-row"><text class="detail-key">读取状态</text><text class="detail-value">{{ applicationIconInspection.roundIconState }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource ID</text><text class="detail-value">{{ iconResourceIdView(applicationIconInspection.roundIcon.resourceId) }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource package</text><text class="detail-value">{{ applicationIconInspection.roundIcon.resourcePackage }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource name</text><text class="detail-value">{{ applicationIconInspection.roundIcon.resourceName }}</text></view>
-              <image v-if="applicationIconInspection.roundIcon.previewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="applicationIconInspection.roundIcon.previewDataUrl" />
-              <text class="setting-title">LAUNCHER_ACTIVITY_ICON · ActivityInfo.icon</text>
-              <view class="detail-row"><text class="detail-key">component</text><text class="detail-value">{{ applicationIconInspection.launcherComponent }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource ID</text><text class="detail-value">{{ iconResourceIdView(applicationIconInspection.launcherActivityIcon.resourceId) }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource package</text><text class="detail-value">{{ applicationIconInspection.launcherActivityIcon.resourcePackage }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource name</text><text class="detail-value">{{ applicationIconInspection.launcherActivityIcon.resourceName }}</text></view>
-              <image v-if="applicationIconInspection.launcherActivityIcon.previewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="applicationIconInspection.launcherActivityIcon.previewDataUrl" />
-              <text class="setting-title">Launcher effective icon · ActivityInfo.loadIcon</text>
-              <image v-if="applicationIconInspection.launcherEffectivePreviewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="applicationIconInspection.launcherEffectivePreviewDataUrl" />
-              <text class="setting-title">NOTIFICATION_PUSH_SMALL</text>
-              <view class="detail-row"><text class="detail-key">resource ID</text><text class="detail-value">{{ iconResourceIdView(applicationIconInspection.pushSmallIcon.resourceId) }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource package</text><text class="detail-value">{{ applicationIconInspection.pushSmallIcon.resourcePackage }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource name</text><text class="detail-value">{{ applicationIconInspection.pushSmallIcon.resourceName }}</text></view>
-              <image v-if="applicationIconInspection.pushSmallIcon.previewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="applicationIconInspection.pushSmallIcon.previewDataUrl" />
-              <view v-if="applicationIconInspection.drawableIcon.resourceId > 0">
-                <text class="setting-title">Manifest drawable/icon</text>
-                <image v-if="applicationIconInspection.drawableIcon.previewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="applicationIconInspection.drawableIcon.previewDataUrl" />
-              </view>
-            </view>
-            <!-- #endif -->
-            <view v-if="activeIconInspection != null" class="section">
-              <text class="setting-title">UniPush notification</text>
-              <text class="setting-detail">SystemUI visual：由用户观察</text>
-              <view class="detail-row"><text class="detail-key">读取状态</text><text class="detail-value">{{ activeIconInspection.state }}</text></view>
-              <view class="detail-row"><text class="detail-key">活动通知</text><text class="detail-value">{{ activeIconInspection.activeCount }}</text></view>
-              <text v-if="activeIconInspection.state == 'NO_ACTIVE_NOTIFICATION'" class="setting-detail">请先保留一条通知，再重新读取。</text>
-              <view class="detail-row"><text class="detail-key">Channel</text><text class="detail-value">{{ activeIconInspection.channelId }}</text></view>
-              <text class="setting-title">Expected push_small</text>
-              <view class="detail-row"><text class="detail-key">resource ID</text><text class="detail-value">{{ iconResourceIdView(activeIconInspection.expectedPushSmallId) }}</text></view>
-              <image v-if="activeIconInspection.expectedPreviewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="activeIconInspection.expectedPreviewDataUrl" />
-              <text class="setting-title">Actual smallIcon</text>
-              <view class="detail-row"><text class="detail-key">类型</text><text class="detail-value">{{ activeIconInspection.smallIcon.type }}</text></view>
-              <view class="detail-row"><text class="detail-key">package</text><text class="detail-value">{{ activeIconInspection.smallIcon.resourcePackage }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource ID</text><text class="detail-value">{{ iconResourceIdView(activeIconInspection.smallIcon.resourceId) }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource name</text><text class="detail-value">{{ activeIconInspection.smallIcon.resourceName }}</text></view>
-              <view class="detail-row"><text class="detail-key">匹配 push_small</text><text class="detail-value">{{ activeIconInspection.matchPushSmall }}</text></view>
-              <image v-if="activeIconInspection.smallIcon.previewDataUrl.length > 0" class="icon-preview" mode="aspectFit" :src="activeIconInspection.smallIcon.previewDataUrl" />
-              <text class="setting-title">Large icon</text>
-              <view class="detail-row"><text class="detail-key">类型</text><text class="detail-value">{{ activeIconInspection.largeIcon.type }}</text></view>
-              <view class="detail-row"><text class="detail-key">package</text><text class="detail-value">{{ activeIconInspection.largeIcon.resourcePackage }}</text></view>
-              <view class="detail-row"><text class="detail-key">resource ID</text><text class="detail-value">{{ iconResourceIdView(activeIconInspection.largeIcon.resourceId) }}</text></view>
-              <view class="detail-row detail-row-last"><text class="detail-key">resource name</text><text class="detail-value">{{ activeIconInspection.largeIcon.resourceName }}</text></view>
-            </view>
-          </view>
         </view>
       </view>
     </scroll-view>
@@ -179,12 +99,6 @@ import {
   presentError
 } from '../../services/presentation.uts'
 import type { NotificationSettings, RuntimeFacts, UiLoadState } from '../../types/models.uts'
-import { getGetuiNotificationIconDiagnostics, rebindGetuiNotificationIconsForDiagnostics } from '../../services/push-runtime.uts'
-import type { PushIconDiagnostics } from '../../services/push-runtime.uts'
-import { inspectActiveNotificationIcons } from '../../services/active-notification-icon-inspector.uts'
-import type { ActiveNotificationIconInspection } from '../../services/active-notification-icon-inspector.uts'
-import { inspectApplicationIcons } from '../../services/application-icon-inspector.uts'
-import type { ApplicationIconInspection } from '../../services/application-icon-inspector.uts'
 
 const state = ref<UiLoadState>('loading')
 const settings = ref<NotificationSettings>({
@@ -196,38 +110,10 @@ const facts = ref<RuntimeFacts>(getRuntimeFacts())
 const working = ref(false)
 const banner = ref('')
 const errorMessage = ref('')
-const iconDiagnostics = ref<PushIconDiagnostics>(getGetuiNotificationIconDiagnostics())
-const bindingIcons = ref(false)
-const activeIconInspection = ref<ActiveNotificationIconInspection | null>(null)
-const applicationIconInspection = ref<ApplicationIconInspection | null>(null)
-
-const resourceView = (id: number): string => id > 0 ? `found (${id})` : 'missing'
-const iconResourceIdView = (id: number): string => id > 0 ? '0x' + id.toString(16) : 'unavailable'
-const readCurrentNotificationIcons = () => {
-  activeIconInspection.value = inspectActiveNotificationIcons()
-}
-const readApplicationIcons = () => {
-  applicationIconInspection.value = inspectApplicationIcons()
-}
-const bindingView = (state: string): string => {
-  if (state == 'success') return '成功'
-  if (state == 'false') return '失败'
-  if (state == 'exception') return '异常'
-  return '未执行'
-}
-const sourceView = (source: string): string => source == 'auto' ? '自动' : source == 'manual' ? '手动' : '无'
-const rebindIcons = () => {
-  if (bindingIcons.value) return
-  bindingIcons.value = true
-  iconDiagnostics.value = rebindGetuiNotificationIconsForDiagnostics()
-  bindingIcons.value = false
-}
-
 const runLoad = async (keepExisting: boolean) => {
   if (!keepExisting) state.value = 'loading'
   try {
     facts.value = await bootstrapClientRuntime()
-    iconDiagnostics.value = getGetuiNotificationIconDiagnostics()
     if (facts.value.login != 'signedIn') {
       uni.reLaunch({ url: '/pages/login/index' })
       return
@@ -314,7 +200,6 @@ const retryRegistration = () => {
 }
 
 onShow(() => {
-  iconDiagnostics.value = getGetuiNotificationIconDiagnostics()
   refresh()
 })
 </script>
@@ -329,6 +214,4 @@ onShow(() => {
 .setting-detail { margin-top: 2px; color: $tm-text-3; font-size: 12px; line-height: 18px; }
 .detail-row-last { border-bottom-width: 0; }
 .notification-help { margin-top: 12px; color: $tm-text-3; font-size: 12px; line-height: 19px; }
-.icon-diagnostics { margin-top: 24px; opacity: 0.85; }
-.icon-preview { width: 48px; height: 48px; margin-top: 8px; margin-bottom: 12px; background-color: #edf3fb; }
 </style>

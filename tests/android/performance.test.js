@@ -451,35 +451,21 @@ test('Push receive expires task views without clearing data, requesting data or 
   assert.equal(env.calls.length, calls);
 });
 
-test('Getui icons bind after CID success once per push runtime and report failure without user data', async () => {
+test('Getui icons bind once after CID success and warn on failure', async () => {
   const env = environment();
   const push = env.loadActualPush();
   push.startPushRuntime();
   assert.equal(env.iconBindings.length, 0);
   assert.equal(await push.getOfficialPushClientId(), 'test-cid');
   assert.deepEqual(env.iconBindings, [['push_small', 'push']]);
-  assert.deepEqual({ ...push.getGetuiNotificationIconDiagnostics() }, {
-    sdkVersion: '3.test', packageName: 'com.gary.tokenm',
-    pushSmallResourceId: 101, pushResourceId: 102,
-    autoBindingState: 'success', lastBindingResult: 'success',
-    lastBindingSource: 'auto', lastBindingErrorCategory: 'none'
-  });
   await push.getOfficialPushClientId();
   assert.equal(env.iconBindings.length, 1);
-
   push.stopPushRuntime();
   push.startPushRuntime();
   env.iconBindingSucceeds = false;
   await push.getOfficialPushClientId();
   assert.equal(env.iconBindings.length, 2);
   assert.deepEqual(env.logs.at(-1), ['Getui notification icon binding failed']);
-  assert.equal(push.getGetuiNotificationIconDiagnostics().autoBindingState, 'false');
-  env.iconBindingSucceeds = true;
-  const manual = push.rebindGetuiNotificationIconsForDiagnostics();
-  assert.equal(env.iconBindings.length, 3);
-  assert.equal(manual.autoBindingState, 'false');
-  assert.equal(manual.lastBindingResult, 'success');
-  assert.equal(manual.lastBindingSource, 'manual');
   assert.equal(env.pushRegistrations, 0);
 });
 

@@ -3,7 +3,7 @@
 	"appid": "__UNI__46C9063",
 	"description": "Potato Android client",
 	"versionName": "0.1.1",
-	"versionCode": 4,
+	"versionCode": 5,
 	"uni-app-x": {},
 	"app": {
 		"defaultAppTheme": "light"
