@@ -73,10 +73,20 @@ type CloudBootstrapCounts = {
   activeMobileDevices: number
 }
 
+type CloudAndroidDashboardCounts = {
+  activeDesktops: number,
+  todayTasks: number
+}
+
+type CloudAndroidDashboardTask = {
+  task: CloudTask,
+  desktopName: string
+}
+
 type CloudAndroidDashboardResult = {
   settings: CloudSettings,
-  counts: { activeDesktops: number, todayTasks: number },
-  recentTasks: { task: CloudTask, desktopName: string }[],
+  counts: CloudAndroidDashboardCounts,
+  recentTasks: CloudAndroidDashboardTask[],
   recentDesktops: CloudDesktop[]
 }
 
