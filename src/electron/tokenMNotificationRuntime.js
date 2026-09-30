@@ -57,7 +57,7 @@ const STABLE_HOOK_LAUNCHER_SOURCE = [
   '$env:ELECTRON_RUN_AS_NODE = "1"',
   '$payload | & $executablePath $helperPath $runtimePath',
   'exit $LASTEXITCODE'
-].join("`r`n") + "`r`n";
+].join('\r\n') + '\r\n';
 
 function assertPrivateRegularFile(filePath) {
   try {

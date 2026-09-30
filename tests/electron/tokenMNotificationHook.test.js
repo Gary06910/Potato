@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -21,7 +22,7 @@ function jsonResponse(value, status = 200) {
   });
 }
 
-function createFixture(t, overrides = {}) {
+function createFixture(t, overrides = {}, runtimeOptions = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'token-m-hook-reconcile-'));
   const codexHome = path.join(directory, 'codex-home');
   fs.mkdirSync(codexHome);
@@ -62,7 +63,8 @@ function createFixture(t, overrides = {}) {
     getSettings: () => settings,
     commitSettings: async (patch) => Object.assign(settings, patch),
     platform: 'linux',
-    executablePath: process.execPath
+    executablePath: process.execPath,
+    ...runtimeOptions
   });
   const hooksPath = path.join(codexHome, 'hooks.json');
   const outboxPath = androidOutboxFilePath(directory, DESKTOP_ID);
@@ -104,9 +106,61 @@ test('Windows Hook command stays byte-for-byte stable when the portable executab
     manifestPath
   });
   assert.equal(first, second);
+  assert.equal(first, `powershell.exe -NoLogo -NoProfile -NonInteractive -InputFormat Text -OutputFormat Text -File '${launcherPath}' '${manifestPath}'`);
   assert.match(first, /launcher\.ps1/);
   assert.match(first, /target\.json/);
   assert.doesNotMatch(first, /To-Know-1\.0\.[01]\.exe/);
+});
+
+test('Windows launcher repairs literal newlines and reconciles valid CRLF source and target idempotently', async (t) => {
+  const { directory, hooksPath, runtime } = createFixture(t, {
+    tokenMCodexHookEnabled: true
+  }, { platform: 'win32' });
+  const launcherPath = path.join(directory, 'codex-hook', 'launcher.ps1');
+  const manifestPath = path.join(directory, 'codex-hook', 'target.json');
+  assert.equal((await runtime.start()).hook.enabled, true);
+  const source = fs.readFileSync(launcherPath, 'utf8');
+  assert.equal(source.includes('`r`n'), false);
+  assert.equal(source.includes('\r\n'), true);
+  assert.equal(source.endsWith('\r\n'), true);
+  assert.equal(source.replaceAll('\r\n', '').includes('\n'), false);
+  assert.equal(source.replaceAll('\r\n', '').includes('\r'), false);
+  const lines = source.split('\r\n');
+  assert.equal(lines.pop(), '');
+  assert.equal(lines.length, 20);
+  assert.equal(lines[0], "$ErrorActionPreference = 'Stop'");
+  assert.equal(lines[1], '$reader = [Console]::In');
+  assert.equal(lines[18], '$payload | & $executablePath $helperPath $runtimePath');
+  assert.equal(lines[19], 'exit $LASTEXITCODE');
+  assert.equal(lines.every((line) => line.length > 0), true);
+
+  if (process.platform === 'win32') {
+    const parsed = spawnSync('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
+      `$tokens = $null; $parseErrors = $null; [void][System.Management.Automation.Language.Parser]::ParseFile('${launcherPath.replaceAll("'", "''")}', [ref]$tokens, [ref]$parseErrors); Write-Output $parseErrors.Count; if ($parseErrors.Count) { exit 1 }`
+    ], { encoding: 'utf8' });
+    assert.equal(parsed.status, 0, parsed.stderr);
+    assert.equal(parsed.stdout.trim(), '0');
+  }
+
+  fs.writeFileSync(launcherPath, source.replaceAll('\r\n', '`r`n'), 'utf8');
+  assert.equal((await runtime.start()).hook.enabled, true);
+  assert.equal(fs.readFileSync(launcherPath, 'utf8'), source);
+  const manifest = fs.readFileSync(manifestPath, 'utf8');
+  assert.deepEqual(JSON.parse(manifest), {
+    version: 1, executablePath: process.execPath,
+    helperPath: path.resolve(__dirname, '../../src/electron/codexHookForwarder.js'),
+    runtimePath: runtime.runtimePath
+  });
+  const hooks = fs.readFileSync(hooksPath, 'utf8');
+  const launcherMtime = fs.statSync(launcherPath).mtimeMs;
+  const hooksMtime = fs.statSync(hooksPath).mtimeMs;
+  assert.equal((await runtime.start()).hook.enabled, true);
+  assert.equal(fs.readFileSync(launcherPath, 'utf8'), source);
+  assert.equal(fs.statSync(launcherPath).mtimeMs, launcherMtime);
+  assert.equal(fs.readFileSync(manifestPath, 'utf8'), manifest);
+  assert.equal(fs.readFileSync(hooksPath, 'utf8'), hooks);
+  assert.equal(fs.statSync(hooksPath).mtimeMs, hooksMtime);
+  assert.equal(JSON.parse(hooks).hooks.Stop.length, 1);
 });
 
 test('startup reconciles the persisted Hook intent without rewriting an exact definition', async (t) => {
