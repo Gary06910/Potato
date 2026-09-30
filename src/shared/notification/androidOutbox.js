@@ -3,7 +3,9 @@
 const { readRegularFileNoFollow, writePrivateJsonAtomic } = require('../credentialStore');
 const { validateAndroidCompletionPayload } = require('./androidPayload');
 
-const VERSION = 2;
+const VERSION = 3;
+const DELIVERED_RETENTION_MS = 24 * 60 * 60 * 1_000;
+const MAX_DELIVERED_ITEMS = 1_000;
 const BASE_DELAY_MS = 1_000;
 const MAX_DELAY_MS = 15 * 60 * 1_000;
 const MAX_ITEMS = 1_000;
@@ -41,14 +43,32 @@ function safeErrorCode(error, status) {
   return /^[A-Za-z0-9_.-]{1,80}$/.test(code) ? code : 'network_error';
 }
 
+function normalizeDelivered(value, now) {
+  if (!Array.isArray(value)) throw new Error('Invalid Android delivered ledger');
+  const events = new Map();
+  for (const entry of value) {
+    if (!entry || typeof entry.eventId !== 'string' || !/^evt:[^\s:]+:[^\s]+$/.test(entry.eventId)
+      || entry.eventId.length > 240 || !Number.isFinite(entry.deliveredAt)) {
+      throw new Error('Invalid Android delivered tombstone');
+    }
+    if (entry.deliveredAt + DELIVERED_RETENTION_MS <= now) continue;
+    const previous = events.get(entry.eventId);
+    if (!previous || previous.deliveredAt < entry.deliveredAt) {
+      events.set(entry.eventId, { eventId: entry.eventId, deliveredAt: entry.deliveredAt });
+    }
+  }
+  return [...events.values()].sort((a, b) => b.deliveredAt - a.deliveredAt).slice(0, MAX_DELIVERED_ITEMS);
+}
+
 function normalizeDocument(value, now) {
-  if (!value || typeof value !== 'object' || ![1, VERSION].includes(value.version) || !Array.isArray(value.items)) {
+  if (!value || typeof value !== 'object' || ![1, 2, VERSION].includes(value.version) || !Array.isArray(value.items)) {
     throw new Error('Unsupported Android outbox document');
   }
   if (value.items.length > MAX_ITEMS) throw new Error('Android outbox is too large');
   const eventIds = new Set();
   return {
     version: VERSION,
+    delivered: value.version < 3 ? [] : normalizeDelivered(value.delivered, now),
     items: value.items.map((item) => {
       const payload = validateAndroidCompletionPayload(item.payload);
       if (eventIds.has(payload.eventId)) throw new Error('Android outbox contains duplicate event ids');
@@ -83,7 +103,7 @@ function createAndroidOutbox({
   if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > MAX_ATTEMPTS) {
     throw new TypeError(`maxAttempts must be between 1 and ${MAX_ATTEMPTS}`);
   }
-  let document = { version: VERSION, items: [] };
+  let document = { version: VERSION, items: [], delivered: [] };
   let loaded = false;
   let running = false;
   let pausedReason = null;
@@ -114,6 +134,7 @@ function createAndroidOutbox({
 
   function prune() {
     const now = currentTime();
+    document.delivered = normalizeDelivered(document.delivered, now);
     for (const item of document.items) {
       if (!item.suspended && item.createdAt + ACTIVE_TTL_MS <= now) {
         item.suspended = 'expired';
@@ -196,6 +217,8 @@ function createAndroidOutbox({
       catch (error) { failure = error; }
       const outcome = classifyAndroidDelivery(result, failure);
       if (outcome.kind === 'success') {
+        // Both changes are persisted in the same atomic document write, inside the lane.
+        document.delivered.unshift({ eventId: item.payload.eventId, deliveredAt: currentTime() });
         document.items.splice(index, 1);
       } else {
         try { onDeliveryFailure({ error: failure, outcome }); } catch (_) {}
@@ -232,7 +255,8 @@ function createAndroidOutbox({
         prune();
         persist();
         const clean = validateAndroidCompletionPayload(payload);
-        if (!document.items.some((item) => item.payload.eventId === clean.eventId)) {
+        if (!document.items.some((item) => item.payload.eventId === clean.eventId)
+          && !document.delivered.some((item) => item.eventId === clean.eventId)) {
           if (document.items.length >= MAX_ITEMS) throw Object.assign(new Error('outbox_full'), { code: 'outbox_full' });
           document.items.push({
             payload: clean,
@@ -300,6 +324,8 @@ function createAndroidOutbox({
 }
 
 module.exports = {
+  DELIVERED_RETENTION_MS,
+  MAX_DELIVERED_ITEMS,
   MAX_ATTEMPTS,
   MAX_ITEMS,
   ACTIVE_TTL_MS,

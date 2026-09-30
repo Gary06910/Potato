@@ -32,14 +32,6 @@ async function postCompletion(runtimePath, input) {
   assert.equal(response.status, 200);
 }
 
-async function waitFor(predicate, timeoutMs = 2_000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (predicate()) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-  assert.fail('timed out waiting for Android event delivery');
-}
 
 test('Stop hook ignores historical destination settings and submits Android events only', async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'token-m-target-runtime-'));
@@ -152,8 +144,7 @@ test('Stop hook ignores historical destination settings and submits Android even
   });
   status = await runtime.getStatus();
   assert.equal(status.android.bindingState, 'bound');
-  await waitFor(() => androidEvents.length === 2);
-  assert.equal(androidEvents.length, 2);
-  assert.equal(androidEvents[1].eventId, androidEvents[0].eventId);
+  assert.equal(status.android.outbox.total, 0);
+  assert.equal(androidEvents.length, 1);
   assert.equal(wechatEvents.length, 0);
 });

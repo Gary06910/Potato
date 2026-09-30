@@ -204,17 +204,17 @@ test('notification overlay stays local-first across pairing, privacy, duplicates
   assert.equal(events[0].durationMs, null);
 
   await runtime.enqueue(completion());
-  await waitFor(() => events.length === 2);
-  assert.equal(events[1].eventId, events[0].eventId);
+  assert.equal(runtime.publicStatus().outbox.total, 0);
+  assert.equal(events.length, 1);
 
   await runtime.setPrivacyMode(false);
   await runtime.enqueue(completion('turn-2'));
-  await waitFor(() => events.length === 3);
-  assert.equal(events[2].privacyMode, false);
-  assert.equal(events[2].project, 'token-m');
-  assert.equal(events[2].model, 'gpt-5');
-  assert.equal(events[2].summary, 'local completion summary');
-  assert.equal(events[2].durationMs, 42);
+  await waitFor(() => events.length === 2);
+  assert.equal(events[1].privacyMode, false);
+  assert.equal(events[1].project, 'token-m');
+  assert.equal(events[1].model, 'gpt-5');
+  assert.equal(events[1].summary, 'local completion summary');
+  assert.equal(events[1].durationMs, 42);
 
   offline = true;
   await assert.doesNotReject(() => runtime.enqueue(completion('turn-3')));

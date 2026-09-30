@@ -187,7 +187,7 @@ test('v1 migrates, old active notifications expire, and retention removes old fa
   assert.equal(sends, 0);
   assert.equal(queue.snapshot().failed, 1);
   assert.equal(queue.snapshot().items[0].suspended, 'expired');
-  assert.equal(JSON.parse(fs.readFileSync(filePath)).version, 2);
+  assert.equal(JSON.parse(fs.readFileSync(filePath)).version, 3);
   now += FAILED_RETENTION_MS;
   await queue.flush();
   assert.equal(queue.snapshot().total, 0);
@@ -219,4 +219,121 @@ test('failure cap retains newest 50 without evicting pending and hard capacity r
   for (let i = 0; i < 50; i++) await queue.enqueue(payload(`evt:session-1:new-${i}`));
   await assert.rejects(queue.enqueue(payload('evt:session-1:overflow')), { code: 'outbox_full' });
   assert.equal(queue.snapshot().total, MAX_ITEMS);
+});
+
+const { DELIVERED_RETENTION_MS, MAX_DELIVERED_ITEMS } = require('../../src/electron/androidOutbox');
+const { buildAndroidCompletionPayload } = require('../../src/electron/androidPayload');
+
+function stored(filePath) { return JSON.parse(fs.readFileSync(filePath, 'utf8')); }
+
+test('delivered identities suppress changed timestamps/content across clear and v3 restart', async (t) => {
+  const filePath = fixture(t);
+  let sends = 0;
+  const send = async () => { sends++; return { status: 200, duplicate: true }; };
+  const queue = createAndroidOutbox({ filePath, send });
+  const event = payload();
+  await queue.enqueue(event);
+  await queue.flush();
+  assert.equal(queue.snapshot().total, 0);
+  assert.equal(stored(filePath).version, 3);
+  assert.deepEqual(Object.keys(stored(filePath).delivered[0]).sort(), ['deliveredAt', 'eventId']);
+  await queue.enqueue({ ...event, occurredAt: new Date(Date.parse(event.occurredAt) + 1000).toISOString() });
+  await queue.enqueue({ ...event, privacyMode: false, summary: 'Synthetic changed summary' });
+  await queue.flush();
+  assert.equal(sends, 1);
+  await queue.clearUndelivered();
+  await queue.clearOutbox();
+  assert.equal(stored(filePath).delivered.length, 1);
+  const reloaded = createAndroidOutbox({ filePath, send });
+  await reloaded.enqueue(event);
+  await reloaded.flush();
+  assert.equal(sends, 1);
+  await reloaded.enqueue(payload('evt:session-1:turn-b'));
+  await reloaded.flush();
+  assert.equal(sends, 2);
+});
+
+test('delivered TTL expires exactly at 24 hours and permits re-enqueue', async (t) => {
+  let now = Date.now();
+  let sends = 0;
+  const queue = createAndroidOutbox({ filePath: fixture(t), now: () => now, send: async () => { sends++; return { status: 201 }; } });
+  await queue.enqueue(payload());
+  await queue.flush();
+  now += DELIVERED_RETENTION_MS - 1;
+  await queue.enqueue(payload());
+  await queue.flush();
+  assert.equal(sends, 1);
+  now++;
+  await queue.enqueue(payload());
+  await queue.flush();
+  assert.equal(sends, 2);
+});
+
+test('delivered ledger keeps newest 1000, prunes expiry, and caps after success', async (t) => {
+  const filePath = fixture(t);
+  const now = Date.now();
+  const delivered = Array.from({ length: MAX_DELIVERED_ITEMS + 5 }, (_, i) => ({ eventId: 'evt:session-1:old-' + i, deliveredAt: now - 2000 + i }));
+  delivered.push({ eventId: 'evt:session-1:expired', deliveredAt: now - DELIVERED_RETENTION_MS });
+  fs.writeFileSync(filePath, JSON.stringify({ version: 3, items: [], delivered }));
+  const queue = createAndroidOutbox({ filePath, now: () => now, send: async () => ({ status: 201 }) });
+  queue.load();
+  assert.equal(stored(filePath).delivered.length, MAX_DELIVERED_ITEMS);
+  assert.equal(stored(filePath).delivered.some((entry) => entry.eventId === 'evt:session-1:old-0'), false);
+  await queue.enqueue(payload());
+  await queue.flush();
+  assert.equal(stored(filePath).delivered.length, MAX_DELIVERED_ITEMS);
+  assert.equal(stored(filePath).delivered[0].eventId, payload().eventId);
+});
+
+for (const version of [1, 2]) {
+  test('v' + version + ' migration preserves pending, terminal, and credential items', (t) => {
+    const filePath = fixture(t);
+    const now = Date.now();
+    const items = [null, 'terminal', 'credential'].map((suspended, i) => ({ payload: payload('evt:session-1:migrate-' + i), createdAt: now, failedAt: suspended ? now : null, suspended,
+      attemptCount: i, nextAttemptAt: now + 1000, lastError: suspended === 'terminal' ? 'event_conflict' : suspended }));
+    fs.writeFileSync(filePath, JSON.stringify({ version, items }));
+    const queue = createAndroidOutbox({ filePath, now: () => now, send: async () => ({ status: 201 }) });
+    assert.equal(queue.snapshot().total, 3);
+    assert.deepEqual(stored(filePath).items, items);
+    assert.deepEqual(stored(filePath).delivered, []);
+    assert.equal(stored(filePath).version, 3);
+  });
+}
+
+test('409 event_conflict stays terminal and never creates a delivered tombstone', async (t) => {
+  const filePath = fixture(t);
+  const queue = createAndroidOutbox({ filePath, send: async () => { throw Object.assign(new Error('conflict'), { status: 409, code: 'event_conflict' }); } });
+  await queue.enqueue(payload());
+  await queue.flush();
+  assert.deepEqual(stored(filePath).delivered, []);
+  assert.equal(queue.snapshot().items[0].suspended, 'terminal');
+  assert.equal(queue.snapshot().lastError, 'event_conflict');
+});
+
+test('seven synthetic completion callbacks without occurred_at send once after first success', async (t) => {
+  let now = Date.now();
+  let sends = 0;
+  const filePath = fixture(t);
+  const accepted = new Map();
+  const queue = createAndroidOutbox({ filePath, now: () => now, send: async (value) => {
+    sends++;
+    const previous = accepted.get(value.eventId);
+    if (previous && JSON.stringify(previous) !== JSON.stringify(value)) throw Object.assign(new Error('conflict'), { status: 409, code: 'event_conflict' });
+    accepted.set(value.eventId, value);
+    return { status: 201 };
+  } });
+  const events = [];
+  for (let i = 0; i < 7; i++) {
+    now += 1000;
+    const event = buildAndroidCompletionPayload({ rawInput: { hook_event_name: 'Stop', session_id: 'synthetic-session', turn_id: 'synthetic-turn' }, desktopId: payload().desktopId, now: () => now });
+    events.push(event);
+    await queue.enqueue(event);
+    await queue.flush();
+  }
+  assert.equal(new Set(events.map((event) => event.eventId)).size, 1);
+  assert.equal(new Set(events.map((event) => event.occurredAt)).size, 7);
+  assert.equal(sends, 1);
+  assert.equal(queue.snapshot().failed, 0);
+  assert.equal(queue.snapshot().total, 0);
+  assert.equal(stored(filePath).delivered.length, 1);
 });
