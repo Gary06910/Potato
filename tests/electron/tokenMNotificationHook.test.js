@@ -68,7 +68,10 @@ function createFixture(t, overrides = {}) {
   const outboxPath = androidOutboxFilePath(directory, DESKTOP_ID);
   const stableHookDirectory = path.join(directory, 'codex-hook');
   t.after(async () => {
-    try { await runtime.disableCodexHook(); } catch (_) {}
+    try {
+      const disabled = await runtime.disableCodexHook();
+      if (disabled.backupPath) fs.unlinkSync(disabled.backupPath);
+    } catch (_) {}
     await runtime.stop();
     if (fs.existsSync(hooksPath)) fs.unlinkSync(hooksPath);
     if (fs.existsSync(outboxPath)) fs.unlinkSync(outboxPath);
@@ -185,6 +188,8 @@ test('a trusted runtime event records only a safe timestamp and disabling remove
   assert.doesNotMatch(JSON.stringify(afterEvent), /private-session|private-turn|private reply|private\\project/);
 
   const disabled = await runtime.disableCodexHook();
+  assert.ok(disabled.backupPath);
+  fs.unlinkSync(disabled.backupPath);
   assert.equal(disabled.enabled, false);
   assert.equal(settings.tokenMCodexHookEnabled, false);
   assert.equal(settings.tokenMAndroidCredential.includes(DESKTOP_ID), true);

@@ -135,7 +135,7 @@ function createTokenMNotificationRuntime(options) {
       encodedWindowsHookCommandFor({ executablePath, helperPath, runtimePath })
     ]
     : [];
-  const commandIdentity = { command, commandWindows, legacyCommands };
+  const commandIdentity = { command, commandWindows, legacyCommands, runtimePath };
   let bridge = null; let stopped = true; let statusTimer = null; let lifecycle = Promise.resolve(); let hookReconcileError = '';
   const android = createAndroidNotificationRuntime({ userDataPath, fetch, getSettings, commitSettings, logger, hostname });
   function hookState() { return readCodexHookState({ codexHome, commandIdentity }); }
@@ -233,7 +233,7 @@ function createTokenMNotificationRuntime(options) {
       }
       if (desired && platform === 'win32') ensureWindowsHookLauncher({ userDataPath, executablePath, helperPath, runtimePath });
       const state = desired
-        ? enableCodexStopHook({ codexHome, command, commandWindows, legacyCommands })
+        ? enableCodexStopHook({ codexHome, command, commandWindows, legacyCommands, runtimePath })
         : disableCodexStopHook({ codexHome, commandIdentity });
       hookReconcileError = state.error || '';
       return state;
@@ -270,7 +270,7 @@ function createTokenMNotificationRuntime(options) {
       }
       try {
         if (platform === 'win32') ensureWindowsHookLauncher({ userDataPath, executablePath, helperPath, runtimePath });
-        const state = enableCodexStopHook({ codexHome, command, commandWindows, legacyCommands });
+        const state = enableCodexStopHook({ codexHome, command, commandWindows, legacyCommands, runtimePath });
         hookReconcileError = state.error || '';
         if (state.enabled) {
           await commitSettings({ tokenMCodexHookEnabled: true });

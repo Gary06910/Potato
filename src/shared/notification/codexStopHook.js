@@ -60,7 +60,8 @@ function identityDetails(commandIdentity) {
   return {
     command: commandIdentity?.command,
     commandWindows: commandIdentity?.commandWindows || null,
-    legacyCommands: Array.isArray(commandIdentity?.legacyCommands) ? commandIdentity.legacyCommands : []
+    legacyCommands: Array.isArray(commandIdentity?.legacyCommands) ? commandIdentity.legacyCommands : [],
+    runtimePath: commandIdentity?.runtimePath
   };
 }
 
@@ -70,10 +71,32 @@ function handlerMatchesCurrent(entry, commandIdentity) {
   return !identity.commandWindows || entry.commandWindows === identity.commandWindows;
 }
 
-function handlerMatchesAny(entry, commandIdentity) {
+// Accept only the historical formal forwarder template targeting this runtime.
+function historicalForwarderMatches(command, runtimePath) {
+  if (typeof command !== 'string' || typeof runtimePath !== 'string' || !path.isAbsolute(runtimePath)) return false;
+  const prefix = 'powershell.exe -NoLogo -NoProfile -NonInteractive -InputFormat Text -OutputFormat Text -EncodedCommand ';
+  if (!command.startsWith(prefix)) return false;
+  const encoded = command.slice(prefix.length);
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) return false;
+  const script = Buffer.from(encoded, 'base64').toString('utf16le');
+  const invocation = script.match(/\$payload \| & '((?:[^']|'')+)' '((?:[^']|'')+)' '((?:[^']|'')+)'; exit \$LASTEXITCODE$/);
+  if (!invocation) return false;
+  const [executable, helper, runtime] = invocation.slice(1).map((value) => value.replaceAll("''", "'"));
+  if (![executable, helper].every((value) => path.win32.isAbsolute(value))) return false;
+  if (!/[\\/]src[\\/]electron[\\/]codexHookForwarder\.js$/.test(helper) || runtime !== runtimePath) return false;
+  const quote = (value) => "'" + value.replaceAll("'", "''") + "'";
+  const expected = ["$ProgressPreference = 'SilentlyContinue'", '$utf8 = [System.Text.UTF8Encoding]::new($false)', '[Console]::InputEncoding = $utf8', '$OutputEncoding = $utf8', '$payload = [Console]::In.ReadToEnd()', "$env:ELECTRON_RUN_AS_NODE = '1'", '$payload | & ' + [executable, helper, runtime].map(quote).join(' '), 'exit $LASTEXITCODE'].join('; ');
+  return script === expected && Buffer.from(expected, 'utf16le').toString('base64') === encoded;
+}
+
+function isPotatoOwnedStopHook(entry, commandIdentity) {
   const identity = identityDetails(commandIdentity);
   const candidates = new Set([identity.command, identity.commandWindows, ...identity.legacyCommands].filter(Boolean));
-  return entry?.type === 'command' && (candidates.has(entry.command) || candidates.has(entry.commandWindows));
+  // An unknown alternate platform command must not be discarded with an owned one.
+  if (entry?.type !== 'command') return false;
+  const commands = [entry.command, entry.commandWindows].filter((value) => value !== undefined && value !== null);
+  return commands.length > 0 && commands.every((command) => candidates.has(command)
+    || historicalForwarderMatches(command, identity.runtimePath));
 }
 
 function containsCommand(config, identity) {
@@ -105,7 +128,7 @@ function assertDestinationSafe(filePath, fsApi) {
   }
 }
 
-function writeAtomic(filePath, value, fsApi) {
+function writeAtomic(filePath, value, fsApi, expectedRaw) {
   const temporary = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
   let descriptor;
   fsApi.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
@@ -116,6 +139,7 @@ function writeAtomic(filePath, value, fsApi) {
     fsApi.closeSync(descriptor);
     descriptor = undefined;
     assertDestinationSafe(filePath, fsApi);
+    if (readConfig(filePath, fsApi).raw !== expectedRaw) throw new Error('Codex hooks.json changed during reconciliation');
     fsApi.renameSync(temporary, filePath);
   } catch (error) {
     if (descriptor !== undefined) {
@@ -142,7 +166,7 @@ function backupExisting(configPath, raw, fsApi) {
   }
 }
 
-function enableCodexStopHook({ codexHome, command, commandWindows, legacyCommands = [], backup = true, fs: fsApi = nodeFs }) {
+function enableCodexStopHook({ codexHome, command, commandWindows, legacyCommands = [], runtimePath, backup = true, fs: fsApi = nodeFs }) {
   const configPath = configPathFor(codexHome);
   let createdBackupPath = null;
   try {
@@ -152,46 +176,43 @@ function enableCodexStopHook({ codexHome, command, commandWindows, legacyCommand
       && (typeof commandWindows !== 'string' || !commandWindows.trim())) {
       throw new TypeError('Windows hook command must be a non-empty string');
     }
-    const identity = { command, commandWindows, legacyCommands };
+    const identity = { command, commandWindows, legacyCommands, runtimePath };
     const document = readConfig(configPath, fsApi);
-    if (containsCommand(document.value, identity)) return hookState(configPath, true);
     const value = structuredClone(document.value);
     if (value.hooks === undefined) value.hooks = {};
     if (!value.hooks || typeof value.hooks !== 'object' || Array.isArray(value.hooks)) throw new Error('hooks must be an object');
     if (value.hooks.Stop === undefined) value.hooks.Stop = [];
     if (!Array.isArray(value.hooks.Stop)) throw new Error('hooks.Stop must be an array');
-    let migrated = false;
-    const legacyIdentity = { command: null, legacyCommands };
-    value.hooks.Stop = value.hooks.Stop.map((group) => {
-      if (!Array.isArray(group?.hooks)) return group;
-      return {
-        ...group,
-        hooks: group.hooks.map((entry) => {
-          if (migrated || !handlerMatchesAny(entry, legacyIdentity)) return entry;
-          migrated = true;
-          const next = { ...entry, command };
-          if (commandWindows) next.commandWindows = commandWindows;
-          else delete next.commandWindows;
-          return next;
-        })
-      };
+    let retainedCurrent = false;
+    value.hooks.Stop = value.hooks.Stop.flatMap((group) => {
+      if (!Array.isArray(group?.hooks)) return [group];
+      const hooks = group.hooks.filter((entry) => {
+        if (!isPotatoOwnedStopHook(entry, identity)) return true;
+        if (!retainedCurrent && group.matcher === '' && handlerMatchesCurrent(entry, identity)) {
+          retainedCurrent = true;
+          return true;
+        }
+        return false;
+      });
+      return hooks.length || group.hooks.length === 0 ? [{ ...group, hooks }] : [];
     });
-    if (!migrated) {
+    if (!retainedCurrent) {
       value.hooks.Stop.push({
         matcher: '',
         hooks: [{ type: 'command', command, ...(commandWindows ? { commandWindows } : {}), timeout: 5 }]
       });
     }
+    if (JSON.stringify(value) === JSON.stringify(document.value)) return hookState(configPath, true);
     const backupPath = document.exists && backup ? backupExisting(configPath, document.raw, fsApi) : null;
     createdBackupPath = backupPath;
-    writeAtomic(configPath, value, fsApi);
+    writeAtomic(configPath, value, fsApi, document.raw);
     return hookState(configPath, true, backupPath);
   } catch (error) {
     return hookState(configPath, false, createdBackupPath, error.message || String(error), null);
   }
 }
 
-function disableCodexStopHook({ codexHome, commandIdentity, fs: fsApi = nodeFs }) {
+function disableCodexStopHook({ codexHome, commandIdentity, backup = true, fs: fsApi = nodeFs }) {
   const configPath = configPathFor(codexHome);
   try {
     assertCodexHomeSafe(codexHome, fsApi);
@@ -199,24 +220,26 @@ function disableCodexStopHook({ codexHome, commandIdentity, fs: fsApi = nodeFs }
     if (!identity.command) throw new TypeError('commandIdentity is required');
     const document = readConfig(configPath, fsApi);
     const hasMatchingHandler = (document.value?.hooks?.Stop || []).some((group) => (
-      Array.isArray(group?.hooks) && group.hooks.some((entry) => handlerMatchesAny(entry, identity))
+      Array.isArray(group?.hooks) && group.hooks.some((entry) => isPotatoOwnedStopHook(entry, identity))
     ));
     if (!document.exists || !hasMatchingHandler) return hookState(configPath, false);
     const value = structuredClone(document.value);
     value.hooks.Stop = value.hooks.Stop.flatMap((group) => {
       if (!Array.isArray(group?.hooks)) return [group];
-      const hooks = group.hooks.filter((entry) => !handlerMatchesAny(entry, identity));
-      if (hooks.length === 0) return [];
+      const hooks = group.hooks.filter((entry) => !isPotatoOwnedStopHook(entry, identity));
+      if (hooks.length === 0 && group.hooks.length !== 0) return [];
       return [{ ...group, hooks }];
     });
-    writeAtomic(configPath, value, fsApi);
-    return hookState(configPath, false);
+    const backupPath = backup ? backupExisting(configPath, document.raw, fsApi) : null;
+    writeAtomic(configPath, value, fsApi, document.raw);
+    return hookState(configPath, false, backupPath);
   } catch (error) {
     return hookState(configPath, false, null, error.message || String(error), null);
   }
 }
 
 module.exports = {
+  isPotatoOwnedStopHook,
   disableCodexStopHook,
   enableCodexStopHook,
   readCodexHookState

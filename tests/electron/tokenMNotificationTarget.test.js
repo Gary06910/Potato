@@ -114,7 +114,10 @@ test('Stop hook ignores historical destination settings and submits Android even
   const hookLauncherPath = path.join(hookDirectory, 'launcher.ps1');
   const hookManifestPath = path.join(hookDirectory, 'target.json');
   t.after(async () => {
-    try { await runtime.disableCodexHook(); } catch (_) {}
+    try {
+      const disabled = await runtime.disableCodexHook();
+      if (disabled.backupPath) fs.unlinkSync(disabled.backupPath);
+    } catch (_) {}
     await runtime.stop();
     if (fs.existsSync(androidOutbox)) fs.unlinkSync(androidOutbox);
     if (fs.existsSync(wechatOutbox)) fs.unlinkSync(wechatOutbox);
