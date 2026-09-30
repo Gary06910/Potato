@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -69,12 +69,14 @@ function createFixture(t, overrides = {}, runtimeOptions = {}) {
   const hooksPath = path.join(codexHome, 'hooks.json');
   const outboxPath = androidOutboxFilePath(directory, DESKTOP_ID);
   const stableHookDirectory = path.join(directory, 'codex-hook');
+  const cleanup = { migrationBackup: null };
   t.after(async () => {
     try {
       const disabled = await runtime.disableCodexHook();
       if (disabled.backupPath) fs.unlinkSync(disabled.backupPath);
     } catch (_) {}
     await runtime.stop();
+    if (cleanup.migrationBackup) fs.unlinkSync(cleanup.migrationBackup);
     if (fs.existsSync(hooksPath)) fs.unlinkSync(hooksPath);
     if (fs.existsSync(outboxPath)) fs.unlinkSync(outboxPath);
     if (fs.existsSync(path.join(stableHookDirectory, 'launcher.ps1'))) fs.unlinkSync(path.join(stableHookDirectory, 'launcher.ps1'));
@@ -83,7 +85,7 @@ function createFixture(t, overrides = {}, runtimeOptions = {}) {
     fs.rmdirSync(codexHome);
     fs.rmdirSync(directory);
   });
-  return { directory, codexHome, events, hooksPath, runtime, settings };
+  return { directory, codexHome, events, hooksPath, runtime, settings, cleanup };
 }
 
 test('Windows Hook command stays byte-for-byte stable when the portable executable moves versions', () => {
@@ -99,17 +101,76 @@ test('Windows Hook command stays byte-for-byte stable when the portable executab
   });
   const second = hookCommandFor({
     platform: 'win32',
-    executablePath: 'C:\\Apps\\To-Know-1.0.1.exe',
-    helperPath: 'C:\\Apps\\resources\\app.asar\\src\\electron\\codexHookForwarder.js',
+    executablePath: 'C:\\Moved Apps\\To-Know-1.0.1.exe',
+    helperPath: 'C:\\Moved Apps\\resources\\app.asar\\src\\electron\\codexHookForwarder.js',
     runtimePath: 'C:\\Users\\Gary\\AppData\\Roaming\\Token Monitor\\token-m-notification-runtime.json',
     launcherPath,
     manifestPath
   });
   assert.equal(first, second);
-  assert.equal(first, `powershell.exe -NoLogo -NoProfile -NonInteractive -InputFormat Text -OutputFormat Text -File '${launcherPath}' '${manifestPath}'`);
+  assert.equal(first, `powershell.exe -NoLogo -NoProfile -NonInteractive -InputFormat Text -OutputFormat Text -File "${launcherPath}" "${manifestPath}"`);
+  assert.doesNotMatch(first, /-File '/);
   assert.match(first, /launcher\.ps1/);
   assert.match(first, /target\.json/);
   assert.doesNotMatch(first, /To-Know-1\.0\.[01]\.exe/);
+});
+
+test('Windows full Hook command reaches the bridge through cmd.exe without enqueueing an invalid identity', { skip: process.platform !== 'win32' }, async (t) => {
+  const { directory, hooksPath, runtime, settings, events } = createFixture(t, {
+    tokenMAndroidEnabled: true, tokenMCodexHookEnabled: true
+  }, { platform: 'win32' });
+  assert.equal((await runtime.start()).hook.enabled, true);
+  const command = JSON.parse(fs.readFileSync(hooksPath, 'utf8')).hooks.Stop[0].hooks[0].commandWindows;
+  const outboxPath = androidOutboxFilePath(directory, DESKTOP_ID);
+  const beforeOutbox = fs.existsSync(outboxPath) ? fs.readFileSync(outboxPath, 'utf8') : null;
+  const beforeEvent = settings.tokenMCodexLastHookEventAt;
+  const result = await new Promise((resolve, reject) => {
+    // Keep the bridge's event loop running while the real command shell invokes the helper.
+    const child = spawn(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', command], {
+      windowsVerbatimArguments: true, windowsHide: true, timeout: 20_000
+    });
+    let stderr = '';
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', (data) => { stderr += data; });
+    child.stdout.resume();
+    child.on('error', reject);
+    child.on('close', (code) => resolve({ code, stderr }));
+    child.stdin.end(JSON.stringify({ hook_event_name: 'Stop', session_id: '', turn_id: '', cwd: 'C:\\', last_assistant_message: null }));
+  });
+  assert.equal(result.code, 0, result.stderr);
+  assert.notEqual(settings.tokenMCodexLastHookEventAt, beforeEvent);
+  assert.equal(events.length, 0);
+  assert.equal(fs.existsSync(outboxPath) ? fs.readFileSync(outboxPath, 'utf8') : null, beforeOutbox);
+});
+
+test('Windows startup migrates only the exact broken stable command and remains idempotent', async (t) => {
+  const { directory, codexHome, hooksPath, runtime, cleanup } = createFixture(t, {
+    tokenMCodexHookEnabled: true
+  }, { platform: 'win32' });
+  const launcherPath = path.join(directory, 'codex-hook', 'launcher.ps1');
+  const manifestPath = path.join(directory, 'codex-hook', 'target.json');
+  // Freeze the historical template independently of the production identity generator.
+  const quote = (value) => "'" + value.replaceAll("'", "''") + "'";
+  const oldCommand = `powershell.exe -NoLogo -NoProfile -NonInteractive -InputFormat Text -OutputFormat Text -File ${quote(launcherPath)} ${quote(manifestPath)}`;
+  const thirdParty = { type: 'command', command: oldCommand + ' --third-party', commandWindows: 'echo third-party', timeout: 17 };
+  fs.writeFileSync(hooksPath, JSON.stringify({ hooks: { Stop: [{ matcher: '', hooks: [
+    { type: 'command', command: oldCommand, commandWindows: oldCommand, timeout: 5 }, thirdParty
+  ] }] } }));
+  assert.equal((await runtime.start()).hook.enabled, true);
+  const handlers = JSON.parse(fs.readFileSync(hooksPath, 'utf8')).hooks.Stop.flatMap((group) => group.hooks);
+  assert.equal(handlers.filter((entry) => entry.command === oldCommand || entry.commandWindows === oldCommand).length, 0);
+  assert.equal(handlers.filter((entry) => entry.command === runtime.commandIdentity && entry.commandWindows === runtime.commandIdentity).length, 1);
+  assert.equal(handlers.length, 2);
+  assert.deepEqual(handlers[0], thirdParty);
+  const backups = fs.readdirSync(codexHome).filter((name) => name.startsWith('hooks.json.token-m-backup-'));
+  assert.equal(backups.length, 1);
+  cleanup.migrationBackup = path.join(codexHome, backups[0]);
+  const bytes = fs.readFileSync(hooksPath, 'utf8');
+  const mtime = fs.statSync(hooksPath).mtimeMs;
+  assert.equal((await runtime.start()).hook.enabled, true);
+  assert.equal(fs.readFileSync(hooksPath, 'utf8'), bytes);
+  assert.equal(fs.statSync(hooksPath).mtimeMs, mtime);
+  assert.deepEqual(fs.readdirSync(codexHome).filter((name) => name.startsWith('hooks.json.token-m-backup-')), backups);
 });
 
 test('Windows launcher repairs literal newlines and reconciles valid CRLF source and target idempotently', async (t) => {

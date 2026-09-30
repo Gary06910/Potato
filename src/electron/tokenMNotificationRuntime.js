@@ -21,6 +21,10 @@ function encodedWindowsHookCommandFor({ executablePath, helperPath, runtimePath 
 }
 function stableWindowsHookCommandFor({ launcherPath, manifestPath }) {
   if (![launcherPath, manifestPath].every((value) => typeof value === 'string' && path.isAbsolute(value))) throw new TypeError('Stable Hook launcher paths must be absolute');
+  return `powershell.exe -NoLogo -NoProfile -NonInteractive -InputFormat Text -OutputFormat Text -File ${windowsQuote(launcherPath)} ${windowsQuote(manifestPath)}`;
+}
+function legacyBrokenStableWindowsHookCommandFor({ launcherPath, manifestPath }) {
+  // Recognition only: cmd.exe cannot execute these historical single-quoted paths.
   return `powershell.exe -NoLogo -NoProfile -NonInteractive -InputFormat Text -OutputFormat Text -File ${powerShellQuote(launcherPath)} ${powerShellQuote(manifestPath)}`;
 }
 function hookCommandFor({ platform = process.platform, executablePath = process.execPath, helperPath, runtimePath, launcherPath, manifestPath }) {
@@ -131,6 +135,7 @@ function createTokenMNotificationRuntime(options) {
   const commandWindows = platform === 'win32' ? command : null;
   const legacyCommands = platform === 'win32'
     ? [
+      legacyBrokenStableWindowsHookCommandFor({ launcherPath, manifestPath }),
       legacyWindowsHookCommandFor({ executablePath, helperPath, runtimePath }),
       encodedWindowsHookCommandFor({ executablePath, helperPath, runtimePath })
     ]
