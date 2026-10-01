@@ -96,7 +96,13 @@ test('Android notification runtime pairs, queues the explicit event, and unpairs
     cwd: 'C:\\private\\project',
     last_assistant_message: 'private result'
   });
-  const event = await accepted;
+  const keepAlive = setInterval(() => {}, 60_000);
+  let event;
+  try {
+    event = await accepted;
+  } finally {
+    clearInterval(keepAlive);
+  }
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(event.eventId, 'evt:session-1:turn-1');
   assert.equal(event.privacyMode, true);

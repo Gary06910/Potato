@@ -141,7 +141,7 @@ test('parallel bash shims exec each original once, forward arguments and streams
       child.stderr.on('data', (chunk) => { stderr += chunk; });
       child.stdin.end(`input-${index}\n`);
       child.on('error', reject);
-      child.on('exit', (code) => resolve({ name, index, code, stdout, stderr }));
+      child.on('close', (code) => resolve({ name, index, code, stdout, stderr }));
     })));
     for (const call of calls) {
       assert.equal(call.stdout.trim(), `ORIGINAL:${call.name}:argument-${call.index}:input-${call.index}`);
@@ -165,7 +165,7 @@ test('parallel bash shims exec each original once, forward arguments and streams
       child.stderr.on('data', (chunk) => { stderr += chunk; });
       child.stdin.end('input\n');
       child.on('error', reject);
-      child.on('exit', (code) => resolve({ code, stdout, stderr }));
+      child.on('close', (code) => resolve({ code, stdout, stderr }));
     });
     assert.equal(failOpen.code, 31);
     assert.match(failOpen.stdout, /ORIGINAL:codex:still-starts:input/);

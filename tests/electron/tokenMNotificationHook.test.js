@@ -89,21 +89,21 @@ function createFixture(t, overrides = {}, runtimeOptions = {}) {
 }
 
 test('Windows Hook command stays byte-for-byte stable when the portable executable moves versions', () => {
-  const launcherPath = 'C:\\Users\\Gary\\AppData\\Roaming\\Token Monitor\\codex-hook\\launcher.ps1';
-  const manifestPath = 'C:\\Users\\Gary\\AppData\\Roaming\\Token Monitor\\codex-hook\\target.json';
+  const launcherPath = '/C:/Users/Gary/AppData/Roaming/Token Monitor/codex-hook/launcher.ps1';
+  const manifestPath = '/C:/Users/Gary/AppData/Roaming/Token Monitor/codex-hook/target.json';
   const first = hookCommandFor({
     platform: 'win32',
-    executablePath: 'C:\\Apps\\To-Know-1.0.0.exe',
-    helperPath: 'C:\\Apps\\resources\\app.asar\\src\\electron\\codexHookForwarder.js',
-    runtimePath: 'C:\\Users\\Gary\\AppData\\Roaming\\Token Monitor\\token-m-notification-runtime.json',
+    executablePath: '/C:/Apps/To-Know-1.0.0.exe',
+    helperPath: '/C:/Apps/resources/app.asar/src/electron/codexHookForwarder.js',
+    runtimePath: '/C:/Users/Gary/AppData/Roaming/Token Monitor/token-m-notification-runtime.json',
     launcherPath,
     manifestPath
   });
   const second = hookCommandFor({
     platform: 'win32',
-    executablePath: 'C:\\Moved Apps\\To-Know-1.0.1.exe',
-    helperPath: 'C:\\Moved Apps\\resources\\app.asar\\src\\electron\\codexHookForwarder.js',
-    runtimePath: 'C:\\Users\\Gary\\AppData\\Roaming\\Token Monitor\\token-m-notification-runtime.json',
+    executablePath: '/C:/Moved Apps/To-Know-1.0.1.exe',
+    helperPath: '/C:/Moved Apps/resources/app.asar/src/electron/codexHookForwarder.js',
+    runtimePath: '/C:/Users/Gary/AppData/Roaming/Token Monitor/token-m-notification-runtime.json',
     launcherPath,
     manifestPath
   });

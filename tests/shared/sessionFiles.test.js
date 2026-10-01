@@ -75,7 +75,7 @@ test('resolves a codex rollout via the dated path', () => {
     fs.mkdirSync(dir, { recursive: true });
     const file = path.join(dir, `${id}.jsonl`);
     fs.writeFileSync(file, '{}\n');
-    assert.equal(resolveSessionFile('codex', id, home), file);
+    assert.equal(resolveSessionFile('codex', id, home, { env: {} }), file);
   } finally { cleanup(home); }
 });
 
@@ -87,7 +87,7 @@ test('resolves a codex session via the walk fallback when the id is not a dated 
     fs.mkdirSync(dir, { recursive: true });
     const file = path.join(dir, `${id}.jsonl`);
     fs.writeFileSync(file, '{}\n');
-    assert.equal(resolveSessionFile('codex', id, home), file);
+    assert.equal(resolveSessionFile('codex', id, home, { env: {} }), file);
   } finally { cleanup(home); }
 });
 

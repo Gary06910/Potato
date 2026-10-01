@@ -378,7 +378,8 @@ test('collectUsageOnce enriches session rows with local last-used timestamps', a
       deviceId: 'test-device',
       agentVersion: 'test',
       limitsEnabled: false,
-      homeDir: tmp
+      homeDir: tmp,
+      sessionMetadataDeps: { env: {} }
     });
 
     assert.equal(summary.today.sessions[`claude:${claudeSession}`].lastUsedAt, '2026-05-30T04:07:32.679Z');
