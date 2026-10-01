@@ -142,12 +142,12 @@ const { isPotatoOwnedStopHook } = require('../../src/electron/codexStopHook');
 const { hookCommandFor } = require('../../src/electron/tokenMNotificationRuntime');
 
 function sanitizedHooks() {
-  const runtimePath = 'C:\\Synthetic\\Token Monitor\\token-m-notification-runtime.json';
-  const command = hookCommandFor({ platform: 'win32', executablePath: 'C:\\Synthetic\\Potato.exe', helperPath: 'C:\\Synthetic\\src\\electron\\codexHookForwarder.js', runtimePath,
-    launcherPath: 'C:\\Synthetic\\Token Monitor\\codex-hook\\launcher.ps1', manifestPath: 'C:\\Synthetic\\Token Monitor\\codex-hook\\target.json' });
+  const runtimePath = '/C:/Synthetic/Token Monitor/token-m-notification-runtime.json';
+  const command = hookCommandFor({ platform: 'win32', executablePath: '/C:/Synthetic/Potato.exe', helperPath: '/C:/Synthetic/src/electron/codexHookForwarder.js', runtimePath,
+    launcherPath: '/C:/Synthetic/Token Monitor/codex-hook/launcher.ps1', manifestPath: '/C:/Synthetic/Token Monitor/codex-hook/target.json' });
   const current = { matcher: '', hooks: [{ type: 'command', command, commandWindows: command, timeout: 5 }] };
   const legacy = Array.from({ length: 6 }, (_, i) => {
-    const legacyCommand = hookCommandFor({ platform: 'win32', executablePath: 'C:\\Synthetic\\build-' + i + '\\Potato.exe', helperPath: 'C:\\Synthetic\\build-' + i + '\\resources\\app.asar\\src\\electron\\codexHookForwarder.js', runtimePath });
+    const legacyCommand = hookCommandFor({ platform: 'win32', executablePath: '/C:/Synthetic/build-' + i + '/Potato.exe', helperPath: '/C:/Synthetic/build-' + i + '/resources/app.asar/src/electron/codexHookForwarder.js', runtimePath });
     return { matcher: '', hooks: [{ type: 'command', command: legacyCommand, commandWindows: legacyCommand, timeout: 5 }] };
   });
   const thirdParty = { matcher: '', custom: { unchanged: true }, hooks: [{ type: 'command', command: 'other-tool --codex --token', timeout: 31 }] };

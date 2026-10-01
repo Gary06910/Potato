@@ -40,10 +40,33 @@ function createFixture() {
   fs.writeFileSync(
     path.join(fakeBin, 'systemctl'),
     '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "${TO_KNOW_SYSTEMCTL_LOG:-$HOME/systemctl.log}"\nif [ "${TO_KNOW_SYSTEMCTL_FAIL:-0}" = "1" ]; then exit 1; fi\n',
-    'utf8'
+    { encoding: 'utf8', mode: 0o755 }
   );
 
   return { configHome, fakeBin, home, packageRoot, systemctlLog };
+}
+
+function missingSystemctlPath(fixture, shellToolPath) {
+  const minimalBin = path.join(fixture.packageRoot, 'minimal-bin');
+  fs.mkdirSync(minimalBin);
+  // sh launches the fixture; dirname and tr precede the systemctl check.
+  for (const name of ['sh', 'dirname', 'tr']) {
+    const fileName = process.platform === 'win32' ? `${name}.exe` : name;
+    const tool = shellToolPath.split(path.delimiter)
+      .map((directory) => path.resolve(directory || '.', fileName))
+      .find((candidate) => {
+        try {
+          fs.accessSync(candidate, fs.constants.X_OK);
+          return fs.statSync(candidate).isFile();
+        } catch (_) { return false; }
+      });
+    assert.ok(tool, `installer fixture requires ${name}`);
+    const quoted = tool.replaceAll('\\', '/').replaceAll("'", "'\\''");
+    fs.writeFileSync(path.join(minimalBin, name), `#!/bin/sh\nexec '${quoted}' "$@"\n`, {
+      encoding: 'utf8', mode: 0o755
+    });
+  }
+  return minimalBin;
 }
 
 function runInstall(fixture, args = [], overrides = {}) {
@@ -52,7 +75,7 @@ function runInstall(fixture, args = [], overrides = {}) {
     ? ['C:\\Program Files\\Git\\usr\\bin', 'C:\\Program Files\\Git\\bin', inheritedPath].join(path.delimiter)
     : inheritedPath;
   const pathEntries = overrides.includeFakeSystemctl === false
-    ? shellToolPath
+    ? missingSystemctlPath(fixture, shellToolPath)
     : `${fixture.fakeBin}${path.delimiter}${shellToolPath}`;
   const env = {
     ...process.env,
