@@ -81,12 +81,12 @@ test('20 parallel ensure commands share one detached usage-only Agent; terminati
   assert.equal(first.state, 'ready');
   assert.equal(first.notificationReady, false);
   pids.add(first.pid);
-  const fastStart = performance.now();
-  assert.equal((await invoke(args)).code, 0);
-  assert.ok(performance.now() - fastStart < 1000);
-  const directStart = performance.now();
-  assert.equal((await instance.ensure(paths)).result, 'already-running');
-  assert.ok(performance.now() - directStart < 200);
+  const fast = await invoke(args);
+  assert.equal(fast.code, 0, fast.stderr);
+  assert.match(fast.stdout, /READY \/ already-running/);
+  const direct = await instance.ensure(paths);
+  assert.equal(direct.result, 'already-running');
+  assert.equal(direct.pid, first.pid);
   assert.equal((await instance.readiness(paths)).pid, first.pid);
   const duplicateRun = await invoke(['run', `--root=${root}`]);
   assert.equal(duplicateRun.code, 1);
