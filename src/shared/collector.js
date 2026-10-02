@@ -3014,6 +3014,9 @@ function startCollector(options) {
   // active tick. A broader request can upgrade this scope but never narrow it.
   let pendingTargetClients = null;
   let pendingActivityRevision = null;
+  // Only warm intervals can be covered by a completed full scan. Explicit
+  // refreshes and history/self-sync work retain their own replay semantics.
+  let pendingCoveredIntervalOnly = null;
   let lastHistoryAt = 0;
   let lastHistoryAttemptAt = 0;
   let lastHistorySuccessAt = 0;
@@ -3489,6 +3492,14 @@ function startCollector(options) {
     const effectiveTickOptions = { ...tickOptions, activityRevision: tickActivityRevision };
     if (tickInFlight) {
       tickPending = true;
+      const coverable = reason === 'interval'
+        && tickOptions.todayOnly === true
+        && !tickOptions.forceHistory
+        && !tickOptions.rolloverHistoryRetry
+        && mergeSelfSyncSelection(tickOptions.forceSelfSync, tickOptions.sourceSelfSync) === null;
+      pendingCoveredIntervalOnly = pendingCoveredIntervalOnly === null
+        ? coverable
+        : pendingCoveredIntervalOnly && coverable;
       pendingForceHistory = pendingForceHistory || Boolean(tickOptions.forceHistory);
       pendingRolloverHistoryRetry = pendingRolloverHistoryRetry
         || Boolean(tickOptions.rolloverHistoryRetry);
@@ -3509,6 +3520,8 @@ function startCollector(options) {
         ...effectiveTickOptions,
         acknowledgedSourceSync: sourceSyncQueue.acknowledge(effectiveTickOptions.forceSelfSync)
       });
+      let previousTickWasSuccessfulFullScan = initialResult === true
+        && effectiveTickOptions.todayOnly !== true;
       while (tickPending && !stopped) {
         const forceHistory = pendingForceHistory;
         const rolloverHistoryRetry = pendingRolloverHistoryRetry;
@@ -3519,6 +3532,7 @@ function startCollector(options) {
           ? [...pendingTargetClients]
           : [];
         const activityRevision = pendingActivityRevision;
+        const coveredIntervalOnly = pendingCoveredIntervalOnly;
         const waiters = pendingWaiters;
         pendingWaiters = [];
         tickPending = false;
@@ -3529,6 +3543,18 @@ function startCollector(options) {
         pendingTodayOnly = null;
         pendingTargetClients = null;
         pendingActivityRevision = null;
+        pendingCoveredIntervalOnly = null;
+        if (
+          previousTickWasSuccessfulFullScan
+          && coveredIntervalOnly === true
+          && activityRevision !== null
+          && activityRevision <= collectedActivityRevision
+        ) {
+          // The full scan also collected fresh WSL usage, satisfying the warm
+          // interval's refreshWsl request without another today-only scan.
+          resolveWaiters(waiters, true);
+          continue;
+        }
         const acknowledgedSourceSync = sourceSyncQueue.acknowledge(forceSelfSync);
         const result = await performTick('coalesced', {
           forceHistory,
@@ -3540,6 +3566,7 @@ function startCollector(options) {
           targetClients,
           ...(activityRevision === null ? {} : { activityRevision })
         });
+        previousTickWasSuccessfulFullScan = result === true && todayOnly !== true;
         resolveWaiters(waiters, result === true);
       }
       return initialResult === true;

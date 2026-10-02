@@ -57,6 +57,37 @@ function recordingSpawn(calls) {
   };
 }
 
+function gatedRecordingSpawn(calls) {
+  let nextScanGate = null;
+  return {
+    holdNextScan() {
+      assert.equal(nextScanGate, null);
+      let release;
+      let markStarted;
+      const completion = new Promise((resolve) => { release = resolve; });
+      const started = new Promise((resolve) => { markStarted = resolve; });
+      nextScanGate = { completion, markStarted };
+      return { started, release };
+    },
+    spawn(_bin, args) {
+      calls.push(args);
+      const child = new EventEmitter();
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.stdin = { end: () => {} };
+      child.kill = () => {};
+      const gate = nextScanGate;
+      nextScanGate = null;
+      gate?.markStarted();
+      Promise.resolve(gate?.completion).then(() => {
+        child.stdout.emit('data', Buffer.from(JSON.stringify({ entries: [] })));
+        child.emit('close', 0);
+      });
+      return child;
+    }
+  };
+}
+
 function wslBundleWith(client, tokens) {
   const period = () => {
     const value = emptyPeriod();
@@ -4338,16 +4369,18 @@ test('smart collection lets a successful manual refresh acknowledge existing act
   const childProcess = require('node:child_process');
   const originalSpawn = childProcess.spawn;
   const calls = [];
-  childProcess.spawn = recordingSpawn(calls);
+  const controlledSpawn = gatedRecordingSpawn(calls);
+  childProcess.spawn = controlledSpawn.spawn;
 
   let handle = null;
+  let manualGate = null;
   try {
     const { startCollector } = freshCollector();
     const updates = [];
     handle = startCollector({
       clients: 'claude',
       allTimeSince: '2024-01-01',
-      commandTimeoutMs: 1000,
+      commandTimeoutMs: 10000,
       deviceId: 'test-device',
       agentVersion: 'test',
       intervalMs: 60,
@@ -4360,9 +4393,20 @@ test('smart collection lets a successful manual refresh acknowledge existing act
       onUpdate: (_summary, reason) => updates.push(reason)
     });
 
-    await waitForCondition(() => updates.length === 1);
-    watchHandler('change', '/fake/before-manual.jsonl');
-    await handle.tick('manual');
+    await handle.whenIdle();
+    // Revision N exists before the manual full scan captures it. Hold that
+    // scan until the smart interval queues the same revision behind it.
+    watchHandler('change', path.join(tmp, '.claude', 'projects', 'before-manual.jsonl'));
+    manualGate = controlledSpawn.holdNextScan();
+    const manualTick = handle.tick('manual');
+    await manualGate.started;
+    assert.equal(calls.length, 4, 'the first manual scan is held after startup');
+    await waitForCondition(() => handle.getDiagnostics().tickPending);
+    assert.equal(handle.getDiagnostics().tickPending, true);
+    manualGate.release();
+    assert.equal(await manualTick, true);
+    await handle.whenIdle();
+    assert.equal(handle.getDiagnostics().tickPending, false, 'covered pending state is drained');
     assert.deepEqual(updates, ['interval', 'manual']);
     assert.equal(calls.length, 6, 'startup and manual refresh are full scans');
 
@@ -4370,6 +4414,7 @@ test('smart collection lets a successful manual refresh acknowledge existing act
     assert.deepEqual(updates, ['interval', 'manual'], 'the next smart interval does not repeat covered activity');
     assert.equal(calls.length, 6, 'the covered activity does not cause another scan');
   } finally {
+    manualGate?.release();
     if (handle) handle.stop();
     childProcess.spawn = originalSpawn;
     chokidar.watch = originalWatch;
@@ -4399,29 +4444,18 @@ test('smart collection acknowledges the latest activity revision after tick coal
   const childProcess = require('node:child_process');
   const originalSpawn = childProcess.spawn;
   const calls = [];
-  let spawnDelayMs = 0;
-  childProcess.spawn = (_bin, args) => {
-    calls.push(args);
-    const child = new EventEmitter();
-    child.stdout = new EventEmitter();
-    child.stderr = new EventEmitter();
-    child.stdin = { end: () => {} };
-    child.kill = () => {};
-    setTimeout(() => {
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ entries: [] })));
-      child.emit('close', 0);
-    }, spawnDelayMs);
-    return child;
-  };
+  const controlledSpawn = gatedRecordingSpawn(calls);
+  childProcess.spawn = controlledSpawn.spawn;
 
   let handle = null;
+  let manualGate = null;
   try {
     const { startCollector } = freshCollector();
     const updates = [];
     handle = startCollector({
       clients: 'claude',
       allTimeSince: '2024-01-01',
-      commandTimeoutMs: 1000,
+      commandTimeoutMs: 10000,
       deviceId: 'test-device',
       agentVersion: 'test',
       intervalMs: 40,
@@ -4434,16 +4468,20 @@ test('smart collection acknowledges the latest activity revision after tick coal
       onUpdate: (_summary, reason) => updates.push(reason)
     });
 
-    await waitForCondition(() => updates.length === 1);
-    await new Promise((resolve) => setImmediate(resolve));
-    spawnDelayMs = 35;
+    await handle.whenIdle();
+    watchHandler('change', path.join(tmp, '.claude', 'projects', 'before-manual.jsonl'));
+    manualGate = controlledSpawn.holdNextScan();
     const manualTick = handle.tick('manual');
-    await waitForCondition(() => calls.length === 4);
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    watchHandler('change', '/fake/during-manual.jsonl');
-
-    await manualTick;
-    await waitForCondition(() => updates.length === 3);
+    await manualGate.started;
+    assert.equal(calls.length, 4, 'the manual full scan captured revision N');
+    // New activity N+1 arrives while the manual scan is held, so the pending
+    // interval must replay even after that scan acknowledges N.
+    watchHandler('change', path.join(tmp, '.claude', 'projects', 'during-manual.jsonl'));
+    await waitForCondition(() => handle.getDiagnostics().tickPending);
+    assert.equal(handle.getDiagnostics().tickPending, true);
+    manualGate.release();
+    assert.equal(await manualTick, true);
+    await handle.whenIdle();
     assert.deepEqual(updates, ['interval', 'manual', 'coalesced']);
     // 3 + 3 + 1: the replay honours what the ticks folded into it actually
     // asked for. Only the anchored interval tick was pending here, so it stays
@@ -4456,7 +4494,207 @@ test('smart collection acknowledges the latest activity revision after tick coal
     assert.equal(updates.length, 3, 'coalesced scan acknowledges activity and prevents a redundant interval');
     assert.equal(calls.length, 7, 'no redundant scan runs on the next interval');
   } finally {
+    manualGate?.release();
     if (handle) handle.stop();
+    childProcess.spawn = originalSpawn;
+    chokidar.watch = originalWatch;
+    os.homedir = originalHomedir;
+    if (originalSharedDir === undefined) delete process.env.TOKEN_MONITOR_SHARED_DIR;
+    else process.env.TOKEN_MONITOR_SHARED_DIR = originalSharedDir;
+    delete require.cache[collectorPath];
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+for (const { name, queueRequest, expectedCalls } of [
+  {
+    name: 'smart collection preserves an explicit manual refresh pending behind a full scan',
+    queueRequest: (handle) => handle.tick('manual'),
+    expectedCalls: 9
+  },
+  {
+    name: 'smart collection preserves an explicit targeted refresh pending behind a full scan',
+    queueRequest: (handle) => handle.refreshClient('claude'),
+    expectedCalls: 7
+  }
+]) {
+  test(name, async () => {
+    const tmp = withTmpHome([path.join('.claude', 'projects'), path.join('.codex', 'sessions')]);
+    const originalHomedir = os.homedir;
+    const originalSharedDir = process.env.TOKEN_MONITOR_SHARED_DIR;
+    os.homedir = () => tmp;
+    process.env.TOKEN_MONITOR_SHARED_DIR = tmp;
+
+    const chokidar = require('chokidar');
+    const originalWatch = chokidar.watch;
+    let watchHandler = null;
+    chokidar.watch = () => ({
+      on: (event, handler) => { if (event === 'all') watchHandler = handler; },
+      close: () => {}
+    });
+
+    const childProcess = require('node:child_process');
+    const originalSpawn = childProcess.spawn;
+    const calls = [];
+    const controlledSpawn = gatedRecordingSpawn(calls);
+    childProcess.spawn = controlledSpawn.spawn;
+
+    let handle = null;
+    let manualGate = null;
+    try {
+      const { startCollector } = freshCollector();
+      const updates = [];
+      handle = startCollector({
+        clients: 'claude,codex',
+        allTimeSince: '2024-01-01',
+        commandTimeoutMs: 10000,
+        deviceId: 'test-device',
+        agentVersion: 'test',
+        intervalMs: 60,
+        watchEnabled: true,
+        watchUsePolling: false,
+        watchTriggersCollection: false,
+        intervalRequiresActivity: true,
+        limitsEnabled: false,
+        historyEnabled: false,
+        onUpdate: (_summary, reason) => updates.push(reason)
+      });
+
+      await handle.whenIdle();
+      watchHandler('change', path.join(tmp, '.claude', 'projects', 'before-manual.jsonl'));
+      manualGate = controlledSpawn.holdNextScan();
+      const firstManual = handle.tick('manual');
+      await manualGate.started;
+      await waitForCondition(() => handle.getDiagnostics().tickPending);
+      // The first pending request is a coverable interval. An explicit request
+      // at the same revision must turn off coverage for the entire batch.
+      const explicitRequest = queueRequest(handle);
+      assert.equal(handle.getDiagnostics().tickPending, true);
+      manualGate.release();
+      assert.equal(await firstManual, true);
+      assert.equal(await explicitRequest, true);
+      await handle.whenIdle();
+      assert.deepEqual(updates, ['interval', 'manual', 'coalesced']);
+      assert.equal(calls.length, expectedCalls, 'the explicit request performs a real replay');
+      if (expectedCalls === 7) {
+        const replay = calls.at(-1);
+        assert.ok(replay.includes('--today'));
+        assert.equal(replay[replay.indexOf('--client') + 1], 'claude', 'targeted scope is preserved');
+      } else {
+        assert.ok(calls.at(-3).includes('--today'));
+        assert.ok(calls.at(-2).includes('--month'));
+        assert.ok(calls.at(-1).includes('--since'), 'the second manual request remains a full scan');
+      }
+      assert.equal(handle.getDiagnostics().tickPending, false);
+    } finally {
+      manualGate?.release();
+      if (handle) handle.stop();
+      childProcess.spawn = originalSpawn;
+      chokidar.watch = originalWatch;
+      os.homedir = originalHomedir;
+      if (originalSharedDir === undefined) delete process.env.TOKEN_MONITOR_SHARED_DIR;
+      else process.env.TOKEN_MONITOR_SHARED_DIR = originalSharedDir;
+      delete require.cache[collectorPath];
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+}
+
+test('smart collection preserves source-sync interval work pending behind a full scan', async () => {
+  const tmp = withTmpHome([
+    path.join('.claude', 'projects'),
+    path.join('.gemini', 'antigravity', 'conversations')
+  ]);
+  const originalHomedir = os.homedir;
+  const originalSharedDir = process.env.TOKEN_MONITOR_SHARED_DIR;
+  os.homedir = () => tmp;
+  process.env.TOKEN_MONITOR_SHARED_DIR = tmp;
+
+  const chokidar = require('chokidar');
+  const originalWatch = chokidar.watch;
+  let watchHandler = null;
+  chokidar.watch = () => ({
+    on: (event, handler) => { if (event === 'all') watchHandler = handler; },
+    close: () => {}
+  });
+
+  const childProcess = require('node:child_process');
+  const originalSpawn = childProcess.spawn;
+  const calls = [];
+  const controlledSpawn = gatedRecordingSpawn(calls);
+  childProcess.spawn = controlledSpawn.spawn;
+  const originalNow = Date.now;
+  const baseNow = originalNow();
+  let clockOffsetMs = 0;
+  Date.now = () => baseNow + clockOffsetMs;
+
+  let handle = null;
+  let manualGate = null;
+  let syncCalls = 0;
+  let replayStartCallCount = null;
+  try {
+    const { startCollector, tokscaleClientFilter } = freshCollector();
+    const updates = [];
+    handle = startCollector({
+      clients: 'claude,antigravity',
+      allTimeSince: '2024-01-01',
+      commandTimeoutMs: 10000,
+      deviceId: 'test-device',
+      agentVersion: 'test',
+      intervalMs: 60,
+      watchEnabled: true,
+      watchUsePolling: false,
+      watchTriggersCollection: false,
+      intervalRequiresActivity: true,
+      limitsEnabled: false,
+      historyEnabled: false,
+      runAntigravitySync: async () => { syncCalls += 1; },
+      onUpdate: (_summary, reason) => {
+        if (reason === 'manual') replayStartCallCount = calls.length;
+        return updates.push(reason);
+      }
+    });
+
+    await handle.whenIdle();
+    assert.equal(syncCalls, 1);
+    // Source sync is due at its shorter floor; an ordinary full scan is still
+    // inside the idle floor and therefore cannot satisfy this pending work.
+    clockOffsetMs = SYNC_SOURCE_EVENT_MIN_INTERVAL_MS + 1;
+    watchHandler('change', path.join(tmp, '.claude', 'projects', 'before-manual.jsonl'));
+    manualGate = controlledSpawn.holdNextScan();
+    const manualTick = handle.tick('manual');
+    await manualGate.started;
+    await waitForCondition(() => handle.getDiagnostics().tickPending);
+    const sourceTick = handle.tick('interval', {
+      todayOnly: true,
+      sourceSelfSync: ['antigravity'],
+      targetClients: ['antigravity']
+    });
+    assert.equal(handle.getDiagnostics().tickPending, true);
+    assert.equal(syncCalls, 1, 'the manual scan has not performed the requested source sync');
+    manualGate.release();
+    assert.equal(await manualTick, true);
+    assert.equal(await sourceTick, true);
+    await handle.whenIdle();
+    assert.deepEqual(updates, ['interval', 'manual', 'coalesced']);
+    assert.equal(replayStartCallCount, 6, 'startup and manual full scans complete before replay');
+    // Empty synthetic Tokscale output deliberately lacks the requested target
+    // partitions, so the anchored-scan safety guard adds one authoritative
+    // full-today fallback within this single coalesced replay.
+    assert.equal(calls.length - replayStartCallCount, 2, 'one targeted today scan and its safety fallback');
+    const [targetedReplay, fullTodayFallback] = calls.slice(replayStartCallCount);
+    const periodFlags = (args) => args.filter((arg) => ['--today', '--month', '--since'].includes(arg));
+    const clientFilter = (args) => args[args.indexOf('--client') + 1];
+    assert.deepEqual(periodFlags(targetedReplay), ['--today']);
+    assert.deepEqual(periodFlags(fullTodayFallback), ['--today']);
+    assert.equal(clientFilter(targetedReplay), tokscaleClientFilter('claude,antigravity'), 'the watch/source-sync target union is scanned');
+    assert.equal(clientFilter(fullTodayFallback), clientFilter(calls[0]), 'the fallback scans the complete Tokscale client set');
+    assert.equal(syncCalls, 2, 'the pending interval performs its own source-sync work');
+    assert.equal(handle.getDiagnostics().tickPending, false);
+  } finally {
+    manualGate?.release();
+    if (handle) handle.stop();
+    Date.now = originalNow;
     childProcess.spawn = originalSpawn;
     chokidar.watch = originalWatch;
     os.homedir = originalHomedir;
