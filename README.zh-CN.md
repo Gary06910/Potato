@@ -1,6 +1,6 @@
 <p align="right"><a href="README.md">English</a> | <strong>简体中文</strong></p>
 
-<p align="center"><img src="assets/icon.png" width="88" alt="Potato 标志"></p>
+<p align="center"><img src=".github/assets/readme/potato-icon.png" width="88" alt="Potato 标志"></p>
 <h1 align="center">Potato</h1>
 <p align="center">把 AI 编程工具的 Token、额度、费用和任务完成通知，集中到一个地方。</p>
 <p align="center"><a href="#download"><strong>下载</strong></a> · <a href="#features">功能一览</a> · <a href="#android-companion">Android 配套应用</a></p>

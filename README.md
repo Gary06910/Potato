@@ -1,6 +1,6 @@
 <p align="right"><strong>English</strong> | <a href="README.zh-CN.md">简体中文</a></p>
 
-<p align="center"><img src="assets/icon.png" width="88" alt="Potato logo"></p>
+<p align="center"><img src=".github/assets/readme/potato-icon.png" width="88" alt="Potato logo"></p>
 <h1 align="center">Potato</h1>
 <p align="center">Your AI coding usage, limits, costs, and task completions, in one place.</p>
 <p align="center"><a href="#download"><strong>Download</strong></a> · <a href="#features">Explore features</a> · <a href="#android-companion">Android companion</a></p>
