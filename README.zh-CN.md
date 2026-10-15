@@ -1,38 +1,114 @@
-<p align="right">
-   <a href="./README.md">EN</a> | <strong>简</strong> | <a href="./README.zh-TW.md">繁</a> | <a href="./README.ko.md">KO</a> | <a href="./README.ja.md">JA</a>
-</p>
-<div align="center">
-    <img src=".github/assets/app.png" alt="Potato logo" width="120">
-    <h1>Potato</h1>
-</div>
+<p align="right"><a href="README.md">English</a> | <strong>简体中文</strong></p>
 
+<p align="center"><img src="assets/icon.png" width="88" alt="Potato 标志"></p>
+<h1 align="center">Potato</h1>
+<p align="center">把 AI 编程工具的 Token、额度、费用和任务完成通知，集中到一个地方。</p>
+<p align="center"><a href="#download"><strong>下载</strong></a> · <a href="#features">功能一览</a> · <a href="#android-companion">Android 配套应用</a></p>
 <p align="center">
-    <em>跨设备聚合每个 AI 编程工具的实时用量。</em>
+  <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/v/release/Gary06910/Potato?include_prereleases&amp;style=flat-square&amp;label=preview&amp;color=56866b" alt="Potato 最新预览版"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-56866b?style=flat-square" alt="MIT 许可证"></a>
 </p>
+<p align="center">Windows x64 · macOS Apple Silicon · Android · Linux Server Agent</p>
 
-<p align="center">
-    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/v/release/Gary06910/Potato?include_prereleases&style=flat-square&label=release&color=22c55e" alt="最新发布" /></a>
-    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/downloads/Gary06910/Potato/total?style=flat-square&color=22c55e" alt="总下载量" /></a>
-    <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square" alt="Windows 10 或更新" />
-    <img src="https://img.shields.io/badge/macOS-12%2B-0A84FF?style=flat-square&logo=apple&logoColor=white" alt="macOS 12 或更新" />
-    <img src="https://img.shields.io/badge/Linux-x64-64748b?style=flat-square&logo=linux&logoColor=white" alt="Linux x64" />
-    <a href="https://discord.gg/HmdNVVvw5P"><img src="https://img.shields.io/discord/1344259784219689031?color=5865F2&label=Discord&logo=discord&logoColor=white&style=flat-square" alt="Discord"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-A855F7?style=flat-square" alt="许可证：MIT" /></a>
-</p>
+<a id="download"></a>
+## 下载
 
-<div align="center">
-    <img src=".github/assets/demo.gif">
-</div>
+[前往 GitHub Releases 下载最新预览版。](https://github.com/Gary06910/Potato/releases) 按设备选择对应文件：
 
-## Potato 是什么？
+| 平台 | 下载文件 | 适合用途 |
+| --- | --- | --- |
+| **Windows x64** | [安装版](https://github.com/Gary06910/Potato/releases) · `Potato-Setup-1.0.0.exe` | 日常桌面使用，推荐选择 |
+| **Windows x64** | [便携版](https://github.com/Gary06910/Potato/releases) · `Potato-1.0.0.exe` | 无需安装，直接运行 |
+| **macOS Apple Silicon** | [DMG](https://github.com/Gary06910/Potato/releases) · `Potato-1.0.0-arm64.dmg` | M 系列 Mac（arm64） |
+| **Android** | [手机配套应用](https://github.com/Gary06910/Potato/releases) · `Potato-Android-0.1.1-code6.apk` | 接收任务通知，查看任务记录 |
+| **Linux x64** | [Server Agent](https://github.com/Gary06910/Potato/releases) · `To-Know-Agent-1.0.0-linux-x64.tar.gz` | 服务器无界面采集；提供命令行工具，不含桌面 GUI |
 
-一款桌面小部件，实时显示 Claude Code、Codex、Cursor、GitHub Copilot、Cherry Studio 等 37+ 种 AI 编程工具的 Token 用量与 AI 工具额度，具备实时多设备同步与历史使用趋势功能，并支持按工具、设备、模型、session 或项目分项显示。
+发布页附有 SHA256 校验文件。本预览版的 macOS 下载仅适用于 Apple Silicon。
 
-## 支持的工具
+<p align="center"><img src=".github/assets/readme/hero-dashboard.png" width="360" alt="macOS 上的 Potato 首页，展示实时 Token、估算费用、Codex 额度、模型用量和活动热力图"></p>
+<p align="center"><sub>今日用量、剩余额度和近期活动，一眼就能看到。</sub></p>
 
-Potato 对 Token 用量、账户额度和 session 明细分别支持：
+## Potato 能做什么
 
-| Logo | 工具 | 数据路径 | Token 用量 | AI 工具额度 | session 明细 |
+- **随时掌握用量。** 编程时实时查看 Token 消耗和估算费用。
+- **提前了解额度。** 集中查看支持的提供方与账号的额度窗口、剩余额度和重置时间。
+- **看懂使用习惯。** 按工具、模型、会话或项目查看明细，通过热力图和历史趋势回顾使用情况。
+- **放心离开电脑。** 配对 Android 后，接收 Codex 任务完成通知，随时查看任务记录。
+- **连接多台设备。** 单机直接使用；需要汇总多台电脑时，再开启同步。
+
+## 三步开始使用
+
+1. **安装 Potato。** Windows 推荐运行 `Potato-Setup-1.0.0.exe`，便携版 `Potato-1.0.0.exe` 可直接启动。macOS 下载 `Potato-1.0.0-arm64.dmg`，打开后将 Potato 拖入“**应用程序**”，再启动 Potato。
+2. **打开应用。** Potato 会自动采集支持的本地 AI 工具日志。单机使用以本地采集为主，无需配置 hub。
+3. **按需配置。** 在“AI 工具额度”中添加提供方账号、[配对 Android 手机](#android-companion)，或开启[多设备同步](#multi-device)。
+
+如果 macOS 首次启动时拦截 Potato，前往“**系统设置 → 隐私与安全性 → 仍要打开**”。
+
+<a id="android-companion"></a>
+## 离开电脑，也能知道任务什么时候完成
+
+Potato Desktop 会通过你配置的 Potato 服务，将 Codex 任务完成记录发送到 Android 配套应用。手机收到通知后，还能在任务列表中回看记录。桌面端重启后，配对关系会保留。
+
+1. 在手机上安装 `Potato-Android-0.1.1-code6.apk`，打开 Potato，登录并允许通知。
+2. 打开 Android 配对页面，获取**六位配对码**。在桌面端“**设置 → 手机通知**”中填入与 Android 应用一致的 Potato 服务地址，输入配对码并连接。
+3. 开启“**Codex 完成通知**”。首次使用时，在 Codex 中输入 `/hooks` 并信任 **Potato Stop Hook**。保持 Potato Desktop 运行，即可发送完成记录。
+
+默认开启隐私模式，仅同步完成记录，不上传任务正文。可按应用内的后台保护指引配置手机，让应用在后台也能接收通知。
+
+<a id="features"></a>
+## 看看实际界面
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <strong>Token 都用在哪里</strong><br><br>
+      <img src=".github/assets/readme/usage-breakdown.png" width="310" alt="按工具展示 Token 总量和估算费用，并展开 Claude Code 的输入、输出及缓存命中明细"><br>
+      <sub>比较各工具用量，展开查看输入、输出和缓存。</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <strong>每个模型花了多少</strong><br><br>
+      <img src=".github/assets/readme/model-breakdown.png" width="310" alt="按模型展示 Token 总量、估算费用和展开的缓存用量"><br>
+      <sub>跨工具汇总模型用量与费用。</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <strong>回顾一段时间的活动</strong><br><br>
+      <img src=".github/assets/readme/activity-dashboard.png" width="460" alt="用量看板展示活动热力图、连续使用天数，以及工具和模型对比"><br>
+      <sub>查看活跃日期、连续使用天数与主要工具。</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <strong>发现用量变化</strong><br><br>
+      <img src=".github/assets/readme/trends.png" width="460" alt="按 AI 编程工具堆叠的每日用量柱状趋势图"><br>
+      <sub>选择时间范围，按工具或模型比较每日趋势。</sub>
+    </td>
+  </tr>
+</table>
+
+**融入日常工作。** 在 macOS 菜单栏或 Windows 系统托盘查看用量，也可以使用悬浮小窗，调整主题、配色、字体和窗口外观。支持跟踪多个提供方账号，并将已保存的 Codex 账号切换为当前使用账号。
+
+<details>
+<summary>更多查看与自定义方式</summary>
+
+- **会话与项目：** 查看支持的本地会话明细，或按项目归类用量；会话详情保留在本机。
+- **时间与币种：** 支持今日、本月、累计、本周、最近 7 天和最近 30 天；费用可显示为 USD、TWD、HKD 或 CNY。
+- **历史与导出：** 来源会话删除后仍可保留已观测到的每日用量，支持手动或自动导出 CSV + JSON。参见[导出指南](docs/export.md)。
+- **自己安排界面：** 显示、隐藏、置顶和排序工具及首页模块，自定义菜单栏与悬浮小窗布局，以及显示／隐藏快捷键。
+- **可选功能：** 实时 Token 速率、服务状态、第三方 Codex 额度重置预测、订阅记录和 Discord Rich Presence。
+- **WSL（Windows）：** 自动识别运行中发行版的用量；SQLite 数据源可能需要[在 WSL 内运行采集代理](docs/wsl-sqlite-setup.md)。
+
+设置中的 AI 工具额度（提供方选择、额度与凭据）集中管理额度查询。采集、外观、账号与同步选项见[配置参考](docs/configuration.md)。
+
+</details>
+
+## 支持的 AI 工具
+
+Potato 覆盖 **37 项工具与提供方集成**，其中 **30 项**支持 Token 用量，**24 项**支持 AI 工具额度，两者存在重叠。包括 Claude Code、Codex、Cursor、GitHub Copilot、OpenCode 等。下表分别列出用量、额度和会话明细支持情况。
+
+<details>
+<summary>展开完整工具支持矩阵</summary>
+
+| 图标 | 工具 | 数据路径 | Token 用量 | AI 工具额度 | 会话明细 |
 |:---:|------|-----------|:---:|:---:|:---:|
 | <img src=".github/assets/tools-icon/claude.png" width="28" alt="Claude Code" /> | Claude Code | `~/.claude/projects/`、`~/.claude/transcripts/` | ✅ | ✅ | ✅ |
 | <img src=".github/assets/tools-icon/codex.png" width="28" alt="Codex" /> | Codex | `~/.codex/`（`sessions/`、`archived_sessions/`） | ✅ | ✅ | ✅ |
@@ -72,250 +148,61 @@ Potato 对 Token 用量、账户额度和 session 明细分别支持：
 | <img src=".github/assets/tools-icon/alibaba.png" width="28" alt="Alibaba Cloud" /> | Alibaba Cloud | 阿里云控制台 cookie（百炼／Model Studio Token Plan 额度，团队版与个人版） | — | ✅ | — |
 | <img src=".github/assets/tools-icon/thirdparty.gif" width="28" alt="第三方 API" /> | 第三方 API | New API / Sub2API 兼容账号预设方案（包括兼容的 One API 分支）、New API 密钥预设方案与自定义余额端点 | — | ✅ | — |
 
-<details>
-<summary><strong>注意事项、Custom 余额端点，以及用环境变量覆盖的数据路径</strong></summary>
-
-<br>
-
-- 上表为默认路径。Potato 与 Tokscale 遵循相同的环境变量覆盖：`~/.local/share/` 下的路径跟随 `$XDG_DATA_HOME`，各工具另有 `$CODEX_HOME`、`$GROK_HOME`、`$HERMES_HOME`、`$KIMI_CODE_HOME`、`$UNSLOTH_STUDIO_HOME`、`$LM_STUDIO_HOME`、`$DSH_HOME`、`$REASONIX_STATE_HOME`、`$REASONIX_HOME` 以及 `$CLINE_*` 系列。
-- LM Studio 追踪目前仅涵盖服务器日志中记录的 OpenAI 兼容 `/v1/chat/completions` 和 `/v1/responses` 请求。通过 LM Studio 内置 Chat 界面发起的对话，以及原生 `/api/v1/chat` 请求均不包括在内。
-- Unsloth Studio 从 `studio.db` 追踪 Studio 对话与本地 API 的推理用量。本地推理的 API 费用为零；可识别的按量计费供应商使用 Tokscale 的价格估算。不包括训练 Token。详见 [Unsloth 数据来源说明](docs/providers/unsloth.md)。
-
-- Command Code transcript 不包含实际 Token 数或每条消息的模型信息。Token 用量根据 transcript 文本估算；模型归属与推算成本可能反映当前配置的模型，而不是每次请求当时实际使用的模型。
-- Cursor 缓存来自 Cursor 的账号层级用量导出，因此同时涵盖 Cursor IDE 和 Cursor CLI。Potato 会自动检测 Cursor 桌面版已登录的账号，也可在设置中手动新增。缓存过期时会自动重新同步，但刚完成的 session 可能需要几分钟才会出现在 Cursor 控制台，因此用量会在同步后更新，而非即时显示。
-
-- Custom 会从一个 GET 余额端点映射数值 JSON 字段；仅兼容 OpenAI 或 Anthropic API 并不足够。
-
-#### Qoder CN（本地适配器）
-
-Qoder CN 的 Token 用量来自应用本地 SQLite 数据库，而非 API —— 在 Settings → tools 中启用（可选，默认关闭）。数据库路径按平台自动探测：macOS `~/Library/Application Support/QoderCN/SharedClientCache/cache/db/local.db`、Windows `%APPDATA%\QoderCN\SharedClientCache\cache\db\local.db`、Linux `~/.config/QoderCN/SharedClientCache/cache/db/local.db` —— 可用 `TOKEN_MONITOR_QODER_CN_DB_PATH` 覆盖。
-
-这是高级本地集成：读取需要 PATH 上的 `sqlite3` CLI，或内置无需 flag 即可用 `node:sqlite` 的 Node 运行时（Node ≥ 23.4；Electron 组件可能需要 CLI）。读取失败会写入日志；若已有完整快照，采集器会保留它而不是用零用量覆盖。成本按每个映射模型在 models.dev 目录中的价格估算；Qoder 若改变数据库 schema，适配器可能失效。
 </details>
 
-## 界面展示
-
-<table>
-<tr>
-<td width="290" align="center"><img src=".github/assets/home-view.png" width="250" alt="主页视图"><br><sub>可自定义仪表板：自选要显示的模块与排序</sub></td>
-<td width="290" align="center"><img src=".github/assets/limits-view.png" width="250" alt="额度视图"><br><sub>多账号并列，Codex 可一键切换本机账号</sub></td>
-<td width="290" align="center"><img src=".github/assets/tools-view.png" width="250" alt="工具视图"><br><sub>点任一工具展开输入／输出与缓存命中明细</sub></td>
-</tr>
-<tr>
-<td width="290" align="center"><img src=".github/assets/sessions-view.png" width="250" alt="Session 视图"><br><sub>点进单个 session，逐条提问拆解 token 与用到的工具</sub></td>
-<td width="290" align="center"><img src=".github/assets/models-view.png" width="250" alt="模型视图"><br><sub>跨工具汇总每个模型的用量与成本</sub></td>
-<td width="290" align="center"><img src=".github/assets/devices-view.png" width="250" alt="设备视图"><br><sub>每台设备的用量、成本与同步状态，可展开看单机明细</sub></td>
-</tr>
-</table>
-
-<table>
-<tr>
-<td width="435" align="center"><img src=".github/assets/dashboard-overview.png" width="400" alt="使用仪表板 总览"><br><sub>跨所有设备汇总的一年活跃热力图与连续天数</sub></td>
-<td width="435" align="center"><img src=".github/assets/dashboard-trends.png" width="400" alt="使用仪表板 趋势"><br><sub>一年的每日趋势，按工具／模型堆叠，含 K 线</sub></td>
-</tr>
-</table>
-
-## 为什么用 Potato？
-
-大多数用量监控工具只在它运行的那台机器上有用。Potato 是为多设备工作流而设计的：每台设备监视自己的本地日志、把汇总更新发送到你的 hub，每个连接中的小部件几乎都能实时看到 Token 变化。
-
-## 功能特性
-
-### 用量追踪
-
-- **实时 Token 追踪**：Claude Code、Codex、Cursor、GitHub Copilot、Antigravity、OpenCode 等 30+ 种 AI 工具，每轮对话后 UI 在数秒内刷新（完整列表见上方表格）
-- **实时 Token 速率**：可选显示的实时读数，以 `tok/s` 显示生成速度或以 `tok/min` 显示总消耗
-- **单个 session 明细**：点进某个 session，可看每条提问的 Token 消耗，并展开查看每次回复的 Token 拆分与用到的工具（打开时才实时读取本机 transcript 或数据库，绝不同步）
-- **缓存命中统计**：点击任何工具或模型，展开查看输入 Token（缓存命中与未命中）、输出 Token 的详细分类及命中率百分比
-- **成本与币别**：Token 数量旁附带成本；可用 USD、TWD、HKD 或 CNY 显示，汇率每日自动更新，也可在设置中手动覆写
-- **自定义扫描路径**：session 不在默认位置时，可为个别工具加入额外的文件夹
-- **WSL 用量（Windows）**：运行中 WSL 发行版里的文件型用量会自动识别，约每 5 分钟并入总量；OpenCode、Hermes 等 SQLite 来源可能需要按照[指南](docs/wsl-sqlite-setup.zh-CN.md)在 WSL 内运行 headless agent
-
-### 额度、趋势与导出
-
-- **AI 工具额度检测**：涵盖 Claude Code、Codex、Cursor、OpenRouter、第三方 API、GLM、Kimi 等 24+ 家提供方的 session、每日、每周、账单与 credits 窗口，支持多个 OpenRouter／第三方 profile，以及余额型账户（Claude credits、DeepSeek 预付余额与消费历史、第三方余额）
-- **多账号与 Codex 账号切换**：同一提供方可追踪多个账号、各自显示额度；已加入追踪的 Codex 账号还能一键切换为本机使用账号，免重新登录授权
-- **Codex 重置预测**：可选开启的第三方重置预测，显示预计重置时间、重置类型（Regular 或 Banked）与上次重置时间
-- **保留已删除会话用量**：许多工具会定期清除旧 session（Claude Code 默认清 30 天前的 transcript），一删就再也算不到。开启后，Potato 会在本地不设期限地归档已观测到的每日工具／模型用量，让热力图与趋势即使在来源文件被清掉后仍然完整（详见下方[〈会话数据保留期〉](#会话数据保留期)）
-- **使用趋势与仪表板**：主页的活跃热力图与趋势图，加上独立的仪表板窗口，提供连续天数，以及跨所有设备、按工具／按模型堆叠的历史（柱状图与 K 线两种视图）
-- **固定时间范围**：除了原本的日、月、总计，还可以切换本周、近 7 天与近 30 天
-- **可选的状态视图**：追踪 Claude、OpenAI、Cursor 与 DeepSeek status 页，支持手动或定时重新检查
-- **数据导出**：把使用数据导出成与工具无关的 CSV + JSON，可手动或自动写入文件夹，接电子表格、Obsidian、Grafana 或自写脚本；详见 [docs/export.md](docs/export.md)
-- **订阅资料**：手动记录每个 AI 账号的实际费用；方案标签的 tooltip 会显示费用、下次续费或到期日、已订阅时间，以及本月用量成本相对订阅费的回本倍数，定期方案与储值记录均适用
-
-### 多设备与部署
-
-- **多设备实时同步**：通过 Server-Sent Events 推送，一台设备的更新数秒内出现在其他设备
-- **本地优先**：单设备使用完全无需服务器
-- **自托管同步后端**：小部件内 hub、Node CLI hub 或 Cloudflare Worker
-- **iOS 小部件支持**：通过 Worker hub 搭配 Widgy、Scriptable
-- **隐私优先**：提示词、回复、源代码和文件内容都留在你的设备上
-
-### 界面与呈现
-
-- **分组视图**：可按工具、设备、模型、session、项目或账户额度分组查看用量
-- **菜单栏（macOS）与系统托盘（Windows）弹出窗口**：图标旁可显示成本、token 数，或最接近用完的提供方剩余额度百分比
-- **悬浮小窗模式**：可将组件收成可拖动的紧凑小窗，支持点击或悬停预览展开，并可显示托盘同款内容
-- **菜单栏排版自定义**：菜单栏与悬浮小窗的显示内容可以直接挑内置版式，也可以选“自定义…”自己排——加入 AI 工具图标、额度条、百分比、重置时间、成本、Token 速率或自定义文字等项目，拖动排序并实时预览，每个项目还能各自指定 AI 工具、账号、额度周期与字体
-- **外观控制**：界面主题切换（含浅色模式）、各工具厂商色、玻璃透明度、模糊度、完全透明窗口、自定义字体
-- **原生 macOS 小部件**：在 macOS 14+ 上通过小号、中号和大号布局查看 Token 用量与成本、趋势、各 AI 工具的剩余额度与重置时间、活动热力图，以及按工具或模型分类的明细
-- **工具列表自定义**：可隐藏、置顶和拖曳排序主列表中的工具，不影响实际追踪
-- **可录制全局快捷键**：可从任何地方快速显示或隐藏窗口
-- **Discord Rich Presence**：将今日 Token、花费与主要工具广播到你的 Discord 个人资料（需手动开启）
-
-## 安装
-
-上游 Token Monitor 项目的 macOS 版本可通过其 [Homebrew Cask](https://formulae.brew.sh/cask/token-monitor) 安装；这不是 Potato 的发布渠道：
-
-```bash
-brew install --cask token-monitor
-```
-
-也可从 [GitHub Releases](https://github.com/Gary06910/Potato/releases) 下载。
-
-- **macOS（Apple Silicon）** — `.dmg`，已签名并 notarize
-- **macOS（Intel）** — x64 `.dmg`，已签名并 notarize
-- **Windows 10/11** — 安装版和便携版 `.exe`，均[已签名](docs/code-signing.md)
-- **Linux x64** — `.AppImage`
-
-打包版会自动检查 GitHub Releases。有新版本时，界面会显示更新提示；受支持的平台也可在 设置 → 常规 中安装更新。
-
-### 首次启动
-
-本地模式是默认模式：启动 App 后会开始追踪这台设备。无需 hub、代理或配置。
-
-## 多设备同步
-
-挑一个所有设备（与任何无头代理）都能连上的 hub 后端。在每台设备上打开小部件，在 设置 → 多设备同步 选一个模式。小部件会自动上报本机用量；只在没有小部件的机器上跑 `npm run agent`。
-
-#### 方案 A——直接在小部件内开 hub（最简单，无需命令行）
-
-在一台长期开机的机器上打开小部件，进入 设置 → 多设备同步，选 **在这台设备托管 Hub**。小部件会生成随机 secret，并列出其他设备可以连入的局域网 URL（Tailscale 或 ZeroTier 地址也会显示在这里）。在其他每台设备上选 **连接到 Hub**，把 URL 与 secret 贴进去即可。
-
-只要 Potato 还在跑，hub 就会运行——退出 App（仅关闭窗口不算）会停掉 hub，所有连入的设备都会断开。
-
-#### 方案 B——自托管 Node hub（长期开机的无头机器）
-
-```bash
-# 在长期开机的机器上
-cp .env.example .env
-# 把 TOKEN_MONITOR_SECRET 设为你私有的值，然后:
-npm run hub
-```
-
-#### 方案 C——Cloudflare Worker hub（跨网络，包含 iPhone）
-
-[![部署到 Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Gary06910/Potato/tree/main/worker)
-
-一键部署——Cloudflare 会在过程中提示你输入 `TOKEN_MONITOR_SECRET`。或手动部署:
-
-```bash
-cd worker
-npm install
-npx wrangler login
-npx wrangler secret put TOKEN_MONITOR_SECRET
-npx wrangler deploy
-```
-
-把部署 URL 贴到每台设备的小部件 设置 → 多设备同步。iOS 小部件配方与端点参考见 [worker/README.md](worker/README.md)，hub HTTP API 见 [docs/API.md](docs/API.md)。
-
-## App 数据
-
-App 状态保存在系统的用户数据目录——卸载时一并删除该目录即可完整移除。
-
-| 平台 | 路径 |
-|------|------|
-| macOS | `~/Library/Application Support/Token Monitor/` |
-| Windows | `%APPDATA%/Token Monitor/` |
-| Linux | `~/.config/Token Monitor/` |
-
-## 从源码构建
-
-如需自己从源码打包安装包，请在**对应的**操作系统上使用 Node.js 22.15+（electron-builder 无法在 Windows 上交叉构建 macOS 的 `.dmg`，反之亦然）。
-
-```bash
-npm install
-npm run dist:mac     # macOS arm64 .dmg → dist/
-npm run dist:mac:x64 # macOS Intel x64 .dmg → dist/
-npm run dist:win     # Windows x64 安装包 .exe → dist/
-npm run dist:linux   # Linux x64 AppImage → dist/
-npm run pack         # 未打包的 app 目录（无安装包），方便本机快速测试
-```
-
-产物会放在 `dist/`。Windows 和 Linux 请在对应系统上使用上面的 `dist:*` 脚本。如果要打包 macOS 发布版，需要本机有 Developer ID Application 签名身份；本地开发或未列出的平台请用 `npm start` 运行。
-
-运行和打包脚本会在四个 vendored 目标上明确确保使用 pinned tokscale binary。其他源码平台会保留 npm binary，并过滤它不支持的 clients；`npm install`、lint 和测试不会下载它。
-
-## 工作原理
-
-```text
-模式 A——本地（默认，免配置）
-    小部件 (Electron) ──▶ tokscale ──▶ ~/.claude、~/.codex、$HERMES_HOME
-
-模式 B——同步（可选，多设备）
-    设备 A agent ──▶
-    设备 B agent ──▶  hub  ──▶  任一设备上的小部件
-    设备 C agent ──▶
-```
-
-小部件会根据 设置 → 多设备同步 决定走本地还是同步模式。hub 本身可以是单独的 `npm run hub` 进程、Cloudflare Worker，或直接跑在某一个小部件里（Host 模式）。同步模式下，hub 通过 Server-Sent Events 把聚合后的统计推送给每个连接中的小部件，所以一台设备上的更新会在数秒内出现在其他设备上。
-
-## 会话数据保留期
-
-开启**保留已删除会话用量**（设置 → 采集）后，Potato 会在本地不设期限地归档已观测到的每日工具／模型用量——即使来源工具日后清掉 session，热力图与趋势也不受影响。
-
 <details>
-<summary><strong>进阶：延长来源工具本身的保留期</strong></summary>
+<summary>采集说明与自定义数据路径</summary>
 
-<br>
-
-热力图与同步数据采用 370 天的滚动窗口（更早的观测数据仍保留在本地供日后查看）。**Claude Code 默认只保留 30 天的 transcript**（`cleanupPeriodDays`）；若想在归档启用前就保住完整的滚动年份，请在时限过去之前于 `~/.claude/settings.json` 调高：
-
-```json
-{
-  "cleanupPeriodDays": 370
-}
-```
-
-设更大能留更多，代价是 transcript 会按你设定的期限一直留在磁盘上。其他工具的默认值与配置文件路径，请见 tokscale 的 [Session Data Retention](https://github.com/junhoyeo/tokscale#session-data-retention) 表。
-
-这份归档只涵盖 Potato 已观测过的日期；在它开始追踪之前就被删除的数据无法找回。
+- 表中列出默认路径。采集遵循对应工具支持的环境变量覆盖，包括 `$XDG_DATA_HOME`、`$CODEX_HOME`、`$GROK_HOME`、`$HERMES_HOME`、`$KIMI_CODE_HOME`、`$UNSLOTH_STUDIO_HOME`、`$LM_STUDIO_HOME`、`$DSH_HOME`、`$REASONIX_STATE_HOME`、`$REASONIX_HOME` 和 `$CLINE_*` 系列。额外扫描目录可在设置中添加。
+- LM Studio 采集覆盖服务器日志中的 `/v1/chat/completions` 和 `/v1/responses`。内置 Chat 界面与原生 `/api/v1/chat` 请求不在此采集范围内。
+- Unsloth Studio 统计 Studio 聊天和本地 API 的推理用量。本地推理 API 费用为零，计费提供方使用价格估算；不含训练 Token。详见 [Unsloth 数据来源说明](docs/providers/unsloth.md)。
+- Command Code 的 Token 数量由会话文本估算。模型归属和估算费用使用可获取的模型配置，可能与历史请求使用的模型不同。
+- Cursor 用量来自账号级导出，同时覆盖 IDE 和 CLI。自动识别桌面端已登录账号，也可在设置中手动添加；刚完成的会话可能需要几分钟才出现在提供方导出数据中。
+- MiMo Code 和 Qoder CN 采集需手动开启。MiMo 导入的 Claude Code 会话可能与 Claude Code 用量重叠。
+- Qoder CN 读取本地 SQLite 数据库，可在采集设置中开启。默认路径：macOS 为 `~/Library/Application Support/QoderCN/SharedClientCache/cache/db/local.db`，Windows 为 `%APPDATA%\QoderCN\SharedClientCache\cache\db\local.db`，Linux 为 `~/.config/QoderCN/SharedClientCache/cache/db/local.db`。可用 `TOKEN_MONITOR_QODER_CN_DB_PATH` 覆盖。读取需有 `sqlite3` 命令行工具，或支持免标志 `node:sqlite` 的 Node（23.4+）；费用按模型价格估算。
+- 第三方集成支持 New API / Sub2API 兼容账号预设、New API API-key 预设，以及 Custom 余额接口。Custom 从 GET 余额接口的 JSON 数值字段读取余额；仅有聊天补全接口并不能提供余额数据。
 
 </details>
 
-## 设置
+<a id="multi-device"></a>
+## 连接电脑与服务器
 
-设置分两处，日常使用只需要前者：
+需要在桌面端汇总多台电脑时，在一台常开电脑的“**设置 → 多设备同步**”中选择“**在此设备上托管 hub**”，再让其他桌面端通过 hub 地址和密钥连接。托管电脑需保持 Potato 运行。也可通过 Node 或 [Cloudflare Workers](worker/README.md) 托管；Worker 指南还提供 iPhone 的 Widgy 和 Scriptable 小组件用法。
 
-- **小部件（GUI）**——点右下角的 `⚙` 打开，分区依次为：常规（语言、登录启动、更新）、主画面（首页模块与显示币别）、窗口（窗口行为、菜单栏与悬浮小窗排版、托盘模式、快捷键）、外观（主题与厂商色）、采集（追踪的工具、采集频率、保留已删除会话用量、数据导出）、AI 工具额度（提供方选择、额度与凭据）、订阅资料（每个账号实际付多少）、多设备同步。标题栏的 `⇧` 按钮可循环切换窗口行为。
-- **无头代理与 hub**——没有 UI，用项目根目录的 `.env` 配置（从 `.env.example` 复制）；优先级为 CLI 参数 → 环境变量 → 内置默认。
+**Linux x64 Server Agent** 用于无界面服务器的用量采集，支持后台运行。它是命令行配套工具，不是 Linux 桌面应用。详见 [Server Agent 安装与服务指南](docs/TO_KNOW_SERVER_AGENT_LINUX_SERVICE.md)；同步设置与集成方式见[配置参考](docs/configuration.md)和 [hub API](docs/API.md)。
 
-每一项设置与所有环境变量的完整说明，请见[设置参考文档](docs/configuration.md)。
+<details>
+<summary>本地数据与历史保留</summary>
 
-## 隐私
+在“设置 → 采集”中开启“**保留已删除会话用量**”，即可在本地保留已观测到的每日工具／模型用量。热力图和同步采用 370 天滚动窗口，本地归档保留更早的记录。采集从设备上仍存在的数据开始。
 
-Potato 在本地处理使用日志，不会向项目维护者发送分析或遥测数据。网络访问仅用于文档所述或由用户启用的功能；更新、提供方集成、Discord Rich Presence 与可选多设备同步所使用的数据，请参阅[隐私政策](docs/privacy.md)。
+对于会自动清理会话的来源工具，请在旧文件过期前调整保留期。Claude Code 使用 `~/.claude/settings.json` 中的 `cleanupPeriodDays`；设为 `370` 可保留滚动一年的来源会话。其他工具见 tokscale 的[会话保留参考](https://github.com/junhoyeo/tokscale#session-data-retention)。
 
-## Star 历史
+卸载 Potato 后，应用数据会保留。现有数据目录名称为：macOS 的 `~/Library/Application Support/Token Monitor/`、Windows 的 `%APPDATA%/Token Monitor/`；从源码运行的 Linux 桌面端使用 `~/.config/Token Monitor/`。迁移本地设置与历史前，请备份该目录。
 
-<a href="https://github.com/Gary06910/Potato/tree/star-history">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
- </picture>
-</a>
+从源码运行 Node hub 或无界面采集代理时，将 `.env.example` 复制为 `.env` 并配置连接信息与密钥。`npm run hub` 启动 hub，`npm run agent` 持续采集，`npm run agent:once` 执行一次采集。[配置参考](docs/configuration.md)说明了 CLI 和环境变量选项。
 
-## 参与贡献
+</details>
 
-欢迎提交 Issue 和 PR。项目规范、架构说明和命令参考都在 [AGENTS.md](AGENTS.md) 中——它是为编码代理编写的，但同样可以作为贡献者指南。
+## 本地优先与隐私
+
+Potato 在设备上读取 AI 工具用量。可选的多设备同步将统计发送到你配置的 hub；Android 通知将完成记录发送到你配置的 Potato 服务。提供方集成会访问对应服务。各功能使用的数据见[隐私政策](docs/privacy.md)。
+
+## 从源码运行与构建
+
+使用 **Node.js 22.15+**，在本地仓库目录运行：
+
+```bash
+npm ci
+npm start
+```
+
+`npm start` 用于启动本地开发版桌面应用。打包脚本见 [package.json](package.json)，各平台安装包可从 [Releases](https://github.com/Gary06910/Potato/releases) 下载。开发命令与项目约定见[贡献指南](AGENTS.md)。
 
 ## 致谢
 
-- [tokscale](https://github.com/junhoyeo/tokscale) 提供日志解析与 Token 计算。
-- [CodexBar](https://github.com/steipete/CodexBar) 提供 AI 工具额度的研究参考。
-- [代码签名政策](docs/code-signing.md)： 免费代码签名由 [SignPath.io](https://signpath.io/) 提供，证书由 [SignPath Foundation](https://signpath.org/) 提供。
+Potato 独立维护，包含基于 [Token Monitor](https://github.com/Javis603/token-monitor) 的 MIT 开源工作。[LICENSE](LICENSE) 中保留了版权与许可声明。感谢 [tokscale](https://github.com/junhoyeo/tokscale) 提供日志解析和 Token 统计，以及 [CodexBar](https://github.com/steipete/CodexBar) 的 AI 工具额度研究。
 
 ## 许可证
 
-[MIT](LICENSE) © [@Javis](https://github.com/Javis603)
+[MIT](LICENSE) · Copyright © 2026 Javis。完整声明见 LICENSE。

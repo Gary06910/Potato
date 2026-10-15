@@ -1,44 +1,112 @@
-<p align="right">
-   <strong>EN</strong> | <a href="./README.zh-CN.md">简</a> | <a href="./README.zh-TW.md">繁</a> | <a href="./README.ko.md">KO</a> | <a href="./README.ja.md">JA</a>
-</p>
-<div align="center">
-    <img src=".github/assets/app.png" alt="Potato logo" width="120">
-    <h1>Potato</h1>
-</div>
+<p align="right"><strong>English</strong> | <a href="README.zh-CN.md">简体中文</a></p>
 
+<p align="center"><img src="assets/icon.png" width="88" alt="Potato logo"></p>
+<h1 align="center">Potato</h1>
+<p align="center">Your AI coding usage, limits, costs, and task completions, in one place.</p>
+<p align="center"><a href="#download"><strong>Download</strong></a> · <a href="#features">Explore features</a> · <a href="#android-companion">Android companion</a></p>
 <p align="center">
-    <em>One live dashboard for every AI coding tool, synced across every machine.</em>
+  <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/v/release/Gary06910/Potato?include_prereleases&amp;style=flat-square&amp;label=preview&amp;color=56866b" alt="Latest Potato preview"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-56866b?style=flat-square" alt="MIT license"></a>
 </p>
+<p align="center">Windows x64 · macOS Apple Silicon · Android · Linux Server Agent</p>
 
-> Potato is independently maintained in [Gary06910/Potato](https://github.com/Gary06910/Potato). It is derived in part from [Token Monitor](https://github.com/Javis603/token-monitor) under the MIT license, retains upstream attribution, and selectively adopts compatible future changes. Potato owns its source of truth, releases, and update feed.
+<a id="download"></a>
+## Download
 
-## Potato 1.0.0 desktop release scope
+[Download the latest preview from GitHub Releases.](https://github.com/Gary06910/Potato/releases) Choose the file for your device:
 
-- **Official desktop binary:** Windows x64.
-- **Android:** a separate Potato mobile client; it is not built by the Desktop GitHub Release workflow.
-- **macOS/Linux:** source and build support may exist in this repository, but official macOS/Linux binary distribution is not provided in 1.0.0.
+| Platform | Download file | Best for |
+| --- | --- | --- |
+| **Windows x64** | [Installer](https://github.com/Gary06910/Potato/releases) · `Potato-Setup-1.0.0.exe` | Recommended for everyday desktop use |
+| **Windows x64** | [Portable](https://github.com/Gary06910/Potato/releases) · `Potato-1.0.0.exe` | Run without installing |
+| **macOS Apple Silicon** | [DMG](https://github.com/Gary06910/Potato/releases) · `Potato-1.0.0-arm64.dmg` | M-series Macs (arm64) |
+| **Android** | [Mobile companion](https://github.com/Gary06910/Potato/releases) · `Potato-Android-0.1.1-code6.apk` | Task notifications and records on your phone |
+| **Linux x64** | [Server Agent](https://github.com/Gary06910/Potato/releases) · `To-Know-Agent-1.0.0-linux-x64.tar.gz` | Headless collection on servers; a CLI, not a desktop GUI |
 
-<p align="center">
-    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/v/release/Gary06910/Potato?include_prereleases&style=flat-square&label=release&color=22c55e" alt="Latest release" /></a>
-    <a href="https://github.com/Gary06910/Potato/releases"><img src="https://img.shields.io/github/downloads/Gary06910/Potato/total?style=flat-square&color=22c55e" alt="Total downloads" /></a>
-    <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square" alt="Windows 10 or later" />
-    <img src="https://img.shields.io/badge/macOS-source%2Fbuild-0A84FF?style=flat-square&logo=apple&logoColor=white" alt="macOS source/build support" />
-    <img src="https://img.shields.io/badge/Linux-source%2Fbuild-64748b?style=flat-square&logo=linux&logoColor=white" alt="Linux source/build support" />
-    <a href="https://discord.gg/HmdNVVvw5P"><img src="https://img.shields.io/discord/1344259784219689031?color=5865F2&label=Discord&logo=discord&logoColor=white&style=flat-square" alt="Discord"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-A855F7?style=flat-square" alt="License: MIT" /></a>
-</p>
+SHA256 checksums are included with releases. macOS downloads in this preview are for Apple Silicon only.
 
-<div align="center">
-    <img src=".github/assets/demo.gif">
-</div>
+<p align="center"><img src=".github/assets/readme/hero-dashboard.png" width="360" alt="Potato Home on macOS showing live tokens, estimated cost, Codex quota, model usage, and an activity heatmap"></p>
+<p align="center"><sub>See today's usage, remaining quota, and recent activity at a glance.</sub></p>
 
-## What is Potato?
+## What Potato does
 
-A desktop widget that shows live token usage and AI Tool Limits across 37+ AI coding tools — Claude Code, Codex, Cursor, GitHub Copilot, Cherry Studio, and more — with real-time multi-device sync, historical usage trends, and breakdowns by tool, device, model, session, or project.
+- **Keep usage in view.** Follow live token counts and estimated costs while you code.
+- **Know your limits.** Check quota windows, remaining balances, and reset times across supported providers and accounts.
+- **Understand your work.** Explore usage by tool, model, session, or project, with activity heatmaps and historical trends.
+- **Step away from your desk.** Pair Android to receive Codex completion notifications and review task records.
+- **Bring devices together.** Start locally, then add a sync hub when you want a shared view across machines.
 
-## Supported Tools
+## Get started in three steps
 
-Potato supports token usage, account-limit checks, and session details separately:
+1. **Install Potato.** On Windows, run `Potato-Setup-1.0.0.exe`; the portable `Potato-1.0.0.exe` runs directly. On macOS, download `Potato-1.0.0-arm64.dmg`, open it, drag Potato to **Applications**, and launch Potato.
+2. **Open the app.** Collection starts automatically for supported local AI-tool logs. Single-device use is local-first and works without a hub.
+3. **Make it yours.** Add provider accounts under AI Tool Limits, [pair your Android phone](#android-companion), or enable [multi-device sync](#multi-device).
+
+If macOS blocks the first launch, open **System Settings → Privacy & Security → Open Anyway**.
+
+<a id="android-companion"></a>
+## Stay in the loop away from your desk
+
+Potato Desktop sends Codex task completions through your configured Potato service to the Android companion. Your phone receives a notification, and the task stays available in its task records. Pairing persists across Desktop restarts.
+
+1. Install `Potato-Android-0.1.1-code6.apk` on your phone, open Potato, sign in, and allow notifications.
+2. Open the Android pairing page to get a **six-digit code**. In Desktop **Settings → Phone notifications**, use the same Potato service address as your Android app, enter the code, and connect.
+3. Enable **Codex completion notifications**. On first use, enter `/hooks` in Codex and trust the **Potato Stop Hook**. Keep Potato Desktop running to deliver completions.
+
+Privacy mode is on by default and sends completion records without task text. Follow the in-app background-protection guide for your phone to keep notifications working when the app is in the background.
+
+<a id="features"></a>
+## A closer look
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <strong>Where your tokens go</strong><br><br>
+      <img src=".github/assets/readme/usage-breakdown.png" width="310" alt="Tool usage breakdown with token totals, estimated costs, and Claude Code input, output, and cache-hit details"><br>
+      <sub>Compare tools and expand input, output, and cache usage.</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <strong>What each model costs</strong><br><br>
+      <img src=".github/assets/readme/model-breakdown.png" width="310" alt="Model usage breakdown showing token totals, estimated costs, and expanded cache usage"><br>
+      <sub>See model usage and cost across your coding tools.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <strong>Your activity over time</strong><br><br>
+      <img src=".github/assets/readme/activity-dashboard.png" width="460" alt="Usage dashboard with activity heatmap, streaks, and tool and model comparisons"><br>
+      <sub>Explore active days, streaks, and the tools behind them.</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <strong>Spot changes in usage</strong><br><br>
+      <img src=".github/assets/readme/trends.png" width="460" alt="Daily usage trends displayed as stacked bars by AI coding tool"><br>
+      <sub>Compare daily trends by tool or model over a chosen period.</sub>
+    </td>
+  </tr>
+</table>
+
+**A desktop companion that fits your workflow.** Keep usage in the macOS menu bar or Windows system tray, use a floating bubble, and adjust themes, colours, fonts, and window appearance. Track multiple provider accounts and switch a saved Codex account into active use.
+
+<details>
+<summary>More ways to explore and customize</summary>
+
+- **Session and project views:** inspect supported local session details and group usage by project. Session details stay local.
+- **Flexible periods:** today, month, total, this week, last 7 days, and last 30 days; costs can display in USD, TWD, HKD, or CNY.
+- **History and export:** preserve observed daily usage after source sessions are deleted, and export CSV + JSON manually or automatically. See the [export guide](docs/export.md).
+- **A dashboard you arrange:** show, hide, pin, and reorder tools and Home modules; customize menu bar and floating-bubble layouts and the show/hide shortcut.
+- **Optional extras:** live token rate, service status, Codex reset forecasts from a third-party service, subscription records, and Discord Rich Presence.
+- **WSL on Windows:** usage from running distros is detected automatically; SQLite-backed tools may need an [agent inside WSL](docs/wsl-sqlite-setup.md).
+
+Settings include AI Tool Limits (provider selection, limits, and credentials). See the [configuration reference](docs/configuration.md) for collection, appearance, account, and sync options.
+
+</details>
+
+## Supported AI tools
+
+Potato covers **37 tool and provider integrations**: **30** support token usage and **24** support AI Tool Limits, with overlap between the two. Claude Code, Codex, Cursor, GitHub Copilot, OpenCode, and many more are included. Usage, limits, and session detail support are listed separately below.
+
+<details>
+<summary>View the full supported-tools matrix</summary>
 
 | Logo | Tool | Data path | Token Usage | AI Tool Limits | Session Details |
 |:---:|------|-----------|:---:|:---:|:---:|
@@ -80,247 +148,61 @@ Potato supports token usage, account-limit checks, and session details separatel
 | <img src=".github/assets/tools-icon/alibaba.png" width="28" alt="Alibaba Cloud" /> | Alibaba Cloud | Alibaba Cloud console cookie (Bailian / Model Studio Token Plan quota, Team & Personal) | — | ✅ | — |
 | <img src=".github/assets/tools-icon/thirdparty.gif" width="28" alt="Third-party APIs" /> | Third-party APIs | New API / Sub2API-compatible account presets (including compatible One API forks), a New API API-key preset, and a Custom balance endpoint | — | ✅ | — |
 
-<details>
-<summary><strong>Notes, Custom balance endpoints, and data paths overridden by environment variables</strong></summary>
-
-<br>
-
-- Paths above are the defaults. Potato follows the same environment overrides Tokscale does — `$XDG_DATA_HOME` for the `~/.local/share/` roots, and per-tool variables such as `$CODEX_HOME`, `$GROK_HOME`, `$HERMES_HOME`, `$KIMI_CODE_HOME`, `$UNSLOTH_STUDIO_HOME`, `$LM_STUDIO_HOME`, `$DSH_HOME`, `$REASONIX_STATE_HOME`, `$REASONIX_HOME` and the `$CLINE_*` family.
-- LM Studio tracking currently covers OpenAI-compatible `/v1/chat/completions` and `/v1/responses` requests recorded in server logs. Conversations started from LM Studio's built-in Chat UI and native `/api/v1/chat` requests are not included.
-- Unsloth Studio tracks inference usage from `studio.db`: Studio chats and its local API. Local inference has zero API cost; recognized metered providers use Tokscale's price estimates. Training tokens are not included. See [Unsloth source notes](docs/providers/unsloth.md).
-
-- Command Code transcripts do not contain actual token counts or per-message model metadata. Token usage is estimated from transcript text, while model attribution and derived cost may reflect the currently configured model rather than the model historically used for each request.
-- The Cursor cache comes from Cursor's account-level usage export, so it covers Cursor IDE and Cursor CLI alike. Potato automatically detects accounts signed in through the Cursor desktop app and also supports adding accounts manually in Settings. The cache re-syncs automatically when stale, but newly finished sessions can take a few minutes to reach Cursor's dashboard, so usage updates on sync rather than instantly.
-
-- Custom maps numeric JSON fields from one GET balance endpoint; OpenAI or Anthropic compatibility alone is not enough.
-
-#### Qoder CN (local adapter)
-
-Qoder CN token usage is read from the app's local SQLite database, not an API — enable it in Settings → tools (opt-in, off by default). The database is auto-detected per platform: macOS `~/Library/Application Support/QoderCN/SharedClientCache/cache/db/local.db`, Windows `%APPDATA%\QoderCN\SharedClientCache\cache\db\local.db`, Linux `~/.config/QoderCN/SharedClientCache/cache/db/local.db` — overridable with `TOKEN_MONITOR_QODER_CN_DB_PATH`.
-
-This is an advanced local integration: reading needs a `sqlite3` CLI on PATH or a Node runtime with unflagged `node:sqlite` (Node ≥ 23.4; the Electron widget may need the CLI). Read failures are logged, and an existing complete snapshot is retained instead of being replaced with zero usage. Costs are estimated from the models.dev catalog for each mapped model; the adapter may break if Qoder changes its database schema.
 </details>
 
-## Showcase
+<details>
+<summary>Collection notes and custom data paths</summary>
 
-<table>
-<tr>
-<td width="290" align="center"><img src=".github/assets/home-view.png" width="250" alt="Home View"><br><sub>Customizable dashboard — choose which modules show and their order</sub></td>
-<td width="290" align="center"><img src=".github/assets/limits-view.png" width="250" alt="Limits View"><br><sub>Multiple accounts side by side, one-click switch of the active Codex account</sub></td>
-<td width="290" align="center"><img src=".github/assets/tools-view.png" width="250" alt="Tools View"><br><sub>Click any tool to expand input / output and cache-hit detail</sub></td>
-</tr>
-<tr>
-<td width="290" align="center"><img src=".github/assets/sessions-view.png" width="250" alt="Session View"><br><sub>Open a single session to break each prompt into tokens and tools used</sub></td>
-<td width="290" align="center"><img src=".github/assets/models-view.png" width="250" alt="Models View"><br><sub>Every model's usage and cost, aggregated across tools</sub></td>
-<td width="290" align="center"><img src=".github/assets/devices-view.png" width="250" alt="Devices View"><br><sub>Each device's usage, cost, and sync status — expand for per-machine detail</sub></td>
-</tr>
-</table>
+- Paths in the matrix are defaults. Collection follows the supported tool's environment overrides, including `$XDG_DATA_HOME`, `$CODEX_HOME`, `$GROK_HOME`, `$HERMES_HOME`, `$KIMI_CODE_HOME`, `$UNSLOTH_STUDIO_HOME`, `$LM_STUDIO_HOME`, `$DSH_HOME`, `$REASONIX_STATE_HOME`, `$REASONIX_HOME`, and the `$CLINE_*` family. Extra scan folders can be added in Settings.
+- LM Studio tracking covers `/v1/chat/completions` and `/v1/responses` recorded in server logs. Its built-in Chat UI and native `/api/v1/chat` requests are outside this collection path.
+- Unsloth Studio tracks inference from Studio chats and its local API. Local inference has zero API cost; metered providers use price estimates. Training tokens are outside this scope. See the [Unsloth source notes](docs/providers/unsloth.md).
+- Command Code token counts are estimated from transcript text. Model attribution and estimated cost use the available model configuration, which can differ from the model used historically.
+- Cursor usage comes from its account-level export and includes IDE and CLI activity. Signed-in desktop accounts are detected automatically, and accounts can also be added in Settings. Finished sessions can take a few minutes to appear in the provider export.
+- MiMo Code and Qoder CN collection are opt-in. MiMo's imported Claude Code sessions can overlap with Claude Code usage.
+- Qoder CN reads its local SQLite database. Enable it under collection settings; the default database is `~/Library/Application Support/QoderCN/SharedClientCache/cache/db/local.db` on macOS, `%APPDATA%\QoderCN\SharedClientCache\cache\db\local.db` on Windows, and `~/.config/QoderCN/SharedClientCache/cache/db/local.db` on Linux. Override it with `TOKEN_MONITOR_QODER_CN_DB_PATH`. Reading requires the `sqlite3` CLI or Node with unflagged `node:sqlite` (23.4+); costs use model price estimates.
+- Third-party integrations support New API / Sub2API-compatible account presets, a New API API-key preset, and Custom balance endpoints. Custom maps numeric JSON fields from a GET balance endpoint; a chat-completions endpoint alone does not supply balance data.
 
-<table>
-<tr>
-<td width="435" align="center"><img src=".github/assets/dashboard-overview.png" width="400" alt="Usage Dashboard Overview"><br><sub>A year of activity heatmap and streaks, aggregated across all devices</sub></td>
-<td width="435" align="center"><img src=".github/assets/dashboard-trends.png" width="400" alt="Usage Dashboard Trends"><br><sub>A year of daily trends, stacked by tool / model, with K-line</sub></td>
-</tr>
-</table>
+</details>
 
-## Why Potato?
+<a id="multi-device"></a>
+## Across computers and servers
 
-Most usage monitors are useful on the machine they run on. Potato is built for multi-device work: each device watches its own local logs, sends summary updates to your hub, and every connected widget sees token changes almost immediately.
+For a shared desktop view, open **Settings → Multi-device Sync** on an always-on computer and choose **Host hub on this device**. Connect other desktops with its hub URL and secret. The host must keep Potato running. You can also host the hub with Node or [Cloudflare Workers](worker/README.md); the Worker guide includes Widgy and Scriptable widgets for iPhone.
 
-## Features
+The **Linux x64 Server Agent** collects usage on headless servers and supports background operation. It is a command-line companion, not a Linux Desktop app. See the [Server Agent setup and service guide](docs/TO_KNOW_SERVER_AGENT_LINUX_SERVICE.md). For sync settings and integrations, see the [configuration reference](docs/configuration.md) and [hub API](docs/API.md).
 
-### Tracking usage
+<details>
+<summary>Local data and retained history</summary>
 
-- **Live token tracking** — Claude Code, Codex, Cursor, GitHub Copilot, Antigravity, OpenCode, and 30+ AI tools, with the UI updating within seconds of each turn (full list in the table above)
-- **Live token rate** — an optional live readout of generation speed in `tok/s` or total burn in `tok/min`
-- **Per-session detail** — open a session to see tokens per prompt, expandable to each reply's exact token split and tools used (read on-demand from local transcripts or databases, never synced)
-- **Cache hit statistics** — click any tool or model to expand a detailed breakdown of input tokens (cache hit vs miss), output tokens, and hit-rate percentages
-- **Cost & currency** — cost alongside token counts, shown in USD, TWD, HKD, or CNY; exchange rates auto-update daily and can be manually overridden in Settings
-- **Custom scan paths** — point a tool at extra session folders when yours live outside the defaults
-- **WSL usage (Windows)** — file-based usage from a running WSL distro is detected automatically and merged about every 5 minutes; SQLite-backed tools such as OpenCode and Hermes may require a [headless agent inside WSL](docs/wsl-sqlite-setup.md)
+Enable **Preserve deleted session usage** in Settings → Collection to retain observed daily tool/model usage locally. Heatmaps and sync use a rolling 370-day window; the local archive retains older observations. Collection starts with the data still available on your device.
 
-### Limits, trends & export
+For source tools that prune transcripts, adjust their retention before old files expire. Claude Code uses `cleanupPeriodDays` in `~/.claude/settings.json`; setting it to `370` retains a rolling year's source transcripts. See tokscale's [session retention reference](https://github.com/junhoyeo/tokscale#session-data-retention) for other tools.
 
-- **AI Tool Limits detection** — provider-specific session, daily, weekly, billing, and credits windows for Claude Code, Codex, Cursor, OpenRouter, third-party APIs, GLM, Kimi, and 24+ providers, including multiple OpenRouter/third-party profiles and balance-style accounts (Claude credits, DeepSeek prepaid balance and spend history, third-party balances)
-- **Multiple accounts & Codex switching** — track several accounts per provider, each with its own limits; a tracked Codex account can be switched as the active local account in one click, without re-authenticating
-- **Codex reset forecast** — an optional third-party forecast below Codex limits, showing the expected reset time, the reset type (Regular or Banked), and when the window last reset
-- **Preserve deleted session usage** — many tools prune old sessions (Claude Code drops transcripts after 30 days by default), losing that history. When enabled, Potato archives observed daily tool/model usage locally so the heatmap and trends survive even after the source files are gone (see [Session data retention](#session-data-retention) below)
-- **Usage Trends & Dashboard** — a home-screen activity heatmap and trend chart, plus a dedicated dashboard window with streaks and stacked per-tool/per-model history (bar and K-line views) across all your devices
-- **Fixed usage ranges** — switch between This week, Last 7 days, and Last 30 days alongside the native day, month, and total periods
-- **Optional Status view** — Claude, OpenAI, Cursor, and DeepSeek status pages, with manual or interval re-checks
-- **Data export** — export usage as tool-agnostic CSV + JSON, manually or auto-written to a folder, for spreadsheets, Obsidian, Grafana, or scripts; see [docs/export.md](docs/export.md)
-- **Subscription records** — record by hand what each AI account actually costs; the plan label's tooltip then reports the price, the next renewal or end date, time subscribed, and the month's usage cost as a multiple of what the plan costs, for recurring plans and top-up ledgers alike
+Potato keeps app data across uninstall. Its existing data-folder names are `~/Library/Application Support/Token Monitor/` on macOS and `%APPDATA%/Token Monitor/` on Windows; source-run Linux desktops use `~/.config/Token Monitor/`. Back up this folder before moving your local settings and history.
 
-### Multi-device & deployment
+For a Node hub or the source headless collector, copy `.env.example` to `.env` and configure your connection and secret. Run `npm run hub` for a hub, `npm run agent` for continuous collection, or `npm run agent:once` for a single collection. The [configuration reference](docs/configuration.md) documents CLI and environment options.
 
-- **Real-time multi-device sync** — Server-Sent Events push an update on one device to the others within seconds
-- **Local-first** — no servers needed for single-device use
-- **Self-hosted sync backend** — in-widget hub, Node CLI hub, or Cloudflare Worker
-- **iOS widget support** — Widgy and Scriptable through the Worker hub
-- **Privacy-first** — usage logs and statistics are processed locally; optional sync and Potato notifications use documented fields and user-configured destinations
+</details>
 
-### Interface & surfaces
+## Local-first privacy
 
-- **Breakdown views** — grouped by tool, device, model, session, project, or account limits
-- **Menu bar (macOS) and system tray (Windows) popover** — live cost, tokens, or the closest-to-empty provider limit % next to the icon
-- **Floating Bubble mode** — collapses the widget into a draggable mini-window with click or hover preview and tray-style content
-- **Menu bar layout composer** — the menu bar and the floating bubble can use a built-in preset or a layout you build yourself: pick "Custom…" to add AI tool icons, quota bars, percentages, reset times, cost, the live token rate, or custom text, drag to reorder against a live preview, and give each item its own AI tool, account, quota window, and typeface
-- **Appearance controls** — interface theme switching (incl. a light mode), per-tool vendor colours, glass opacity, blur, transparent window mode, and custom fonts
-- **Native macOS Widgets** — View token usage and cost, trends, AI tool quota remaining and reset times, activity heatmaps, and breakdowns by tool or model in Small, Medium, and Large layouts on macOS 14+
-- **Customizable tool list** — hide, pin, and reorder tools in the main dashboard without changing what gets tracked
-- **Recordable global shortcut** — show or hide the window from anywhere
-- **Discord Rich Presence** — broadcast today's tokens, cost, and top client (opt-in)
-
-## Installation
-
-Download the official 1.0.0 Desktop binaries from [Potato GitHub Releases](https://github.com/Gary06910/Potato/releases):
-
-- **Windows 10/11 x64** — setup and portable `.exe`, [planned code-signing policy](docs/CODE_SIGNING_POLICY.md)
-- **Android** — distributed as the separate Potato mobile client
-- **macOS/Linux** — no official 1.0.0 binary distribution; source/build support remains available
-
-Packaged builds check GitHub Releases automatically. When an update is available, the app shows an update indicator; supported platforms can also install from Settings → General.
-
-### First run
-
-Local mode is the default: launch the app and it starts tracking this device. No hub, agent, or config required.
-
-### Uninstall
-
-On Windows, use the Potato uninstaller from Windows Settings → Apps or the installation directory. Uninstalling the application does not silently delete `%APPDATA%\Token Monitor`; remove that data separately only when you intend to clear settings, credentials, usage history, pairing data, and notification outbox data.
-
-## Multi-device sync
-
-Pick ONE hub backend that all your devices (and any headless agents) connect to. On each device, open the widget and pick a mode under Settings → Multi-device Sync. The widget contributes this device's usage automatically; run `npm run agent` only on machines without a widget.
-
-#### Option A — Host the hub from the widget (easiest, no CLI)
-
-In the widget on one always-on machine, open Settings → Multi-device Sync and pick **Host hub on this device**. The widget generates a random secret and lists the LAN URLs other devices can connect to (Tailscale or ZeroTier addresses appear here too). On every other device, pick **Connect to a hub** and paste the URL + secret.
-
-The hub runs while Potato is running — quitting (not just closing the window) stops it for all connected devices.
-
-#### Option B — Self-hosted Node hub (always-on headless machine)
-
-```bash
-# on the always-on machine
-cp .env.example .env
-# set TOKEN_MONITOR_SECRET to something private, then:
-npm run hub
-```
-
-#### Option C — Cloudflare Worker hub (across networks, including iPhone)
-
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Gary06910/Potato/tree/main/worker)
-
-One-click deploy — Cloudflare will prompt for the `TOKEN_MONITOR_SECRET` during setup. Or deploy manually:
-
-```bash
-cd worker
-npm install
-npx wrangler login
-npx wrangler secret put TOKEN_MONITOR_SECRET
-npx wrangler deploy
-```
-
-Paste the deployed URL into each device's widget at Settings → Multi-device Sync. See [worker/README.md](worker/README.md) for the iOS widget recipe and endpoint reference, or [docs/API.md](docs/API.md) for the hub HTTP API.
-
-## App data
-
-App state lives in the OS user-data dir. Uninstall does not silently remove it; delete it separately only when you intend to clear the stored data.
-
-| Platform | Path |
-|----------|------|
-| macOS | `~/Library/Application Support/Token Monitor/` |
-| Windows | `%APPDATA%/Token Monitor/` |
-| Linux | `~/.config/Token Monitor/` |
+Potato reads AI-tool usage on your device. Optional multi-device sync sends statistics to the hub you configure; Android notifications send completion records to your configured Potato service. Provider integrations contact their respective services. See the [privacy policy](docs/privacy.md) for the data used by each workflow.
 
 ## Build from source
 
-To build your own installer, use Node.js 22.15+ on the **target** OS (electron-builder can't cross-build a macOS `.dmg` on Windows, or vice-versa). macOS/Linux build commands remain source-build capabilities and are not official 1.0.0 binary distribution.
+Use **Node.js 22.15+**. From a local checkout:
 
 ```bash
-npm install
-npm run dist:mac     # macOS arm64 .dmg           → dist/
-npm run dist:mac:x64 # macOS Intel x64 .dmg       → dist/
-npm run dist:win     # Windows x64 installer .exe → dist/
-npm run dist:linux   # Linux x64 AppImage         → dist/
-npm run pack         # unpacked app dir (no installer), for quick local testing
+npm ci
+npm start
 ```
 
-Output lands in `dist/`. Windows and Linux use the matching `dist:*` script above on the target OS. Packaging the macOS release build requires a local Developer ID Application signing identity; use `npm start` for local development or unsupported platforms.
+`npm start` launches the desktop app for local development. Packaging scripts are listed in [package.json](package.json); platform installers are available in [Releases](https://github.com/Gary06910/Potato/releases). The [contributor guide](AGENTS.md) covers development commands and project conventions.
 
-Runtime and packaging scripts explicitly ensure the pinned tokscale binary on the four vendored targets. Other source platforms keep the npm binary and filter clients it does not support; `npm install`, lint, and tests do not download it.
+## Acknowledgements
 
-## How it works
-
-```text
-Mode A — Local (default, no setup)
-    widget (Electron) ──▶ tokscale ──▶ ~/.claude, ~/.codex, $HERMES_HOME
-
-Mode B — Sync (opt-in, multi-device)
-    device A agent ──▶
-    device B agent ──▶  hub  ──▶  widget on any device
-    device C agent ──▶
-```
-
-The widget chooses local vs sync mode based on Settings → Multi-device Sync. The hub itself can run as a separate `npm run hub` process, a Cloudflare Worker, or directly inside one of the widgets (Host mode). In sync mode the hub pushes aggregated stats to every connected widget over Server-Sent Events, so updates on one device appear on the others within a few seconds.
-
-## Session data retention
-
-With **Preserve deleted session usage** enabled (Settings → Collection), Potato archives observed daily tool/model usage locally with no time limit — so even after a source tool prunes its own sessions, the heatmap and trends are unaffected.
-
-<details>
-<summary><strong>Advanced: extend the source tool's own retention</strong></summary>
-
-<br>
-
-The heatmap and sync payload use a rolling 370-day window (older observations remain available locally for future views). **Claude Code keeps only 30 days of transcripts by default** (`cleanupPeriodDays`); to keep the full rolling year before the archive kicks in, raise it in `~/.claude/settings.json` before the window passes:
-
-```json
-{
-  "cleanupPeriodDays": 370
-}
-```
-
-A larger value keeps more, at the cost of transcripts living on disk for as long as you set. tokscale's [Session Data Retention](https://github.com/junhoyeo/tokscale#session-data-retention) table covers the other tools' defaults and config paths.
-
-This archive only covers days Potato has already observed; data deleted before it started tracking cannot be recovered.
-
-</details>
-
-## Settings
-
-There are two places to configure Potato; day-to-day use only needs the first:
-
-- **Widget (GUI)** — click the `⚙` button in the bottom-right corner. Sections, in order: General (language, launch at login, updates), Main (Home modules and display currency), Window (window behavior, menu bar and floating-bubble layout, tray mode, shortcut), Appearance (theme and vendor colours), Collection (tracked tools, collection cadence, Preserve deleted session usage, data export), AI Tool Limits (provider selection, limits, and credentials), Subscriptions (what you pay per account), and Multi-device Sync. The `⇧` button in the title bar cycles the window behavior.
-- **Headless agent & hub** — no UI; configured with a `.env` file at the project root (copy from `.env.example`), precedence CLI flag → env var → built-in default.
-
-See the [configuration reference](docs/configuration.md) for every setting and all environment variables.
-
-## Privacy
-
-Potato processes usage logs and usage statistics locally and sends no analytics or telemetry to the project maintainer. It is not a pure offline application: GitHub is used for update checks, and user-enabled Potato notifications can call the configured Potato backend / uniCloud for Desktop-to-Android delivery. See the [privacy policy](docs/privacy.md) for the documented fields and other provider integrations.
-
-## Star History
-
-<a href="https://github.com/Gary06910/Potato/tree/star-history">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history-dark.svg" />
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
-   <img alt="Star History Chart" src="https://raw.githubusercontent.com/Gary06910/Potato/star-history/star-history.svg" />
- </picture>
-</a>
-
-## Contributing
-
-Issues and PRs are welcome. Project conventions, architecture notes, and the command reference live in [AGENTS.md](AGENTS.md) — written for coding agents, but it doubles as the contributor guide.
-
-## Acknowledgments
-
-- [tokscale](https://github.com/junhoyeo/tokscale) for log parsing and token accounting.
-- [CodexBar](https://github.com/steipete/CodexBar) for AI Tool Limits research.
-- [Potato Code signing policy](docs/CODE_SIGNING_POLICY.md): planned/intended SignPath integration; Potato has not yet been approved or signed by SignPath Foundation.
+Potato is independently maintained and includes work derived from [Token Monitor](https://github.com/Javis603/token-monitor) under MIT. Copyright and license notices are preserved in [LICENSE](LICENSE). Thanks to [tokscale](https://github.com/junhoyeo/tokscale) for log parsing and token accounting, and [CodexBar](https://github.com/steipete/CodexBar) for AI Tool Limits research.
 
 ## License
 
-[MIT](LICENSE) © [@Javis](https://github.com/Javis603)
+[MIT](LICENSE) · Copyright © 2026 Javis. See LICENSE for the full notice.
