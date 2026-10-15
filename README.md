@@ -55,6 +55,24 @@ Potato Desktop sends Codex task completions through your configured Potato servi
 
 Privacy mode is on by default and sends completion records without task text. Follow the in-app background-protection guide for your phone to keep notifications working when the app is in the background.
 
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <strong>Review completed tasks</strong><br><br>
+      <img src=".github/assets/readme/android-tasks.png" width="260" alt="Potato Android task list showing completed tasks, sent notification status, and privacy mode without task text"><br>
+      <sub>Revisit completion records while task text stays private.</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <strong>See your connected computers</strong><br><br>
+      <img src=".github/assets/readme/android-desktops.png" width="260" alt="Potato Android computer list showing connection status and last report times for linked computers"><br>
+      <sub>Check connected computers and when they last reported.</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center"><img src=".github/assets/readme/android-notification.png" width="560" alt="Android system notification from Potato announcing a completed task on a connected Mac"></p>
+<p align="center"><sub>Get a task-completion notification while you're away from your desk.</sub></p>
+
 <a id="features"></a>
 ## A closer look
 

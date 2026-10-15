@@ -55,6 +55,24 @@ Potato Desktop 会通过你配置的 Potato 服务，将 Codex 任务完成记�
 
 默认开启隐私模式，仅同步完成记录，不上传任务正文。可按应用内的后台保护指引配置手机，让应用在后台也能接收通知。
 
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <strong>随时回看完成记录</strong><br><br>
+      <img src=".github/assets/readme/android-tasks.png" width="260" alt="Potato Android 任务列表展示已完成任务、通知已发送状态，以及未同步任务正文的隐私模式"><br>
+      <sub>手机上回看完成记录，任务正文保持私密。</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <strong>查看已连接的电脑</strong><br><br>
+      <img src=".github/assets/readme/android-desktops.png" width="260" alt="Potato Android 电脑列表展示已绑定电脑的连接状态和最后上报时间"><br>
+      <sub>查看电脑连接状态和最近上报时间。</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center"><img src=".github/assets/readme/android-notification.png" width="560" alt="Android 系统通知中，Potato 提醒已连接 Mac 上的任务已完成"></p>
+<p align="center"><sub>离开电脑，也能收到任务完成通知。</sub></p>
+
 <a id="features"></a>
 ## 看看实际界面
 
