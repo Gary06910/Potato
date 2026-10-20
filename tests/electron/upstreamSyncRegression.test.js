@@ -66,8 +66,8 @@ test('upstream-sync candidate keeps the fetched upstream package and Token M rel
   assert.equal(packageJson.dependencies.koffi, '^3.1.5');
   assert.equal(packageJson.dependencies['electron-updater'], '6.8.9');
   assert.equal(packageJson.engines.node, '>=22.15.0');
-  assert.equal(manifest.baseVersion, '4.17.0');
-  assert.equal(manifest.releaseTag, 'token-monitor-09cf5471');
+  assert.equal(manifest.baseVersion, '4.20.0');
+  assert.equal(manifest.releaseTag, 'token-monitor-324d5136');
 
   assert.deepEqual(packageJson.build.publish, [{ provider: 'github', owner: 'Gary06910', repo: 'Potato' }]);
   assert.match(updater, /const GITHUB_REPO = 'Gary06910\/Potato'/);
@@ -120,7 +120,7 @@ test('candidate contains the current upstream feature and renderer-refactor surf
   assert.match(renderer, /modelAlias/);
   assert.match(renderer, /tokenRate/);
   assert.match(renderer, /verticalDragSortApi/);
-  assert.match(collector, /SELF_WATCHED_SQLITE_SIDECAR_CLIENTS = Object\.freeze\(\['qodercn', 'zcode'\]\)/);
+  assert.match(collector, /SELF_WATCHED_SQLITE_SIDECAR_CLIENTS = Object\.freeze\(\['antigravity', 'catpaw', 'cherrystudio', 'goose', 'qodercn', 'zcode'\]\)/);
   assert.match(kimiLimits, /limit_month_total/);
   assert.match(kimiLimits, /label: 'Monthly'/);
   assert.match(antigravityOAuth, /\[API_DAILY_BASE_URL, API_BASE_URL\]/);

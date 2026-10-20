@@ -1,14 +1,24 @@
 'use strict';
 
 const { spawn } = require('node:child_process');
+const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const semver = require('semver');
+const { isolatedProbeEnv } = require('./tokscaleProbeEnv');
+const { clientSourceRoots, cherryStudioTranscriptRoots, canonicalWatchPath, antigravityCliDataDir, copilotExporterWatch } = require('./clientSources');
+const { clientSourceChecks, clientDiagnosticRoots, visibleDiagnosticRoots, dirExists } = require('./clientSourceObservations');
+const { kimiWorkSessionsRoots } = require('./providers/kimi/sessionMetadata');
+const { qoderCnDataPaths } = require('./providers/qodercn/paths');
+const { assertQoderCnSourceReadable } = require('./providers/qodercn/sourceGuard');
+const { sourceRegistryFingerprint } = require('./clientSourceFingerprint');
+const { catpawDatabaseName } = require('./providers/catpaw/paths');
+const { FORK_ONLY_CLIENT_IDS } = require('./clientCatalog');
 const { abortReason, throwIfAborted } = require('./abortSignal');
 const { readJson, sharedDataDir } = require('./config');
 const { appVersion } = require('./appVersion');
-const { normalizeClientsCsv, PARSE_LOCAL_CLIENTS } = require('./clientTracking');
+const { normalizeClientsCsv } = require('./clientTracking');
 const {
   CLIENT_HEALTH_VERSION,
   MAX_DIAGNOSTICS_PER_CLIENT,
@@ -16,7 +26,7 @@ const {
 } = require('./clientHealth');
 const { tokscalePackageNameForPlatform, tokscalePlatformKey } = require('./tokscalePlatform');
 const { createTokscaleCapabilityResolver, filterSupportedClients, parseSupportedClients } = require('./tokscaleCapabilities');
-const { customPricingPath, tokscaleCacheDirs, tokscaleConfigDir, tokscaleHomeDir } = require('./tokscaleConfig');
+const { customPricingPath, tokscaleCacheDirs } = require('./tokscaleConfig');
 const { normalizeCustomScanPaths, tokscaleExtraDirsEnv } = require('./customScanPaths');
 const { TOKSCALE_CLIENT_ALIASES, tokscaleScanClientIds } = require('./tokscaleClientMapping');
 const {
@@ -29,7 +39,7 @@ const {
   UNATTRIBUTED_USAGE_CLIENT
 } = require('./usage');
 const { collectWslUsage: collectWslUsageImpl, emptyWslBundle, probeWslState: probeWslStateImpl } = require('./wslUsage');
-const { hermesProfileWatchDirs, resolveHermesHome } = require('./providers/hermes/profiles');
+
 const { createWatcherHost } = require('./watcherHost');
 const { localDayKey, mergeHistories, parseGraphResult, normalizeHistory } = require('./history');
 const { retainDailyHistory, retainLiveDailyHistory } = require('./dailyHistoryArchive');
@@ -38,13 +48,12 @@ const {
   terminationUnconfirmedError
 } = require('./subprocessTermination');
 const {
-  antigravityDataPresent,
   antigravityDataRoots,
   createAntigravitySelfSync
 } = require('./providers/antigravity/selfSync');
 const { withCursorLifecycle } = require('./providers/cursor/lifecycle');
 const { createCursorSelfSync } = require('./providers/cursor/selfSync');
-const { claudeSessionRoots } = require('./providers/claude/paths');
+
 const {
   applySessionMetadata,
   applyTokscaleSessionMetadata,
@@ -52,20 +61,7 @@ const {
   projectPathFromJsonl,
   sessionMetadataMap
 } = require('./sessionMetadata');
-const {
-  kimiCodeSessionsHome,
-  kimiWorkSessionsRoots
-} = require('./providers/kimi/sessionMetadata');
-const { buildPromaHistoryGraph, buildPromaPeriods, collectPromaRows } = require('./providers/proma/usage');
-const {
-  buildQoderCnHistoryGraph,
-  buildQoderCnPeriods,
-  collectQoderCnRows,
-  qoderCnDataPaths,
-  resolveQoderCnPricing
-} = require('./providers/qodercn/usage');
-const { resolveReasonixStatsDir, REASONIX_SOURCE_CHECK_ID } = require('./providers/reasonix/paths');
-const { resolveDshSessionsDir, DSH_SOURCE_CHECK_ID } = require('./providers/dsh/paths');
+
 const {
   createReasonixNativeSessionCache,
   isReasonixNativeSessionPath,
@@ -144,19 +140,35 @@ function readDownloadedPointer() {
   };
 }
 
-function decideResolver({ downloaded, bundled, shim }) {
-  if (downloaded && !bundled) return downloaded;
-  if (downloaded && bundled && semver.valid(downloaded.version) && semver.valid(bundled.version) && semver.gt(downloaded.version, bundled.version)) {
-    return downloaded;
-  }
+// Legacy pointers remain readable for compatibility diagnostics, but never
+// participate in executable selection, even when their version is newer.
+function decideResolver({ bundled, shim }) {
   return bundled || shim || null;
 }
 
 function resolvePlatformBinary() {
-  const bundled = locateBundledBinary();
-  const downloaded = readDownloadedPointer();
-  const shim = { source: 'shim', path: TOKSCALE_BIN_JS, version: null };
-  return decideResolver({ downloaded, bundled, shim });
+  return decideResolver({
+    bundled: locateBundledBinary(),
+    shim: { source: 'shim', path: TOKSCALE_BIN_JS, version: null }
+  });
+}
+
+// Declared app build metadata, not verification of the executable's bytes.
+function readTokscaleBundledBuild(manifest = readJson(path.join(__dirname, '../../scripts/vendor/tokscale.json'), null)) {
+  if (!manifest || ![undefined, null, 'override'].includes(manifest.mode)) return null;
+  if (typeof manifest.commit !== 'string' || !/^[0-9a-f]{40}$/i.test(manifest.commit)) return null;
+  if (typeof manifest.releaseTag !== 'string' || !manifest.releaseTag) return null;
+  return { releaseTag: manifest.releaseTag, commit: manifest.commit };
+}
+
+function getTokscaleStatus() {
+  if (bundledPackageCandidates().length === 0) return { supported: false };
+  const current = resolvePlatformBinary();
+  return {
+    supported: true,
+    current: { source: current.source, version: current.version, path: current.path },
+    bundledBuild: readTokscaleBundledBuild()
+  };
 }
 
 // Tokscale reads a few XDG environment variables with a bare
@@ -387,6 +399,47 @@ function spawnTokscaleHelp(command, options = {}) {
   });
 }
 
+async function forkOnlyClientsAccepted(command, options = {}, clients = FORK_ONLY_CLIENT_IDS) {
+  if (clients.length === 0) return false;
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tokscale-probe-'));
+  try {
+    await spawnTokscaleJson(
+      ['--json', '--client', clients.join(','), '--today', '--home', home, '--no-spinner'],
+      options.timeoutMs ?? TOKSCALE_CAPABILITY_PROBE_TIMEOUT_MS,
+      { ...command, env: isolatedProbeEnv(home, command.env) },
+      undefined,
+      {
+        operation: 'tokscale capability probe',
+        terminationOptions: options.terminationOptions,
+        onTerminationUnconfirmed: options.onTerminationUnconfirmed
+      }
+    );
+    return true;
+  } catch (error) {
+    if (isUnknownTokscaleClientError(error)) return false;
+    throw error;
+  } finally {
+    // Preserve isolated probe home for diagnostics; never delete user data.
+  }
+}
+
+async function probeTokscaleCapabilities(command, options = {}) {
+  const supported = await spawnTokscaleHelp(command, options);
+  if (await forkOnlyClientsAccepted(command, options)) {
+    for (const client of FORK_ONLY_CLIENT_IDS) supported.add(client);
+  } else {
+    // A pre-CatPaw fork can still accept the existing client batch. Probe
+    // CatPaw separately without changing the other clients' batch rule.
+    const clientGroups = [FORK_ONLY_CLIENT_IDS.filter(client => client !== 'catpaw'), ['catpaw']];
+    for (const clients of clientGroups) {
+      if (await forkOnlyClientsAccepted(command, options, clients)) {
+        for (const client of clients) supported.add(client);
+      }
+    }
+  }
+  return supported;
+}
+
 const tokscaleCapabilityResolver = createTokscaleCapabilityResolver({
   warn: (message) => console.warn(message)
 });
@@ -496,7 +549,7 @@ function retryWithKnownCapabilities(error, requested, command, emptyResult, retr
   // superseded collector must not poison the cache for every later runtime.
   const sharedProbe = tokscaleCapabilityResolver.probe(
     command.identity,
-    () => spawnTokscaleHelp(command, options)
+    () => probeTokscaleCapabilities(command, options)
   );
   return waitForSharedCapabilityProbe(sharedProbe, signal).then((supported) => {
     throwIfAborted(signal);
@@ -1033,14 +1086,8 @@ async function collectHistoryOnce(options) {
       if (typeof options.logger === 'function') options.logger(`tokscale graph failed: ${error.message}`);
     }
   }
-  if (options.promaGraph) {
-    rawGraphs.push(options.promaGraph);
-    histories.push(normalizeHistory(parseGraphResult(options.promaGraph), { capDays, todayKey }));
-  }
-  if (options.qoderCnGraph) {
-    rawGraphs.push(options.qoderCnGraph);
-    histories.push(normalizeHistory(parseGraphResult(options.qoderCnGraph), { capDays, todayKey }));
-  }
+
+
   if (options.dailyHistoryArchiveEnabled) {
     try {
       const retainedGraph = retainDailyHistory(rawGraphs, {
@@ -1048,6 +1095,8 @@ async function collectHistoryOnce(options) {
         liveDays: options.dailyHistoryLiveDays,
         todayKey,
         capDays,
+        pricingRevision: options.pricingRevision,
+        reprice: options.repriceHistory === true,
         writeEnabled: options.dailyHistoryArchiveWriteEnabled
       });
       const retained = normalizeHistory(parseGraphResult(retainedGraph), { capDays, todayKey });
@@ -1103,17 +1152,29 @@ async function collectUsageOnce(options) {
     onTerminationUnconfirmed: () => reportTerminationUnconfirmed('tokscale-scan')
   }));
   const runTokscaleFn = async (input) => {
+    const checksQoder = String(input.clients || '').split(',').includes('qodercn');
+    if (checksQoder) assertQoderCnSourceReadable(options);
     const json = await runTokscaleScan(input);
+    if (checksQoder) assertQoderCnSourceReadable(options);
+    options.onScanComplete?.();
     applyTokscaleSessionMetadata(json, { resolveProjects: projectsEnabled });
     return json;
   };
-  const runGraphFn = options.runGraph || ((input) => runTokscaleGraph({
+  const runGraphScan = options.runGraph || ((input) => runTokscaleGraph({
     ...input,
     customScanPaths: options.customScanPaths,
     homeDir: options.homeDir || os.homedir(),
     terminationOptions: options.subprocessTerminationOptions,
     onTerminationUnconfirmed: () => reportTerminationUnconfirmed('tokscale-graph')
   }));
+  const runGraphFn = async (input) => {
+    const checksQoder = String(input.clients || '').split(',').includes('qodercn');
+    if (checksQoder) assertQoderCnSourceReadable(options);
+    const graph = await runGraphScan(input);
+    options.onScanComplete?.();
+    if (checksQoder) assertQoderCnSourceReadable(options);
+    return graph;
+  };
   const collectWsl = options.collectWslUsage || collectWslUsageImpl;
   const probeWslStateFn = options.probeWslState || probeWslStateImpl;
   // Injectable only for the WSL-status gate, so tests can exercise the win32
@@ -1142,24 +1203,14 @@ async function collectUsageOnce(options) {
     // applySessionMetadata skips the expensive path read per session, not per tick.
     { ...localSessionMetadataDeps, retryMisses, resolveProjects: projectsEnabled }
   );
-  // Proma and Qoder CN remain local compatibility adapters. Reasonix aggregate
-  // usage is supplied by the same Tokscale path as every other tracked client.
-  const localClients = new Set(PARSE_LOCAL_CLIENTS);
-  const tokscaleClients = normalizedClients ? normalizedClients.split(',').filter((c) => !localClients.has(c)).join(',') : normalizedClients;
-  const includesProma = normalizedClients.split(',').includes('proma');
-  const includesQoderCn = normalizedClients.split(',').includes('qodercn');
+  // All usage, including fork-only clients, has one native parser owner.
+  const tokscaleClients = normalizedClients;
   const trackedClientSet = new Set(normalizedClients.split(',').filter(Boolean));
   const targetClients = [...new Set(normalizeClientsCsv(options.targetClients).split(',').filter((client) => trackedClientSet.has(client)))];
   const targetRequested = targetClients.length > 0;
-  const targetClientSet = new Set(targetClients);
-  const targetTokscaleClientList = targetClients.filter((client) => !localClients.has(client));
+  const targetTokscaleClientList = targetClients;
   const targetTokscaleClientSet = new Set(targetTokscaleClientList);
   const targetTokscaleClients = targetTokscaleClientList.join(',');
-  const qoderCnReadState = options.qoderCnReadState;
-  if (qoderCnReadState) {
-    qoderCnReadState.periodFailed = false;
-    qoderCnReadState.fallbackUsed = false;
-  }
   let today = emptyPeriod();
   let month = emptyPeriod();
   let allTime = emptyPeriod();
@@ -1171,18 +1222,9 @@ async function collectUsageOnce(options) {
     && anchor.dateKey === localTodayKey(collectedAt)
     && canTargetTodayPartitions(anchor, targetClients)
   );
-  let promaPeriods = null;
-  let promaRows = null;
-  let promaPricing = null;
-  let qoderCnPeriods = null;
-  let qoderCnRows = null;
-  let qoderCnPricing = null;
-  let qoderCnPeriodReadFailed = false;
   const emitProgress = (periods) => {
     if (typeof options.onProgress !== 'function') return;
     const progress = { ...periods };
-    if (qoderCnPeriods?.today && progress.today) progress.today = mergePeriods(progress.today, qoderCnPeriods.today);
-    if (qoderCnPeriods?.month && progress.month) progress.month = mergePeriods(progress.month, qoderCnPeriods.month);
     try { options.onProgress({ ...progress, updatedAt: new Date().toISOString() }); } catch (_) {}
   };
   if (normalizedClients) {
@@ -1205,50 +1247,6 @@ async function collectUsageOnce(options) {
       onTerminationUnconfirmed: () => reportTerminationUnconfirmed('antigravity-sync'),
       onFailure: options.onSelfSyncFailed
     });
-    throwIfAborted(options.signal);
-    if (includesProma && (!targetRequested || targetClients.includes('proma'))) {
-      try {
-        promaRows = collectPromaRows();
-        promaPricing = await resolvePromaPricing(promaRows, {
-          lookupModelPricing: options.lookupModelPricing,
-          commandTimeoutMs: options.pricingTimeoutMs ?? Math.min(commandTimeoutMs || PROMA_PRICING_LOOKUP_TIMEOUT_MS, PROMA_PRICING_LOOKUP_TIMEOUT_MS),
-          pricingRevision: options.pricingRevision
-        });
-        const promaJson = buildPromaPeriods({ now: collectedAt, allTimeSince, rows: promaRows, pricingByModel: promaPricing });
-        promaPeriods = {
-          today: extractUsageFromTokscale(promaJson.today),
-          month: extractUsageFromTokscale(promaJson.month),
-          allTime: extractUsageFromTokscale(promaJson.allTime)
-        };
-      } catch (err) {
-        if (typeof options.logger === 'function') options.logger(`proma parse failed: ${err.message}`);
-      }
-    }
-    if (includesQoderCn && (!targetRequested || targetClients.includes('qodercn'))) {
-      try {
-        const qoderCnSinceMs = anchorUsed ? new Date(collectedAt.getFullYear(), collectedAt.getMonth(), collectedAt.getDate()).getTime() : undefined;
-        qoderCnRows = await collectQoderCnRows({ homeDir: options.homeDir, logger: options.logger, sinceMs: qoderCnSinceMs });
-        qoderCnPricing = await resolveQoderCnPricing(qoderCnRows, {
-          lookupModelPricing: options.lookupModelPricing || lookupModelPricing,
-          commandTimeoutMs: options.pricingTimeoutMs,
-          pricingRevision: options.pricingRevision
-        });
-        const qoderCnJson = buildQoderCnPeriods({ now: collectedAt, allTimeSince, rows: qoderCnRows, pricingByModel: qoderCnPricing });
-        qoderCnPeriods = {
-          today: extractUsageFromTokscale(qoderCnJson.today),
-          month: extractUsageFromTokscale(qoderCnJson.month),
-          allTime: extractUsageFromTokscale(qoderCnJson.allTime)
-        };
-      } catch (err) {
-        if (typeof options.logger === 'function') options.logger(`qodercn parse failed: ${err.message}`);
-        qoderCnPeriodReadFailed = true;
-        if (qoderCnReadState) {
-          qoderCnReadState.periodFailed = true;
-          qoderCnReadState.fallbackUsed = Boolean(options.qoderCnFallbackPeriods);
-        }
-        qoderCnPeriods = options.qoderCnFallbackPeriods || null;
-      }
-    }
     throwIfAborted(options.signal);
     if (anchorUsed) {
       // Anchored tick (watch-triggered): every tokscale period scan costs the
@@ -1293,27 +1291,6 @@ async function collectUsageOnce(options) {
           delete freshPartitions[UNATTRIBUTED_USAGE_CLIENT];
         }
       }
-      if (promaPeriods) freshPartitions.proma = promaPeriods.today;
-      if (qoderCnPeriods) freshPartitions.qodercn = qoderCnPeriods.today;
-      if (qoderCnPeriodReadFailed && anchor.todayPartitions?.qodercn) {
-        // A transient local.db read failure must not turn the existing Qoder CN
-        // partition into an empty one or subtract it from month/allTime.
-        freshPartitions.qodercn = anchor.todayPartitions.qodercn;
-      }
-      if (!useTargetedPartitions) {
-        // The fallback rebuilds every Tokscale partition, but parse-local
-        // adapters do not participate in that scan. Preserve any adapter that
-        // this tick did not refresh instead of treating its absence as empty.
-        for (const client of localClients) {
-          if (
-            !targetClientSet.has(client)
-            && !Object.prototype.hasOwnProperty.call(freshPartitions, client)
-            && anchor.todayPartitions?.[client]
-          ) {
-            freshPartitions[client] = anchor.todayPartitions[client];
-          }
-        }
-      }
       todayPartitions = useTargetedPartitions
         ? replaceTodayPartitions(anchor.todayPartitions, freshPartitions, targetClients)
         : completeTodayPartitions(freshPartitions, normalizedClients);
@@ -1355,18 +1332,6 @@ async function collectUsageOnce(options) {
     } else {
       decorateLocalPeriods({ today, month, allTime }, { retryMisses: true });
     }
-    if (promaPeriods && !anchorUsed) {
-      today = mergePeriods(today, promaPeriods.today);
-      month = mergePeriods(month, promaPeriods.month);
-      allTime = mergePeriods(allTime, promaPeriods.allTime);
-      todayPartitions = { ...(todayPartitions || {}), proma: promaPeriods.today };
-    }
-    if (qoderCnPeriods && !anchorUsed) {
-      today = mergePeriods(today, qoderCnPeriods.today);
-      month = mergePeriods(month, qoderCnPeriods.month);
-      allTime = mergePeriods(allTime, qoderCnPeriods.allTime);
-      todayPartitions = { ...(todayPartitions || {}), qodercn: qoderCnPeriods.today };
-    }
     todayPartitions = completeTodayPartitions(todayPartitions, normalizedClients);
     // Partition metadata is internal but must remain as complete as the public
     // period: a later targeted tick re-merges these sessions into `today`.
@@ -1397,11 +1362,6 @@ async function collectUsageOnce(options) {
         commandTimeoutMs,
         signal: options.signal,
         runTokscale: runTokscaleFn,
-        resolvePromaPricing: (rows) => resolvePromaPricing(rows, {
-          lookupModelPricing: options.lookupModelPricing,
-          commandTimeoutMs: options.pricingTimeoutMs ?? Math.min(commandTimeoutMs || PROMA_PRICING_LOOKUP_TIMEOUT_MS, PROMA_PRICING_LOOKUP_TIMEOUT_MS),
-          pricingRevision: options.pricingRevision
-        }),
         logger: options.logger,
         decoratePeriods: (periods, home) => applySessionMetadata(periods, home, { scopedHome: true, resolveProjects: projectsEnabled })
       });
@@ -1418,11 +1378,6 @@ async function collectUsageOnce(options) {
         commandTimeoutMs,
         signal: options.signal,
         runTokscale: runTokscaleFn,
-        resolvePromaPricing: (rows) => resolvePromaPricing(rows, {
-          lookupModelPricing: options.lookupModelPricing,
-          commandTimeoutMs: options.pricingTimeoutMs ?? Math.min(commandTimeoutMs || PROMA_PRICING_LOOKUP_TIMEOUT_MS, PROMA_PRICING_LOOKUP_TIMEOUT_MS),
-          pricingRevision: options.pricingRevision
-        }),
         logger: options.logger,
         decoratePeriods: (periods, home) => applySessionMetadata(periods, home, { scopedHome: true, resolveProjects: projectsEnabled })
       });
@@ -1449,6 +1404,7 @@ async function collectUsageOnce(options) {
         ...(options.dailyHistoryArchiveOptions || {}),
         liveDays: dailyHistoryLiveDays,
         todayKey: localTodayKey(collectedAt),
+        pricingRevision: options.pricingRevision,
         writeEnabled: options.dailyHistoryArchiveWriteEnabled
       });
       dailyHistoryLiveDays = retainedLive.liveDays || {};
@@ -1458,7 +1414,7 @@ async function collectUsageOnce(options) {
   }
 
   // WSL attribution (Windows only; null elsewhere). detected = markers found,
-  // withData = clients whose WSL scan or local parser returned tokens. The gap
+  // withData = clients whose WSL scan returned tokens. The gap
   // is the diagnostic (e.g. Hermes detected but unreadable over 9P).
   //
   // Like wslBundle, this is FROZEN between full scans: anchored watch ticks
@@ -1506,6 +1462,7 @@ async function collectUsageOnce(options) {
     agentVersion,
     ...(agentRuntime ? { agentRuntime } : {}),
     projectsEnabled,
+    sessionUsageArchiveFullScan: !anchorUsed,
     trackedClients: normalizedClients ? normalizedClients.split(',') : [],
     clientStatus: deriveClientStatus(normalizedClients, allTime, { sourceChecks }),
     wslStatus,
@@ -1538,7 +1495,6 @@ async function collectUsageOnce(options) {
     options.onAnchorComputed({
       windowsPeriods,
       todayPartitions,
-      qoderCnPeriods,
       wslBundle,
       wslStatus,
       ...(summary.nativeSessions ? { nativeSessions: summary.nativeSessions } : {}),
@@ -1548,42 +1504,8 @@ async function collectUsageOnce(options) {
   if (options.historyEnabled === false) {
     summary.history = null;
   } else if (options.includeHistory) {
-    // The history graph needs the full Qoder CN row set: anchored (watch/interval)
-    // ticks collect Qoder CN rows only since local midnight for the period delta,
-    // so reusing qoderCnRows here would truncate the history panel to today and
-    // archive that truncated graph. Read full rows for the graph only — this
-    // block is gated by includeHistory (historyIntervalMs), mirroring the proma
-    // full-read pattern; resolveQoderCnPricing is cached (6h TTL) so the second
-    // pass is cheap when the scan already priced the same models.
-    let qoderCnGraph = null;
-    let qoderCnHistoryReadFailed = false;
-    if (includesQoderCn) {
-      try {
-        // Reuse the scan's full rows on non-anchored ticks; anchored ticks read
-        // only since local midnight, so the graph needs its own full read there.
-        // resolveQoderCnPricing is cached (6h TTL), so the second pass is cheap.
-        const rows = (!anchorUsed && qoderCnRows) ? qoderCnRows : await collectQoderCnRows({ homeDir: options.homeDir, logger: options.logger });
-        const pricing = (!anchorUsed && qoderCnPricing) ? qoderCnPricing : await resolveQoderCnPricing(rows, {
-          lookupModelPricing: options.lookupModelPricing || lookupModelPricing,
-          commandTimeoutMs: options.pricingTimeoutMs,
-          pricingRevision: options.pricingRevision
-        });
-        qoderCnGraph = buildQoderCnHistoryGraph({ rows, pricingByModel: pricing });
-      } catch (err) {
-        // A failed history read must not take down the whole tick — the live
-        // periods stay authoritative and the failure remains in the local log.
-        qoderCnHistoryReadFailed = true;
-        if (typeof options.logger === 'function') options.logger(`qodercn history parse failed: ${err.message}`);
-      }
-    }
-    const historyQoderCnGraph = qoderCnHistoryReadFailed
-      ? options.qoderCnHistoryFallbackGraph
-      : qoderCnGraph;
-    throwIfAborted(options.signal);
     const history = await collectHistoryOnce({
       clients: tokscaleClients,
-      promaGraph: includesProma ? buildPromaHistoryGraph({ rows: promaRows || collectPromaRows(), pricingByModel: promaPricing || {} }) : null,
-      qoderCnGraph: historyQoderCnGraph || null,
       historyEnabled: options.historyEnabled,
       commandTimeoutMs: options.historyTimeoutMs,
       capDays: options.historyCapDays,
@@ -1593,15 +1515,15 @@ async function collectUsageOnce(options) {
       dailyHistoryArchiveEnabled: options.dailyHistoryArchiveEnabled,
       dailyHistoryArchiveWriteEnabled: options.dailyHistoryArchiveWriteEnabled,
       dailyHistoryArchiveOptions: options.dailyHistoryArchiveOptions,
+      pricingRevision: options.pricingRevision,
+      repriceHistory: options.repriceHistory,
       dailyHistoryLiveDays,
       onHistoryStatus: options.onHistoryStatus,
       logger: options.logger
     });
     throwIfAborted(options.signal);
     if (history) summary.history = history;
-    if (!qoderCnHistoryReadFailed && qoderCnGraph && typeof options.onQoderCnHistoryGraph === 'function') {
-      options.onQoderCnHistoryGraph(qoderCnGraph);
-    }
+
   }
   // After history, so `lastActivityDay` can come from the daily buckets this
   // scan already produced rather than from a second source of truth.
@@ -1620,428 +1542,6 @@ async function collectUsageOnce(options) {
   return summary;
 }
 
-function dirExists(dir) {
-  try { return fs.statSync(dir).isDirectory(); } catch (_) { return false; }
-}
-
-function fileExists(file) {
-  try { return fs.statSync(file).isFile(); } catch (_) { return false; }
-}
-
-function nonBlankEnvPath(name, fallback, env = process.env) {
-  const value = env[name];
-  return typeof value === 'string' && value.trim() ? value : fallback;
-}
-
-function absoluteEnvPath(name, fallback, env = process.env) {
-  const value = env[name];
-  return typeof value === 'string' && path.isAbsolute(value) ? value : fallback;
-}
-
-function cherryStudioTranscriptRoots({ homeDir, platform = process.platform, env = process.env } = {}) {
-  const home = homeDir || os.homedir();
-  const appDataRoot = platform === 'win32'
-    ? nonBlankEnvPath('APPDATA', path.join(home, 'AppData', 'Roaming'), env)
-    : platform === 'darwin'
-      ? path.join(home, 'Library', 'Application Support')
-      : absoluteEnvPath('XDG_CONFIG_HOME', path.join(home, '.config'), env);
-  return [
-    ['cherrystudio-transcripts', path.join(appDataRoot, 'CherryStudio', 'Data', 'Agents', '.claude', 'projects')],
-    ['cherrystudio-transcripts', path.join(appDataRoot, 'CherryStudio', '.claude', 'projects')]
-  ];
-}
-
-// `env` is threaded through rather than read off process.env here: every other
-// resolver in clientSourceRoots() takes the caller's injected env, and a scan of
-// this function that reached for the real environment would resolve a different
-// root than the one its caller passed in.
-function xdgDataHome(home, env = process.env) {
-  return nonBlankEnvPath('XDG_DATA_HOME', path.join(home, '.local', 'share'), env);
-}
-
-// Where tokscale looks for captured `codex exec --json` output. Both defaults
-// are scanned on every platform — upstream pushes them with no cfg gate, so the
-// Application Support one is not a macOS variant of the .config one — and
-// TOKSCALE_HEADLESS_DIR replaces the pair rather than adding to it
-// (scanner.rs `headless_roots_with_env_strategy`). Neither default follows
-// XDG_CONFIG_HOME: upstream spells the .config path as a literal.
-//
-// `optional` marks a root whose absence carries no information. Nobody has
-// these unless they opted into a capture workflow, so the diagnostics panel
-// hides them when they are missing rather than showing them struck through
-// beside a real "Codex wrote nothing here". A configured root is the opposite:
-// the user named that path, so its absence is exactly what they want to see.
-function tokscaleHeadlessRoots(home) {
-  const configured = nonBlankEnvPath('TOKSCALE_HEADLESS_DIR', null);
-  if (configured) return [{ dir: configured, optional: false }];
-  return [
-    { dir: path.join(home, '.config', 'tokscale', 'headless'), optional: true },
-    { dir: path.join(home, 'Library', 'Application Support', 'tokscale', 'headless'), optional: true }
-  ];
-}
-
-function copilotExporterPath() {
-  const configured = process.env.COPILOT_OTEL_FILE_EXPORTER_PATH;
-  if (typeof configured !== 'string') return null;
-  const trimmed = configured.trim();
-  return trimmed ? path.resolve(trimmed) : null;
-}
-
-function hasWatchableParent(file) {
-  return path.dirname(file) !== path.parse(file).root;
-}
-
-// The one derivation of the custom Copilot OTel exporter, shared by the source
-// table, the watcher's ignore matcher and the attribution map. It used to exist
-// in two places that canonicalised differently before comparing against
-// ~/.copilot/otel, and the two answers diverge as soon as any part of that path
-// is a symlink — which either leaves the exporter's parent watched with no
-// pruning at all, or silently drops the exporter's own events.
-//
-// tokscale reads exactly the file this env var names (`path.is_file()`, no glob,
-// no directory walk), so the watch is pinned to that one file. Anything under
-// ~/.copilot/otel is already covered recursively and returns null here.
-function copilotExporterWatch(home) {
-  const file = copilotExporterPath();
-  if (!file || !hasWatchableParent(file)) return null;
-  const otelRoot = path.resolve(canonicalWatchPath(path.join(home, '.copilot', 'otel')));
-  const canonicalFile = canonicalWatchFilePath(file);
-  if (canonicalFile.startsWith(otelRoot + path.sep)) return null;
-  return { file, canonicalFile, dir: path.dirname(file) };
-}
-
-function clineCliSessionRoot(home) {
-  const sessionDataDir = nonBlankEnvPath('CLINE_SESSION_DATA_DIR', null);
-  if (sessionDataDir) return sessionDataDir;
-  const dataDir = nonBlankEnvPath('CLINE_DATA_DIR', null);
-  if (dataDir) return path.join(dataDir, 'sessions');
-  const clineDir = nonBlankEnvPath('CLINE_DIR', null);
-  if (clineDir) return path.join(clineDir, 'data', 'sessions');
-  return path.join(home, '.cline', 'data', 'sessions');
-}
-
-function hasCopilotChatSessions(workspaceRoot) {
-  try {
-    return fs.readdirSync(workspaceRoot, { withFileTypes: true })
-      .some((entry) => entry.isDirectory() && dirExists(path.join(workspaceRoot, entry.name, 'chatSessions')));
-  } catch (_) {
-    return false;
-  }
-}
-
-// Per-client data-dir candidates, keyed by client. Drives the detection-status
-// derivation and, after the interval-only/self-synced projections below, the
-// chokidar watch list; Antigravity's read-only source roots are added back
-// explicitly below.
-// The watched roots, each tagged with a stable id for its *kind*. One id may
-// cover several paths: Copilot's workspaceStorage has a variant per platform and
-// Kiro's IDE globalStorage has four, but "the VS Code workspace storage is
-// missing" is the useful statement, not which spelling was probed. Absolute
-// paths contain the user's home directory and never leave this process, so a
-// health record carries the id instead — CLIENT_SOURCE_CHECK_IDS in
-// clientHealth.js is the allowlist every id here must appear in.
-function clientSourceRoots(clientsCsv, options = {}) {
-  const home = options.homeDir || os.homedir();
-  const platform = options.platform || process.platform;
-  const env = options.env || process.env;
-  const enabled = new Set(String(clientsCsv || '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean));
-  const byClient = {};
-  const add = (client, ...roots) => {
-    if (enabled.has(client)) {
-      byClient[client] = roots.map(([id, dir, sourcePath, optional, custom]) => ({
-        id,
-        dir,
-        ...(sourcePath ? { sourcePath } : {}),
-        ...(optional ? { optional: true } : {}),
-        ...(custom ? { custom: true } : {})
-      }));
-    }
-  };
-  const claudeRoots = claudeSessionRoots({ homeDir: home });
-  add('claude', ['claude-projects', claudeRoots.projects], ['claude-transcripts', claudeRoots.transcripts]);
-  const codexHome = nonBlankEnvPath('CODEX_HOME', path.join(home, '.codex'));
-  add(
-    'codex',
-    ['codex-sessions', path.join(codexHome, 'sessions')],
-    ['codex-sessions', path.join(codexHome, 'archived_sessions')],
-    ...tokscaleHeadlessRoots(home).map(({ dir, optional }) => ['codex-sessions', path.join(dir, 'codex'), null, optional])
-  );
-  const hermesHome = resolveHermesHome({ env: process.env, homeDir: home });
-  add('hermes', ['hermes-home', hermesHome], ...hermesProfileWatchDirs(hermesHome).map((dir) => ['hermes-profile', dir]));
-  // Within the default OpenCode data root, Tokscale reads the direct
-  // opencode*.db family and the legacy storage/message/*/*.json source. The
-  // watcher prunes the rest of this broad app data root below.
-  //
-  // Only the roots tokscale declares as `PathRoot::XdgData` go through this —
-  // opencode, zed, kilo and micode (clients.rs), plus the CodeBuddy extension
-  // logs it resolves via `dirs::data_local_dir()`. Kiro's CLI database is
-  // deliberately NOT one of them: tokscale spells it as a home-relative literal
-  // (`{home}/.local/share/kiro-cli/data.sqlite3`, scanner.rs), so following XDG
-  // there would watch a directory it never reads. The split is upstream's, not
-  // an oversight — check clients.rs before adding or removing a root here.
-  // The XDG fallback hangs off Tokscale's *effective* home, not the Win32
-  // profile. A normal scan passes no --home, so the CLI hands the scanner
-  // `paths::home_dir()`, and on Windows that returns an absolute native $HOME
-  // in preference to the user profile (paths.rs home_dir()). Deriving the
-  // fallback from os.homedir() instead pointed the watcher and the health check
-  // at the profile while the scan read the $HOME tree, so Amp could show
-  // `detected` next to usage collected from another directory.
-  const tokscaleHome = tokscaleHomeDir({ env, platform, homeDir: home });
-  const xdgHome = xdgDataHome(tokscaleHome, env);
-  add('opencode', ['opencode-data', path.join(xdgHome, 'opencode')]);
-  add('openclaw', ['openclaw-agents', path.join(home, '.openclaw', 'agents')]);
-  // Amp (Sourcegraph / AmpCode): tokscale reads the XDG-data root on every
-  // platform — clients.rs declares PathRoot::XdgData + relative "amp/threads",
-  // pattern T-*.json (the thread JSON holds a usageLedger and per-assistant-
-  // message usage). So this follows XDG_DATA_HOME like opencode/zed/kilo rather
-  // than a home-relative literal; a Windows or macOS install keeps the XDG
-  // convention instead of an Application Support tree.
-  add('amp', ['amp-threads', path.join(xdgHome, 'amp', 'threads')]);
-  // Droid (Factory): tokscale reads the home-relative ~/.factory/sessions tree on
-  // every platform (clients.rs PathRoot::Home). The Factory desktop app is an
-  // Electron shell over the same bundled droid kernel and keeps no session data
-  // of its own, so this one root covers both.
-  add('droid', ['droid-sessions', path.join(home, '.factory', 'sessions')]);
-  // Tokscale resolves these two caches differently and the split is deliberate
-  // upstream, so mirror it rather than picking whichever looks tidier:
-  //   cursor.rs      — `home_dir().join(".config/tokscale/cursor-cache")`, a
-  //                    home-relative literal that never consults
-  //                    `get_config_dir()`. On Windows that is
-  //                    `%USERPROFILE%\.config\tokscale\`, not `%APPDATA%\tokscale\`,
-  //                    and TOKSCALE_CONFIG_DIR does not move it.
-  //   antigravity.rs — `paths::get_config_dir().join("antigravity-cache")`,
-  //                    routed that way on purpose so an isolated profile covers
-  //                    the sync cache too.
-  const tokscaleConfigRoot = tokscaleConfigDir({ env, platform, homeDir: home });
-  add('cursor', ['tokscale-cursor-cache', path.join(tokscaleHome, '.config', 'tokscale', 'cursor-cache')]);
-  add('antigravity', ['tokscale-antigravity-cache', path.join(tokscaleConfigRoot, 'antigravity-cache')]);
-  // A whitespace-only KIMI_CODE_HOME counts as unset, matching tokscale: it
-  // joins `sessions` onto the raw value, so a blank export would resolve to the
-  // root-level /sessions and hide the real one.
-  const kimiCodeRoot = kimiCodeSessionsHome(home, { env });
-  const kimiWorkRoots = kimiWorkSessionsRoots(home, platform, env);
-  add(
-    'kimi',
-    ['kimi-sessions', path.join(home, '.kimi', 'sessions')],
-    ['kimi-code-sessions', kimiCodeRoot],
-    ...kimiWorkRoots.map((root) => ['kimi-code-sessions', root, null, true])
-  );
-  add('qwen', ['qwen-projects', path.join(home, '.qwen', 'projects')]);
-  const grokHome = nonBlankEnvPath('GROK_HOME', path.join(home, '.grok'));
-  add(
-    'grok',
-    ['grok-sessions', path.join(grokHome, 'sessions')],
-    ['grok-unified-log', path.join(grokHome, 'logs'), path.join(grokHome, 'logs', 'unified.jsonl')]
-  );
-  // Tokscale 4.5.2 also parses VS Code Copilot Chat JSONL under each
-  // workspaceStorage/*/chatSessions directory. Watch the workspaceStorage roots
-  // so newly created workspaces are picked up; watchIgnoreMatcher prunes every
-  // sibling except chatSessions + workspace.json to keep polling bounded.
-  const copilotWorkspaceRoots = [
-    path.join(home, 'Library', 'Application Support', 'Code', 'User', 'workspaceStorage'),
-    path.join(home, '.config', 'Code', 'User', 'workspaceStorage'),
-    ...(process.platform === 'win32'
-      ? [path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Code', 'User', 'workspaceStorage')]
-      : []),
-    path.join(home, 'AppData', 'Roaming', 'Code', 'User', 'workspaceStorage')
-  ];
-  const copilotOtelRoot = path.join(home, '.copilot', 'otel');
-  const copilotRoots = [
-    ['copilot-otel', copilotOtelRoot],
-    ['copilot-data', path.join(home, '.copilot'), path.join(home, '.copilot', 'data.db')],
-    ...[...new Set(copilotWorkspaceRoots)].map((dir) => ['vscode-workspace-storage', dir])
-  ];
-  // The parent is the watch root because the exporter file may not exist yet;
-  // the exact file is the source. watchAttributionRootsForClients() keeps that
-  // parent from becoming a copilot attribution prefix — it is an arbitrary
-  // user-chosen directory and can be $HOME.
-  const exporter = copilotExporterWatch(home);
-  if (exporter) copilotRoots.push(['copilot-otel-exporter', exporter.dir, exporter.file]);
-  add('copilot', ...copilotRoots);
-  add('pi', ['pi-sessions', path.join(home, '.pi', 'agent', 'sessions')], ['omp-sessions', path.join(home, '.omp', 'agent', 'sessions')]);
-  // Zed: tokscale reads the XdgData root on every platform AND the native macOS
-  // (Application Support) / Windows (LOCALAPPDATA) roots (see tokscale scanner.rs
-  // cfg(macos)/cfg(windows) blocks) — watch all three so native mac/win users get
-  // seconds-level refresh and a correct waiting/missing status.
-  add(
-    'zed',
-    ['zed-threads', path.join(xdgHome, 'zed', 'threads')],
-    ['zed-threads', path.join(home, 'Library', 'Application Support', 'Zed', 'threads')],
-    ['zed-threads', path.join(process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'), 'Zed', 'threads')]
-  );
-  // Kilo is one Token Monitor client backed by two Tokscale sources. `kilo`
-  // reads the CLI's XDG-data SQLite database, while `kilocode` reads the VS Code
-  // extension's Linux/local and remote task roots. Keep the native macOS and
-  // Windows VS Code roots out until Tokscale scans them; otherwise they would be
-  // dead watches and false presence signals.
-  add(
-    'kilo',
-    ['kilo-db', path.join(xdgHome, 'kilo'), path.join(xdgHome, 'kilo', 'kilo.db')],
-    ['kilocode-tasks', path.join(home, '.config', 'Code', 'User', 'globalStorage', 'kilocode.kilo-code', 'tasks')],
-    ['kilocode-tasks', path.join(home, '.vscode-server', 'data', 'User', 'globalStorage', 'kilocode.kilo-code', 'tasks')]
-  );
-  add('commandcode', ['commandcode-projects', path.join(home, '.commandcode', 'projects')]);
-  // MiMo Code: tokscale 4.8.0 unions the XDG data dir with orca's hook-sandbox
-  // copy (scanner.rs `discover_micode_dbs_in_dirs`), and that copy can hold
-  // sessions the XDG one is missing. Watch both so an orca-driven install still
-  // refreshes in seconds; the orca root only exists on macOS in practice and a
-  // missing dir is dropped by watchClientRootsForClients.
-  add(
-    'micode',
-    ['mimocode-data', path.join(xdgHome, 'mimocode')],
-    ['mimocode-orca-data', path.join(home, 'Library', 'Application Support', 'orca', 'mimocode-hooks', 'shared', 'data')]
-  );
-  const zcodeDbDir = path.join(home, '.zcode', 'cli', 'db');
-  add(
-    'zcode',
-    ['zcode-projects', path.join(home, '.zcode', 'projects')],
-    ['zcode-cli-db', zcodeDbDir, path.join(zcodeDbDir, 'db.sqlite')]
-  );
-  // CodeBuddy (Tencent): tokscale reads the home-relative CLI/WebUI JSONL dir on
-  // every platform, plus the IDE / VS Code extension logs under a platform-
-  // specific CodeBuddyExtension/Logs root (scanner.rs). Watch both so CLI and
-  // IDE usage each refresh in seconds; the shared Code/logs tree is deliberately
-  // not watched (too broad for polling — full ticks still scan it). No --home
-  // host-DB fallback, so every root is safe to watch cross-platform.
-  // Two extension-log roots, because tokscale scans two (scanner.rs). It seeds
-  // the list with the home-relative Windows-shaped path on EVERY platform, and
-  // only then adds the native `dirs::data_local_dir()` root — so a home carried
-  // over from Windows is scanned on macOS/Linux too, and watching only the
-  // native one would let the periodic scan see usage the watcher never does.
-  //
-  // `dirs::data_local_dir()` is %LOCALAPPDATA% on Windows, Application Support
-  // on macOS, and the XDG data home on Linux, so the Linux arm follows
-  // XDG_DATA_HOME rather than a hardcoded .local/share. Being a `dirs` lookup
-  // rather than a path literal is why it does not appear in tokscale's strings.
-  //
-  // On Windows the two normally resolve to the same directory and the Set
-  // collapses them; elsewhere watchClientRootsForClients drops whichever is
-  // absent, which is the usual case for the Windows-shaped one.
-  const codebuddyExtLogRoots = [
-    path.join(home, 'AppData', 'Local', 'CodeBuddyExtension', 'Logs'),
-    process.platform === 'win32'
-      ? path.join(process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'), 'CodeBuddyExtension', 'Logs')
-      : process.platform === 'darwin'
-        ? path.join(home, 'Library', 'Application Support', 'CodeBuddyExtension', 'Logs')
-        : path.join(xdgHome, 'CodeBuddyExtension', 'Logs')
-  ];
-  add(
-    'codebuddy',
-    ['codebuddy-projects', path.join(home, '.codebuddy', 'projects')],
-    ...[...new Set(codebuddyExtLogRoots)].map((dir) => ['codebuddy-extension-logs', dir])
-  );
-  // WorkBuddy (Tencent): watch only the detailed session dirs (projects/*.jsonl,
-  // the preferred source) — not the whole app homes, whose config / auth churn
-  // would add polling load and spurious ticks with no usage change. WorkBuddy
-  // 5.5 moved to ~/.workbuddy-ai; keep the legacy ~/.workbuddy root because
-  // tokscale 4.17.0 still scans both. A db-only install still refreshes via the
-  // periodic full tick; the WSL markers stay broader so those homes are found.
-  add(
-    'workbuddy',
-    ['workbuddy-projects', path.join(home, '.workbuddy', 'projects')],
-    ['workbuddy-projects', path.join(home, '.workbuddy-ai', 'projects')]
-  );
-  // Proma — session transcripts at ~/.proma/agent-sessions/*.jsonl
-  add('proma', ['proma-sessions', path.join(home, '.proma', 'agent-sessions')]);
-  // Qoder CN — SQLite DB under the platform Application Support dir.
-  const qoderCnPaths = qoderCnDataPaths({ homeDir: home, platform: process.platform, env: process.env });
-  add('qodercn', ...qoderCnPaths.dbPaths.map((dbPath) => ['qodercn-db', path.dirname(dbPath), dbPath]));
-  add('reasonix', [
-    REASONIX_SOURCE_CHECK_ID,
-    resolveReasonixStatsDir({ env: process.env, homeDir: home, platform: process.platform, cwdDir: process.cwd() })
-  ]);
-  // DeepSeek Harness (DSH) — zstd JSONL session transcripts at
-  // `<dshHome>/sessions/` (default `~/.dsh`, overridable via `DSH_HOME`).
-  add('dsh', [
-    DSH_SOURCE_CHECK_ID,
-    resolveDshSessionsDir({ env: process.env, homeDir: home, platform: process.platform })
-  ]);
-  // Kiro (AWS): tokscale reads home-relative roots — the sessions tree used by
-  // both CLI and IDE, the Kiro IDE globalStorage root (native macOS / Linux /
-  // Windows), and the kiro-cli sqlite dir. None falls back to a host-absolute
-  // path under --home (unlike Zed), so every root remains a valid source and
-  // presence signal. The globalStorage kind is deliberately interval-only in
-  // clientWatchCandidates() because real trees can contain tens of thousands of
-  // files; the sessions and sqlite roots retain seconds-level refresh.
-  //
-  // Note the deliberate Kiro-vs-kiro casing asymmetry below (do not "fix" it to
-  // list both cases everywhere): tokscale scans both `Kiro` and `kiro` cased
-  // globalStorage roots, but watchPathsForClients filters by dirExists, so the
-  // COST of listing both differs by filesystem:
-  //   - Linux/WSL (case-sensitive): a missing variant is filtered out at zero
-  //     cost, and a real lowercase build is genuinely distinct — so list BOTH
-  //     `.config/Kiro` and `.config/kiro` (free insurance for the case ambiguity
-  //     that tokscale scanning both already signals exists in the wild).
-  //   - macOS/Windows (case-insensitive): `Kiro` and `kiro` resolve to the SAME
-  //     dir, so both would pass dirExists and double-watch one directory with no
-  //     functional gain — so list only the canonical `Kiro` (it already resolves
-  //     a lowercase install on these filesystems). Same reason zed lists one case.
-  // Usage counting is unaffected either way: full scans run tokscale, which reads
-  // every root; the watch list only governs refresh latency + the presence dot.
-  // (APPDATA || home AppData\Roaming mirrors how cline resolves the Windows root.)
-  add(
-    'kiro',
-    ['kiro-sessions', path.join(home, '.kiro', 'sessions')],
-    ['kiro-ide-globalstorage', path.join(home, 'Library', 'Application Support', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent')],
-    ['kiro-ide-globalstorage', path.join(home, '.config', 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent')],
-    ['kiro-ide-globalstorage', path.join(home, '.config', 'kiro', 'User', 'globalStorage', 'kiro.kiroagent')],
-    ['kiro-ide-globalstorage', path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Kiro', 'User', 'globalStorage', 'kiro.kiroagent')],
-    ['kiro-cli-data', path.join(home, '.local', 'share', 'kiro-cli')],
-    ['kiro-cli-data', path.join(home, 'Library', 'Application Support', 'kiro-cli')]
-  );
-  add(
-    'cline',
-    ['cline-tasks', path.join(home, '.config', 'Code', 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'tasks')],
-    ['cline-tasks', path.join(home, 'Library', 'Application Support', 'Code', 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'tasks')],
-    ['cline-tasks', path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Code', 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'tasks')],
-    ['cline-tasks', path.join(home, '.vscode-server', 'data', 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'tasks')],
-    ['cline-cli-sessions', clineCliSessionRoot(home)]
-  );
-  // Cherry Studio (Electron desktop) writes standard Claude Code transcripts
-  // under its per-user app-data directory: %APPDATA%\CherryStudio\.claude\
-  // projects on Windows, ~/Library/Application Support/CherryStudio/.claude/
-  // projects on macOS, and $XDG_CONFIG_HOME/CherryStudio/.claude/projects (or
-  // ~/.config) on Linux — mirroring the `PathRoot::AppData` resolution in
-  // tokscale's clients.rs. tokscale's dedicated cherrystudio parser reads
-  // these files (deduping the same API call appended 3-4 times per streaming
-  // response) and tags them as `cherrystudio`.
-  //
-  // Cherry Studio V2 (2026-08) moved live transcripts to
-  // `<appdata>/CherryStudio/Data/Agents/.claude/projects`; the legacy root
-  // keeps the pre-V2 snapshot. Both are watched; tokscale dedupes same-named
-  // sessions (V2 copy wins, legacy fills in sessions V2 lacks).
-  const cherryRoots = cherryStudioTranscriptRoots({
-    homeDir: home,
-    platform: options.platform || process.platform,
-    env: options.env || process.env
-  });
-  add(
-    'cherrystudio',
-    ...cherryRoots
-  );
-  // LM Studio's OpenAI-compatible local server writes nested monthly `.log`
-  // files under this root. Tokscale's PathRoot::EnvVar treats a blank override
-  // as unset, so keep the watcher and source-health path on the same fallback.
-  const lmStudioHome = nonBlankEnvPath('LM_STUDIO_HOME', path.join(home, '.lmstudio'), env);
-  add('lmstudio', ['lmstudio-server-logs', path.join(lmStudioHome, 'server-logs')]);
-  const unslothHome = nonBlankEnvPath('UNSLOTH_STUDIO_HOME', path.join(home, '.unsloth', 'studio'), env);
-  add('unsloth', ['unsloth-db', unslothHome, path.join(unslothHome, 'studio.db')]);
-  const customScanPaths = normalizeCustomScanPaths(options.customScanPaths, { platform });
-  for (const [client, dirs] of Object.entries(customScanPaths)) {
-    if (!enabled.has(client)) continue;
-    const roots = byClient[client] || (byClient[client] = []);
-    roots.push(...dirs.map((dir) => ({ id: 'custom-scan-path', dir, custom: true })));
-  }
-  return byClient;
-}
-
-// Sources that remain part of collection, health, and diagnostics but are too
-// broad for a persistent recursive watcher. Kiro globalStorage accepts every
-// `.chat`, `.json`, and extensionless file at any depth in tokscale, so a real
-// tree can require thousands of native directory watches; after descriptor
-// exhaustion the same tree becomes an even more expensive 2-second polling
-// watch. Regular interval ticks (five minutes by default), manual refreshes, and
-// hourly full reconciliation still scan it through the unchanged Kiro client.
 const INTERVAL_ONLY_SOURCE_CHECK_IDS = new Set(['kiro-ide-globalstorage']);
 
 // The watcher only ever wants paths, so it keeps its original shape rather than
@@ -2071,10 +1571,7 @@ const SELF_SYNCED_CLIENTS = new Set(SELF_SYNC_KINDS);
 // It belongs to the umbrella `antigravity` client but, unlike that client's IDE
 // sync cache, is written by `agy` and never by us — so it is both watchable and a
 // real presence signal, sharing this single source of truth.
-function antigravityCliDataDir() {
-  const geminiHome = process.env.GEMINI_CLI_HOME || path.join(os.homedir(), '.gemini');
-  return path.join(geminiHome, 'antigravity-cli', 'conversations');
-}
+
 
 // Watch roots that feed a self-sync, keyed by client. Antigravity's IDE cache is
 // written by our sync and must stay watch-excluded, but the native session roots
@@ -2087,11 +1584,11 @@ function antigravityCliDataDir() {
 // The parse-local antigravity-cli dir is deliberately not in here even though it
 // shares the umbrella client id: tokscale reads it directly, so a CLI write has
 // nothing to re-sync and must not pay for the subprocess.
-function selfSyncSourceRootsForClients(clientsCsv) {
-  const enabled = new Set(String(clientsCsv || '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean));
+function selfSyncSourceRootsForClients(clientsCsv, options = {}) {
+  const enabled = new Set(normalizeClientsCsv(clientsCsv).split(',').filter(Boolean));
   const rootsByClient = {};
   if (enabled.has('antigravity')) {
-    const sourceRoots = [...new Set(antigravityDataRoots().filter(dirExists))];
+    const sourceRoots = [...new Set(antigravityDataRoots(options.homeDir || os.homedir()).filter(dirExists))];
     if (sourceRoots.length > 0) rootsByClient.antigravity = sourceRoots;
   }
   return rootsByClient;
@@ -2111,14 +1608,14 @@ function watchClientRootsForClients(clientsCsv, options = {}) {
     const existing = [...new Set(candidates.filter(dirExists))];
     if (existing.length > 0) rootsByClient[client] = existing;
   }
-  for (const [client, dirs] of Object.entries(selfSyncSourceRootsForClients(clientsCsv))) {
+  for (const [client, dirs] of Object.entries(selfSyncSourceRootsForClients(clientsCsv, options))) {
     rootsByClient[client] = [...new Set([...(rootsByClient[client] || []), ...dirs])];
   }
   // The Antigravity CLI writes parse-local SQLite that tokscale reads directly,
   // so it is also safe to watch and shares the umbrella client id. The filter
   // expands that id to antigravity-cli when the targeted scan runs.
-  const enabled = new Set(String(clientsCsv || '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean));
-  const antigravityCliDir = antigravityCliDataDir();
+  const enabled = new Set(normalizeClientsCsv(clientsCsv).split(',').filter(Boolean));
+  const antigravityCliDir = antigravityCliDataDir(options);
   if (enabled.has('antigravity') && dirExists(antigravityCliDir)) {
     rootsByClient.antigravity = [...new Set([...(rootsByClient.antigravity || []), antigravityCliDir])];
   }
@@ -2150,7 +1647,7 @@ function watchPathsForClients(clientsCsv, options = {}) {
 // other — the same "two derivations of one thing" trap the exporter had.
 function watchAttributionRootsForClients(clientsCsv, watchRoots = null, options = {}) {
   const rootsByClient = watchRoots || watchClientRootsForClients(clientsCsv, options);
-  const exporter = copilotExporterWatch(os.homedir());
+  const exporter = copilotExporterWatch(options.homeDir || os.homedir(), options.env || process.env);
   if (!exporter || !rootsByClient.copilot) return rootsByClient;
   const exporterDir = path.resolve(exporter.dir);
   const ownedByOtherSource = new Set(
@@ -2166,11 +1663,12 @@ function watchAttributionRootsForClients(clientsCsv, watchRoots = null, options 
 
 function clientsForWatchPath(filePath, rootsByClient) {
   if (!filePath) return [];
-  const resolved = path.resolve(filePath);
+  const comparable = (value) => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+  const resolved = comparable(filePath);
   const matched = [];
   for (const [client, roots] of Object.entries(rootsByClient || {})) {
     if (roots.some((root) => {
-      const resolvedRoot = path.resolve(root);
+      const resolvedRoot = comparable(root);
       return resolved === resolvedRoot || resolved.startsWith(resolvedRoot + path.sep);
     })) matched.push(client);
   }
@@ -2222,9 +1720,12 @@ const MICODE_DB_WATCH_PATTERN = /^mimocode(?:-[A-Za-z0-9._-]+)?\.db(?:-(?:wal|sh
 // recurse through the application data trees around them.
 const KIRO_DB_WATCH_PATTERN = /^data\.sqlite3(?:-(?:wal|shm))?$/;
 const ZED_DB_WATCH_PATTERN = /^threads\.db(?:-(?:wal|shm))?$/;
-const COPILOT_DB_WATCH_PATTERN = /^data\.db(?:-(?:wal|shm))?$/;
+const COPILOT_DB_WATCH_PATTERN = /^(?:data|session-store)\.db(?:-(?:wal|shm))?$/;
 const ZCODE_DB_WATCH_PATTERN = /^db\.sqlite(?:-(?:wal|shm))?$/;
 const UNSLOTH_DB_WATCH_PATTERN = /^studio\.db(?:-(?:wal|shm))?$/;
+const GOOSE_DB_WATCH_PATTERN = /^sessions\.db(?:-(?:wal|shm))?$/;
+const DEVIN_CLI_DB_WATCH_PATTERN = GOOSE_DB_WATCH_PATTERN;
+const CHERRY_STUDIO_DB_WATCH_PATTERN = /^cherrystudio\.sqlite(?:-(?:wal|shm))?$/;
 const GROK_UNIFIED_LOG_FILE = 'unified.jsonl';
 // Tokscale scans only these two CodeBuddy extension log subtrees. Keep their
 // recursive layout intact, but prune unrelated siblings under Logs before
@@ -2274,6 +1775,52 @@ const EMPTY_SET = new Set();
 // are the live-write signal even though tokscale never parses them as databases
 // — so a database created later is still discovered, and never recurse into the
 // runtime files beside it.
+const CUSTOM_ROOT_PRUNED_DIRS = new Set([
+  '.git', '.hg', '.svn', 'node_modules', '.venv', 'venv', '__pycache__', '.tox'
+]);
+const pruneDependencyTrees = (parts) => parts.some((part) => CUSTOM_ROOT_PRUNED_DIRS.has(part));
+
+function ignoreDesktopTranscriptPath(parts, resolved) {
+  const marker = parts.indexOf('.claude');
+  const discovery = marker < 0 ? parts : parts.slice(0, marker);
+  if (pruneDependencyTrees(discovery)) return true;
+  if (marker >= 0 && parts.length > marker + 1
+    && !['projects', 'transcripts'].includes(parts[marker + 1])) return true;
+
+  const root = parts.reduce((parent) => path.dirname(parent), resolved);
+  let current = root;
+  for (let index = 0; index < parts.length; index += 1) {
+    current = path.join(current, parts[index]);
+    let stat;
+    try { stat = fs.lstatSync(current); } catch (_) {
+      // A removed directory or transcript must still invalidate the scan.
+      // Missing entries cannot cause chokidar to descend into a new tree.
+      return marker < 0 || parts.length <= marker + 2 ? false : !resolved.endsWith('.jsonl');
+    }
+    const laneRoot = marker >= 0 && index === marker + 1;
+    const transcriptFile = marker >= 0 && index === parts.length - 1 && index > marker + 1;
+    if (stat.isSymbolicLink()) {
+      // WalkDir does not follow discovery/.claude or interior directory links.
+      // Its explicitly discovered scan root and individual file links do work.
+      if (!laneRoot && !transcriptFile) return true;
+      try { stat = fs.statSync(current); } catch (error) {
+        // A previously admitted link can outlive its target. Keep its removal
+        // signal; a missing target cannot cause traversal outside the source.
+        const missing = error.code === 'ENOENT' || error.code === 'ENOTDIR';
+        return !missing || (!laneRoot && !resolved.endsWith('.jsonl'));
+      }
+      if (laneRoot ? !stat.isDirectory() : !stat.isFile()) return true;
+    }
+    if (index < parts.length - 1 || !transcriptFile) {
+      if (!stat.isDirectory()) return true;
+    } else if (!stat.isDirectory() && (!stat.isFile() || !resolved.endsWith('.jsonl'))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
 function directChildOnly(isSource) {
   return (parts) => parts.length > 1 || !isSource(parts[0]);
 }
@@ -2323,8 +1870,13 @@ function watchPolicyEntries(clientsCsv, options = {}) {
   // Hermes: the SQLite trio is the only source, at any depth. Each explicit
   // watch root — the home AND every profile dir under it — is kept by the
   // matcher itself, so a profile's own database still reports.
-  bound('hermes', candidates.hermes || [], (parts) => !HERMES_DB_FILES.has(parts[parts.length - 1]));
+  bound('hermes', candidates.hermes || [], (parts) => {
+    if (HERMES_DB_FILES.has(parts[parts.length - 1])) return false;
+    return !(parts[0] === 'logs' && (parts.length === 1 || (parts.length === 2 && parts[1].startsWith('agent.log'))));
+  });
 
+  const desktopRoots = clientSourceRoots(clientsCsv, options).claude || [];
+  bound('claude', desktopRoots.filter(({ id }) => id === 'claude-desktop-transcripts').map(({ dir }) => dir), ignoreDesktopTranscriptPath);
   bound('openclaw', candidates.openclaw || [], (parts) => {
     // The first level is the dynamic agent id. Keep it so newly created agents
     // can expose one of the bounded source lanes below.
@@ -2367,7 +1919,7 @@ function watchPolicyEntries(clientsCsv, options = {}) {
   // is what gets watched. The parent is an arbitrary user-chosen directory and
   // can be $HOME — everything in it except that one file is pruned, and
   // watchAttributionRootsForClients keeps it from becoming a copilot prefix.
-  const exporter = copilotExporterWatch(os.homedir());
+  const exporter = copilotExporterWatch(options.homeDir || os.homedir(), options.env || process.env);
   if (exporter) bound('copilot', [exporter.dir], (_parts, resolved) => resolved !== exporter.canonicalFile);
 
   const antigravityEnabled = String(clientsCsv || '').split(',').map((value) => value.trim().toLowerCase()).includes('antigravity');
@@ -2433,7 +1985,11 @@ function watchPolicyEntries(clientsCsv, options = {}) {
 
   // Tokscale reads only direct children of each MiMo root, so log/* and every
   // other recursive subtree is pruned before chokidar descends into it.
-  bound('micode', candidates.micode || [], directChildOnly((name) => MICODE_DB_WATCH_PATTERN.test(name)));
+  bound('mimo', candidates.mimo || [], directChildOnly((name) => MICODE_DB_WATCH_PATTERN.test(name)));
+  bound('goose', candidates.goose || [], directChildOnly((name) => GOOSE_DB_WATCH_PATTERN.test(name)));
+  bound('devin', withBasename('devin', 'cli'), directChildOnly((name) => DEVIN_CLI_DB_WATCH_PATTERN.test(name)));
+  bound('catpaw', candidates.catpaw || [], directChildOnly((name) => catpawDatabaseName(name.replace(/-(?:wal|shm)$/, ''))));
+  bound('cherrystudio', withBasename('cherrystudio', 'Data'), directChildOnly((name) => CHERRY_STUDIO_DB_WATCH_PATTERN.test(name)));
   bound('unsloth', candidates.unsloth || [], directChildOnly((name) => UNSLOTH_DB_WATCH_PATTERN.test(name)));
   // The dual-source Grok scanner derives exactly logs/unified.jsonl from each
   // Grok home.
@@ -2457,7 +2013,7 @@ function watchPolicyEntries(clientsCsv, options = {}) {
         && (!SELF_SYNCED_CLIENTS.has(client) || customScanPaths[client]?.includes(dir))
         && !(claimed.get(client) || EMPTY_SET).has(dir)
       ))),
-    ...(antigravityEnabled && dirExists(antigravityCliDataDir()) ? [antigravityCliDataDir()] : [])
+    ...(antigravityEnabled && dirExists(antigravityCliDataDir(options)) ? [antigravityCliDataDir(options)] : [])
   ];
   for (const root of new Set(recursive.map(canonicalRoot))) {
     entries.push({ root, prefix: root + path.sep, policy: KEEP_EVERYTHING });
@@ -2488,111 +2044,6 @@ function watchIgnoreMatcher(clientsCsv, options = {}) {
 // check id with same-kind paths collapsed by OR. clientDataDirPresence() is
 // derived from this rather than computed beside it, so the presence dot in the
 // UI and the health record can never disagree about what was found.
-function sourceRootExists(root) {
-  if (root.sourcePath) return fileExists(root.sourcePath);
-  return root.id === 'vscode-workspace-storage'
-    ? hasCopilotChatSessions(root.dir)
-    : dirExists(root.dir);
-}
-
-// `dir` is what the diagnostics panel prints, so for an exact-file source it has
-// to be the file `exists` actually answered for. Printing the watch parent while
-// `exists` probed a file inside it makes the panel report a directory that is
-// plainly there as missing — the one question the panel exists to answer. The
-// watch root stays available to the watcher through clientWatchCandidates(),
-// which reads clientSourceRoots() directly; `sourcePath` rides along so a reveal
-// can tell a file from a directory without stat-ing it again.
-function evaluatedClientSourceRoots(clientsCsv, options = {}) {
-  return Object.fromEntries(Object.entries(clientSourceRoots(clientsCsv, options)).map(([client, roots]) => [
-    client,
-    roots.map((root) => ({
-      id: root.id,
-      dir: root.sourcePath || root.dir,
-      ...(root.sourcePath ? { sourcePath: root.sourcePath } : {}),
-      ...(root.optional ? { optional: true } : {}),
-      ...(root.custom ? { custom: true } : {}),
-      exists: sourceRootExists(root)
-    }))
-  ]));
-}
-
-function clientSourceChecks(clientsCsv, options = {}) {
-  const checks = {};
-  const push = (client, id, exists) => {
-    const list = checks[client] || (checks[client] = []);
-    const found = list.find((entry) => entry.id === id);
-    if (found) found.exists = found.exists || exists;
-    else list.push({ id, exists });
-  };
-  for (const [client, roots] of Object.entries(evaluatedClientSourceRoots(clientsCsv, options))) {
-    checks[client] = checks[client] || [];
-    for (const { id, exists } of roots) push(client, id, exists);
-  }
-  // antigravity's watch candidate is only the IDE sync cache, which our own sync
-  // writes. Its two real sources are separate checks so a health record can say
-  // "the IDE is installed but the cache was never written" rather than collapse
-  // all three into one boolean. A source-only or CLI-only install with no
-  // countable usage yet must read `waiting`, not `missing`; the sync cache stays
-  // a valid presence signal for snapshots taken before either of the others
-  // existed.
-  if (Object.prototype.hasOwnProperty.call(checks, 'antigravity')) {
-    push('antigravity', 'antigravity-ide-source', antigravityDataPresent(os.homedir()));
-    push('antigravity', 'antigravity-cli-data', dirExists(antigravityCliDataDir()));
-  }
-  // A client installed only inside WSL has no host directory, but its usage is
-  // merged into the same periods — so without this its source reads `missing`
-  // while the very same snapshot counts its tokens. The WSL marker is a source
-  // that exists; it just lives in a filesystem this process reaches through
-  // `wsl.exe` rather than through `fs`.
-  for (const client of options.wslDetected || []) {
-    if (Object.prototype.hasOwnProperty.call(checks, client)) push(client, 'wsl-home', true);
-  }
-  return checks;
-}
-
-// Every directory a tracked client's usage can come from on this machine, keyed
-// by client as {id, dir, exists} — the path-level table behind
-// clientSourceChecks(), before same-id roots are collapsed into one boolean.
-//
-// Only the diagnostics panel wants this shape: a user asking "is it looking
-// where I installed it" needs the paths, and a check id cannot answer that. The
-// self-synced clients are why it is not simply clientSourceRoots(): that table
-// holds antigravity's *sync cache*, which is ours and says nothing about which
-// Antigravity is installed — the IDE session roots and the CLI's own data dir
-// are the ones that answer it, and they are checks without being watch roots.
-// What the diagnostics panel should list, which is not everything probed. An
-// optional root that is absent is dropped here, in the main process, so the
-// flag never crosses IPC: the renderer flattens cached sources to
-// `exists: false, pending: true` while a re-probe is in flight, and any
-// visibility rule that reads `exists` downstream of that would blink an
-// existing capture directory out of the panel and back on every snapshot.
-// Deciding it where `exists` is still the answer to a real stat() is the only
-// place the question can be asked once.
-//
-// clientDiagnosticRoots() stays faithful for callers that want every probed
-// root — the reveal handler picks from it and selects on `exists` itself.
-function visibleDiagnosticRoots(clientsCsv, options = {}) {
-  return Object.fromEntries(Object.entries(clientDiagnosticRoots(clientsCsv, options)).map(([client, roots]) => [
-    client,
-    roots.filter((root) => !(root.optional === true && root.exists !== true))
-  ]));
-}
-
-function clientDiagnosticRoots(clientsCsv, options = {}) {
-  const byClient = evaluatedClientSourceRoots(clientsCsv, options);
-  if (byClient.antigravity) {
-    byClient.antigravity.unshift(
-      ...antigravityDataRoots().map((dir) => ({ id: 'antigravity-ide-source', dir, exists: dirExists(dir) })),
-      { id: 'antigravity-cli-data', dir: antigravityCliDataDir(), exists: dirExists(antigravityCliDataDir()) }
-    );
-  }
-  return byClient;
-}
-
-// Whether each tracked client has at least one data directory on disk. Takes
-// pre-computed checks when the caller already has them: a tick derives the
-// legacy status and the health record from one probe, so the two cannot
-// disagree about a directory created between two scans of the same snapshot.
 function clientDataDirPresence(clientsCsv, options = {}) {
   const presence = {};
   for (const [client, checks] of Object.entries(options.sourceChecks || clientSourceChecks(clientsCsv, options))) {
@@ -2616,7 +2067,7 @@ function statusFromSignals(clients, presence, usageClients) {
 }
 
 function deriveClientStatus(clientsCsv, allTimePeriod, options = {}) {
-  const clients = String(clientsCsv || '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean);
+  const clients = normalizeClientsCsv(clientsCsv).split(',').filter(Boolean);
   return statusFromSignals(clients, clientDataDirPresence(clientsCsv, options), allTimePeriod?.clients || {});
 }
 
@@ -2681,7 +2132,7 @@ function mergeClientActivityDays(previous, history, todayPeriod, todayKey) {
 // a document the hub keeps — so "which of Copilot's two roots is missing" is
 // worth its bytes exactly when something is wrong.
 function deriveClientHealth(clientsCsv, allTimePeriod, options = {}) {
-  const clients = String(clientsCsv || '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean);
+  const clients = normalizeClientsCsv(clientsCsv).split(',').filter(Boolean);
   if (clients.length === 0) return null;
   // Injectable so a test can state the filesystem instead of depending on one:
   // every `overall` below turns on whether a directory exists, which makes the
@@ -2803,12 +2254,33 @@ function canTargetTodayPartitions(anchor, targetClients) {
   );
 }
 
-function configFingerprint(clientsCsv, allTimeSince, projectsEnabled = true, qoderCnDbPath = '') {
+function pricingFingerprint(options = {}) {
+  const pricingPath = options.pricingPath || customPricingPath({
+    env: tokscaleEnvWithBlanksDropped(process.env)
+  });
+  const hash = createHash('sha256');
+  hash.update(pricingPath);
+  try { hash.update(fs.readFileSync(pricingPath)); }
+  catch (error) { hash.update(`|file:${error.code || 'unreadable'}`); }
+  if (options.binaryRevision !== undefined) {
+    hash.update(`|binary:${options.binaryRevision}`);
+  } else {
+    const binary = resolvePlatformBinary();
+    hash.update(JSON.stringify([binary.source, binary.path, binary.version, readTokscaleBundledBuild()]));
+    try {
+      const stat = fs.statSync(binary.path);
+      hash.update(JSON.stringify([stat.size, stat.mtimeMs, stat.ctimeMs]));
+    } catch (_) { hash.update('|binary:missing'); }
+  }
+  return hash.digest('hex');
+}
+
+function configFingerprint(clientsCsv, allTimeSince, projectsEnabled = true, qoderCnDbPath = '', sourceOptions = {}, pricingRevision = sourceOptions.pricingRevision ?? pricingFingerprint(sourceOptions)) {
   // Deterministic string that captures the config inputs anchor correctness
   // depends on. When this changes, the persisted anchor is invalidated.
   const qoderCn = String(qoderCnDbPath || '').trim();
   const qoderCnPart = qoderCn ? `|qodercn:${path.resolve(qoderCn)}` : '';
-  return `${normalizeClientsCsv(clientsCsv)}|${allTimeSince}|projects:${projectsEnabled !== false ? 'on' : 'off'}${qoderCnPart}`;
+  return `${normalizeClientsCsv(clientsCsv)}|${allTimeSince}|projects:${projectsEnabled !== false ? 'on' : 'off'}${qoderCnPart}|source:${sourceRegistryFingerprint(clientsCsv, sourceOptions)}|pricing:${pricingRevision}`;
 }
 
 function qoderCnDbPathForClients(clientsCsv, options = {}) {
@@ -2833,7 +2305,7 @@ function collectorAnchorTrust(saved, options = {}) {
   const { clients = '', allTimeSince = '', projectsEnabled = true, qoderCnDbPath = '', now = new Date() } = options;
   if (!saved || saved.dateKey !== localTodayKey(now)) return null;
   if (!saved.today || !saved.month || !saved.allTime) return null;
-  if (saved.configFingerprint !== configFingerprint(clients, allTimeSince, projectsEnabled, qoderCnDbPath)) return null;
+  if (saved.configFingerprint !== configFingerprint(clients, allTimeSince, projectsEnabled, qoderCnDbPath, options)) return null;
   const parsed = Date.parse(saved.fullScanAt || '');
   const capturedAtMs = Number.isFinite(parsed) && parsed <= now.getTime() ? parsed : null;
   return { capturedAtMs };
@@ -2893,19 +2365,13 @@ const WATCH_DESCRIPTOR_ERROR_CODES = new Set(['ENOSPC', 'EMFILE', 'ENFILE']);
 // chokidar the canonical long path in the first place. Junctions reach the same
 // assert by the same route. Identity off Windows, so watch roots elsewhere stay
 // byte-identical to the paths tokscale reads.
-function canonicalWatchPath(dir) {
-  if (process.platform !== 'win32') return dir;
-  try { return fs.realpathSync.native(dir); }
-  catch (_) { return dir; }
-}
+
 
 // The exporter file may not exist when the watcher starts, so canonicalise its
 // existing parent and append the original basename instead of realpathing the
 // file itself. This keeps exact-file matching in the same path space as the
 // canonical directory root handed to chokidar on Windows.
-function canonicalWatchFilePath(file) {
-  return path.join(path.resolve(canonicalWatchPath(path.dirname(file))), path.basename(file));
-}
+
 
 function watcherOptions(usePolling, ignored) {
   return {
@@ -2934,7 +2400,7 @@ function watcherOptions(usePolling, ignored) {
 // its -wal, so a genuine change still produces an event; a client whose scan was
 // measured NOT to rewrite its sidecar (micode) is deliberately absent here, and
 // adding a client to this list asserts a measurement rather than a hunch.
-const SELF_WATCHED_SQLITE_SIDECAR_CLIENTS = Object.freeze(['qodercn', 'zcode']);
+const SELF_WATCHED_SQLITE_SIDECAR_CLIENTS = Object.freeze(['antigravity', 'catpaw', 'cherrystudio', 'goose', 'qodercn', 'zcode']);
 
 function isSelfWatchSqliteSidecarEvent(filePath, rootsByClient = {}) {
   // Match SQLite's wal-index suffix, not one client's database basename: ZCode's
@@ -2990,8 +2456,14 @@ function startCollector(options) {
     customScanPaths: options.customScanPaths,
     env: options.env,
     homeDir: options.homeDir,
-    platform: options.platform
+    platform: options.platform,
+    windowsFolders: options.windowsFolders
   };
+  let sourceRevision = sourceRegistryFingerprint(normalizedClients, sourceOptions);
+  let pricingRevision = pricingFingerprint(options);
+  let tickWasFullScan = false;
+  const sourceChangedDuringScan = Symbol('source changed during scan');
+  const pricingChangedDuringScan = Symbol('pricing changed during scan');
   const qoderCnDbPath = qoderCnDbPathForClients(normalizedClients, {
     homeDir: options.homeDir,
     platform: process.platform,
@@ -3040,7 +2512,6 @@ function startCollector(options) {
   // process owns the shared archive. A watch tick can then hand its value to a
   // later full/history tick instead of losing it at the tick boundary.
   let liveDailyHistoryDays = {};
-  let qoderCnHistoryGraph = null;
   let lastFullScanAt = 0;
   let pendingWaiters = [];
   let debounceTimer = null;
@@ -3136,7 +2607,9 @@ function startCollector(options) {
         clients,
         allTimeSince,
         projectsEnabled: options.projectsEnabled,
-        qoderCnDbPath
+        qoderCnDbPath,
+        ...sourceOptions,
+        pricingRevision, pricingPath: options.pricingPath, binaryRevision: options.binaryRevision
       });
       if (trust) {
         anchor = {
@@ -3144,7 +2617,6 @@ function startCollector(options) {
           today: saved.today,
           month: saved.month,
           allTime: saved.allTime,
-          qoderCnPeriods: saved.qoderCnPeriods || null,
           // Per-client partitions are deliberately rebuilt by the first
           // anchored all-client tick after restart. Persisted partitions
           // could be stale for clients that changed while the app was down.
@@ -3198,6 +2670,20 @@ function startCollector(options) {
     const tickStartedAt = Date.now();
     const collectedAt = collectionDate(options.now);
     const todayKey = localTodayKey(collectedAt);
+    const tickSourceRevision = sourceRegistryFingerprint(normalizedClients, sourceOptions);
+    const tickPricingRevision = pricingFingerprint(options);
+    const sourcesChanged = tickSourceRevision !== sourceRevision;
+    const pricingChanged = tickPricingRevision !== pricingRevision;
+    if (sourcesChanged || pricingChanged) {
+      lastFullScanAt = 0;
+      tickOptions = { ...tickOptions, todayOnly: false, targetClients: [], forceHistory: true };
+    }
+    let sourceChangeObserved = false;
+    let pricingChangeObserved = false;
+    const observeSources = () => {
+      if (sourceRegistryFingerprint(normalizedClients, sourceOptions) !== tickSourceRevision) sourceChangeObserved = true;
+      if (pricingFingerprint(options) !== tickPricingRevision) pricingChangeObserved = true;
+    };
     // The previous live DAY becomes durable history at local midnight. Finalize
     // it before publishing the new day, even when the normal History interval
     // is not due yet, so fixed ranges never wait for the next scheduled graph.
@@ -3217,7 +2703,8 @@ function startCollector(options) {
     let historyScanSucceeded = !includeHistory;
     const requestedTargetClients = [...new Set(normalizeClientsCsv(tickOptions.targetClients).split(',').filter(Boolean))];
     const targetAnchorReady = canTargetTodayPartitions(anchor, requestedTargetClients);
-    const anchored = Boolean(tickOptions.todayOnly && anchor && anchor.dateKey === todayKey);
+    const anchored = Boolean(!sourcesChanged && !pricingChanged && tickOptions.todayOnly && anchor && anchor.dateKey === todayKey);
+    tickWasFullScan = !anchored;
     const refreshWsl = Boolean(tickOptions.refreshWsl);
     const hadPreviousFailure = tickHadFailure;
     lastTickAttemptAt = tickStartedAt;
@@ -3225,7 +2712,6 @@ function startCollector(options) {
     lastTickScope = tickScopeCode(tickOptions);
     try {
       let captured = null;
-      const qoderCnReadState = { periodFailed: false };
       const summary = await collectUsageOnce({
         ...options,
         signal: runtimeSignal,
@@ -3242,6 +2728,8 @@ function startCollector(options) {
         // the same today period that the user actually sees. The process-local
         // liveDays overlay is passed into any graph scan that happens first.
         deferLiveHistoryCapture: true,
+        pricingRevision: tickPricingRevision,
+        repriceHistory: pricingChanged,
         dailyHistoryLiveDays: liveDailyHistoryDays,
         onHistoryStatus: includeHistory ? (status) => {
           lastHistoryAttemptAt = Date.parse(status.attemptedAt) || lastHistoryAttemptAt;
@@ -3268,21 +2756,23 @@ function startCollector(options) {
         wslStatus: anchored ? wslStatusAnchor : null,
         lastActivityDays: activityDaysAnchor,
         refreshWsl: anchored ? refreshWsl : false,
-        qoderCnFallbackPeriods: anchor?.qoderCnPeriods || null,
-        qoderCnHistoryFallbackGraph: qoderCnHistoryGraph,
-        qoderCnReadState,
+        onScanComplete: observeSources,
+        dailyHistoryArchiveWriteEnabled: () => {
+          observeSources();
+          const allowed = typeof options.dailyHistoryArchiveWriteEnabled === 'function'
+            ? options.dailyHistoryArchiveWriteEnabled() : options.dailyHistoryArchiveWriteEnabled;
+          return !sourceChangeObserved && !pricingChangeObserved && allowed !== false;
+        },
         onAnchorComputed: (x) => { captured = x; },
-        onQoderCnHistoryGraph: (graph) => { qoderCnHistoryGraph = graph; },
         onProgress: (partial) => {
+          observeSources();
+          if (sourceChangeObserved || pricingChangeObserved || trackedClients.has('catpaw') || sourcesChanged || pricingChanged) return;
           if (!partial.today) return;
           try {
             if (typeof onPreview === 'function') {
               // Frozen WSL snapshot, gated so a cross-day/cross-month full scan
               // doesn't merge a stale period's WSL usage into the preview.
               const wsl = wslPeriodsForPreview(wslAnchor, anchor?.dateKey, todayKey);
-              const qoderCnAnchorToday = qoderCnReadState.periodFailed && !qoderCnReadState.fallbackUsed
-                ? anchor?.todayPartitions?.qodercn
-                : null;
               const preview = {
                 deviceId, hostname: os.hostname(),
                 platform: `${process.platform}-${process.arch}`,
@@ -3297,26 +2787,24 @@ function startCollector(options) {
                 // The upstream wsl.today guard is preserved: non-WSL machines
                 // keep the identity pass-through instead of a normalize round
                 // trip on this shared preview path.
-                today: qoderCnAnchorToday
-                  ? mergePeriods(partial.today, qoderCnAnchorToday, wsl.today)
-                  : (wsl.today ? mergePeriods(partial.today, wsl.today) : partial.today)
+                today: wsl.today ? mergePeriods(partial.today, wsl.today) : partial.today
               };
               // Only include month/allTime when actually scanned. During warm
               // full scans the main.js handler carries the previous values
               // forward for omitted fields, so these cards don't flash empty.
-              if (partial.month && !qoderCnReadState.periodFailed) {
+              if (partial.month) {
                 preview.month = wsl.month
                   ? mergePeriods(partial.month, wsl.month)
                   : partial.month;
               }
-              if (partial.allTime && !qoderCnReadState.periodFailed) {
+              if (partial.allTime) {
                 preview.allTime = wslAnchor
                   ? mergePeriods(partial.allTime, wslAnchor.allTime)
                   : partial.allTime;
               }
               // Only derive clientStatus when allTime is available; warm
               // scans carry the previous status forward in main.js.
-              if (partial.allTime && !qoderCnReadState.periodFailed) {
+              if (partial.allTime) {
                 preview.clientStatus = deriveClientStatus(clients, partial.allTime);
               }
               onPreview(preview);
@@ -3328,6 +2816,11 @@ function startCollector(options) {
         }
       });
       if (stopped) return;
+      observeSources();
+      if (sourceChangeObserved || pricingChangeObserved) {
+        lastHistoryAt = 0;
+        return sourceChangeObserved ? sourceChangedDuringScan : pricingChangedDuringScan;
+      }
       if (includeHistory) {
         settleRolloverHistoryAttempt(
           historyScanSucceeded,
@@ -3337,6 +2830,12 @@ function startCollector(options) {
       for (const [client, entry] of Object.entries(summary.clientHealth?.clients || {})) {
         if (entry.data?.lastActivityDay) activityDaysAnchor[client] = entry.data.lastActivityDay;
       }
+      const transformedSummary = await onUpdate?.(summary, reason);
+      const visibleSummary = transformedSummary && typeof transformedSummary === 'object'
+        ? transformedSummary
+        : summary;
+      sourceRevision = tickSourceRevision;
+      pricingRevision = tickPricingRevision;
       if (!anchored && captured) {
         anchor = {
           dateKey: todayKey,
@@ -3344,13 +2843,12 @@ function startCollector(options) {
           month: captured.windowsPeriods.month,
           allTime: captured.windowsPeriods.allTime,
           todayPartitions: captured.todayPartitions,
-          qoderCnPeriods: captured.qoderCnPeriods,
           ...(captured.nativeSessions ? { nativeSessions: captured.nativeSessions } : {}),
           ...(captured.nativeProjects ? { nativeProjects: captured.nativeProjects } : {})
         };
         wslAnchor = captured.wslBundle;
         wslStatusAnchor = captured.wslStatus || null;
-        if (!qoderCnReadState.periodFailed) lastFullScanAt = Date.now();
+        lastFullScanAt = Date.now();
         if (options.anchorPersistenceEnabled !== false) {
           try {
             fs.mkdirSync(path.dirname(anchorPath), { recursive: true });
@@ -3359,12 +2857,11 @@ function startCollector(options) {
               today: anchor.today,
               month: anchor.month,
               allTime: anchor.allTime,
-              qoderCnPeriods: anchor.qoderCnPeriods,
               wslBundle: wslAnchor,
               wslStatus: wslStatusAnchor,
               ...(anchor.nativeSessions ? { nativeSessions: anchor.nativeSessions } : {}),
               ...(anchor.nativeProjects ? { nativeProjects: anchor.nativeProjects } : {}),
-              configFingerprint: configFingerprint(clients, allTimeSince, options.projectsEnabled, qoderCnDbPath),
+              configFingerprint: configFingerprint(clients, allTimeSince, options.projectsEnabled, qoderCnDbPath, { ...sourceOptions, sourceRevision: tickSourceRevision }, tickPricingRevision),
               fullScanAt: new Date(lastFullScanAt).toISOString()
             }));
           } catch (_) {}
@@ -3373,13 +2870,6 @@ function startCollector(options) {
         // Keep the rolling per-client today partitions fresh for targeted
         // watch ticks. WSL stays independently frozen between interval ticks.
         if (captured.todayPartitions) anchor.todayPartitions = captured.todayPartitions;
-        if (!qoderCnReadState.periodFailed && captured.qoderCnPeriods?.today && anchor.qoderCnPeriods) {
-          anchor.qoderCnPeriods = {
-            today: captured.qoderCnPeriods.today,
-            month: applyPeriodDelta(anchor.qoderCnPeriods.month, captured.qoderCnPeriods.today, anchor.qoderCnPeriods.today),
-            allTime: applyPeriodDelta(anchor.qoderCnPeriods.allTime, captured.qoderCnPeriods.today, anchor.qoderCnPeriods.today)
-          };
-        }
         if (captured.nativeSessions) anchor.nativeSessions = captured.nativeSessions;
         if (captured.nativeProjects) anchor.nativeProjects = captured.nativeProjects;
         if (refreshWsl) {
@@ -3387,11 +2877,6 @@ function startCollector(options) {
           wslStatusAnchor = captured.wslStatus || null;
         }
       }
-      if (qoderCnReadState.periodFailed) scheduledWatchNeedsFullScan = true;
-      const transformedSummary = await onUpdate?.(summary, reason);
-      const visibleSummary = transformedSummary && typeof transformedSummary === 'object'
-        ? transformedSummary
-        : summary;
       if (historyEnabled !== false && options.dailyHistoryArchiveEnabled) {
         try {
           const visibleAt = visibleSummary.updatedAt || summary.updatedAt;
@@ -3403,6 +2888,7 @@ function startCollector(options) {
             ...(options.dailyHistoryArchiveOptions || {}),
             liveDays: liveDailyHistoryDays,
             todayKey: visibleDateKey,
+            pricingRevision: tickPricingRevision,
             // Watch ticks update the in-memory maximum on every refresh, but
             // only full/history ticks write it. This avoids a disk write for
             // every few-second watch event without dropping the value before
@@ -3515,13 +3001,23 @@ function startCollector(options) {
       return new Promise((resolve) => pendingWaiters.push(resolve));
     }
     tickInFlight = true;
+    let sourceReplayUsed = false;
+    const performWithSourceReplay = async (tickReason, scanOptions) => {
+      const result = await performTick(tickReason, scanOptions);
+      if ((result !== sourceChangedDuringScan && result !== pricingChangedDuringScan) || sourceReplayUsed || stopped) return result;
+      sourceReplayUsed = true;
+      return performTick('input-change', {
+        ...scanOptions, todayOnly: false, targetClients: [], forceHistory: true,
+        forceSelfSync: null, sourceSelfSync: null, acknowledgedSourceSync: null
+      });
+    };
     try {
-      const initialResult = await performTick(reason, {
+      const initialResult = await performWithSourceReplay(reason, {
         ...effectiveTickOptions,
         acknowledgedSourceSync: sourceSyncQueue.acknowledge(effectiveTickOptions.forceSelfSync)
       });
       let previousTickWasSuccessfulFullScan = initialResult === true
-        && effectiveTickOptions.todayOnly !== true;
+        && tickWasFullScan;
       while (tickPending && !stopped) {
         const forceHistory = pendingForceHistory;
         const rolloverHistoryRetry = pendingRolloverHistoryRetry;
@@ -3556,7 +3052,7 @@ function startCollector(options) {
           continue;
         }
         const acknowledgedSourceSync = sourceSyncQueue.acknowledge(forceSelfSync);
-        const result = await performTick('coalesced', {
+        const result = await performWithSourceReplay('coalesced', {
           forceHistory,
           rolloverHistoryRetry,
           forceSelfSync,
@@ -3566,7 +3062,7 @@ function startCollector(options) {
           targetClients,
           ...(activityRevision === null ? {} : { activityRevision })
         });
-        previousTickWasSuccessfulFullScan = result === true && todayOnly !== true;
+        previousTickWasSuccessfulFullScan = result === true && tickWasFullScan;
         resolveWaiters(waiters, result === true);
       }
       return initialResult === true;
@@ -3909,6 +3405,7 @@ module.exports = {
   computePeriodWindows,
   collectorAnchorTrust,
   configFingerprint,
+  pricingFingerprint,
   qoderCnDbPathForClients,
   deriveClientHealth,
   deriveClientStatus,
@@ -3924,6 +3421,8 @@ module.exports = {
   normalizeHistoryIntervalMs,
   sessionTimestampMap: sessionMetadataMap,
   locateBundledBinary,
+  getTokscaleStatus,
+  readTokscaleBundledBuild,
   lookupModelPricing,
   normalizePromaPricing,
   pruneAttemptedResetBoundaries,
@@ -3945,6 +3444,8 @@ module.exports = {
   isSelfWatchSqliteSidecarEvent,
   shouldIncludeHistory,
   spawnTokscaleHelp,
+  forkOnlyClientsAccepted,
+  probeTokscaleCapabilities,
   startCollector,
   tokscaleCommand,
   tokscaleClientFilter,

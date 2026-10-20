@@ -205,6 +205,7 @@ test('usage replacement abandons its wait for a shared capability probe without 
   const calls = [];
   let helpChild = null;
   let helpClosed = false;
+  let forkProbeClosed = false;
 
   function closingChild(code, stdout = '', stderr = '') {
     const child = new EventEmitter();
@@ -229,6 +230,11 @@ test('usage replacement abandons its wait for a shared capability probe without 
       helpChild.stdin = { end() {} };
       helpChild.kill = () => true;
       return helpChild;
+    }
+    if (args.includes('--home')) {
+      const probe = closingChild(0, JSON.stringify({ entries: [] }));
+      probe.on('close', () => { forkProbeClosed = true; });
+      return probe;
     }
     const clientIndex = args.indexOf('--client');
     const requested = clientIndex === -1 ? '' : args[clientIndex + 1];
@@ -273,6 +279,7 @@ test('usage replacement abandons its wait for a shared capability probe without 
     helpChild.stdout.emit('data', '--client [possible values: claude]');
     helpChild.emit('close', 0);
     helpClosed = true;
+    await waitFor(() => forkProbeClosed);
     await nextTurn();
 
     const callsBeforeCacheCheck = calls.length;

@@ -4,7 +4,7 @@
 //
 // This is the single source of truth for a client's *identity* — id, label,
 // display position, whether it is tracked on a fresh install, and whether its
-// usage is parsed locally instead of by tokscale. Before this file, that data
+// usage is parsed only by Token Monitor's tokscale fork. Before this file, that data
 // lived in two hand-maintained lists (this module's CSVs and the renderer's
 // own KNOWN_CLIENTS/clientLabels) that had to be kept in the same order by
 // hand; the shared copy even rebuilt the order procedurally to match the
@@ -27,18 +27,26 @@
   // and the README table (tests/shared/clientTracking.test.js enforces that).
   //
   // `defaultTracked: false` keeps a client wired and selectable but off on a
-  // fresh install. micode (MiMo Code) is opt-in because mimocode.db auto-imports
-  // Claude Code sessions (its claude-import service), so scanning it
-  // double-counts the `claude` client: tokscale fixed the scan path but does not
-  // dedup imports, and the imported rows aren't cleanly separable (MiMo is
-  // multi-model). qodercn is opt-in per the upstream tool-support boundary — a
-  // local adapter that may break when Qoder changes its DB schema.
+  // fresh install. qodercn is opt-in per the upstream tool-support boundary — a
+  // fork-only parser that may break when Qoder changes its storage format.
   //
-  // `locallyParsed: true` means the client is excluded from the tokscale client
-  // filter and read by a local adapter instead (collector.js). This is an axis
-  // of its own, not a collection "mode": self-synced clients (cursor,
-  // antigravity) still go through tokscale and are tracked separately in
-  // collector.js.
+  // mimo (MiMo) ships default-tracked even though mimocode.db auto-imports
+  // Claude Code sessions (its claude-import service): tokscale parses the store
+  // but does not dedup those imports, and the imported rows aren't cleanly
+  // separable (MiMo is multi-model), so a MiMo user's Claude work is counted
+  // under both `claude` and `mimo`. That overlap is accepted rather than fixed
+  // here — discovering the tool at all was judged to matter more than the
+  // inflation, and anyone affected can untick it in Settings → tools. Only a
+  // fresh install is affected; saved selections are untouched. Revisit if
+  // tokscale ever marks claude-import sessions.
+  //
+  // `forkOnly: true` means the client is parsed by Token Monitor's tokscale
+  // fork (crates/tokscale-core/src/token_monitor/ in Javis603/tokscale) and is
+  // unknown to upstream tokscale: the collector requests it with --client like
+  // any other id, but it is absent from tokscale's --help client list and does
+  // not honour TOKSCALE_EXTRA_DIRS. This is an axis of its own, not a
+  // collection "mode": self-synced clients (cursor, antigravity) are tracked
+  // separately in collector.js.
   const CLIENT_CATALOG = Object.freeze([
     { id: 'claude', label: 'Claude Code' },
     { id: 'codex', label: 'Codex' },
@@ -55,23 +63,35 @@
     { id: 'grok', label: 'Grok Build' },
     { id: 'copilot', label: 'GitHub Copilot' },
     { id: 'pi', label: 'Pi' },
+    // Oh My Pi was folded into the `pi` row until the two products were split
+    // apart (see clientIdentitySplits.js). Tokscale has always parsed its
+    // .omp/agent/sessions root as its own `omp` client, so the row is a real
+    // client, not a sub-source of Pi.
+    { id: 'omp', label: 'Oh My Pi' },
+    { id: 'goose', label: 'Goose' },
     { id: 'zed', label: 'Zed' },
     { id: 'kilo', label: 'Kilo' },
     { id: 'commandcode', label: 'Command Code' },
-    { id: 'micode', label: 'MiMo Code', defaultTracked: false },
+    { id: 'mimo', label: 'Xiaomi MiMo' },
+    { id: 'muse', label: 'Muse Code' },
     { id: 'zcode', label: 'ZCode' },
     { id: 'kiro', label: 'Kiro' },
     { id: 'codebuddy', label: 'CodeBuddy' },
     { id: 'workbuddy', label: 'WorkBuddy' },
-    { id: 'proma', label: 'Proma', locallyParsed: true },
-    { id: 'qodercn', label: 'Qoder CN', defaultTracked: false, locallyParsed: true },
+    { id: 'proma', label: 'Proma', forkOnly: true, locallyParsed: false },
+    { id: 'catpaw', label: 'CatPaw', defaultTracked: false, forkOnly: true },
+    { id: 'qodercn', label: 'Qoder CN', defaultTracked: false, forkOnly: true, locallyParsed: false },
     { id: 'reasonix', label: 'Reasonix' },
     { id: 'dsh', label: 'DeepSeek Harness' },
     { id: 'cherrystudio', label: 'Cherry Studio' },
     { id: 'lmstudio', label: 'LM Studio' },
-    { id: 'unsloth', label: 'Unsloth' }
+    { id: 'unsloth', label: 'Unsloth' },
+    { id: 'devin', label: 'Devin' },
+    { id: 'fx', label: 'fx' },
+    { id: 'mcode', label: 'MiniMax Code' }
   ].map((client) => Object.freeze({
     defaultTracked: true,
+    forkOnly: false,
     locallyParsed: false,
     ...client
   })));
@@ -99,6 +119,12 @@
   const DEFAULT_CLIENT_IDS = Object.freeze(
     CLIENT_CATALOG.filter((client) => client.defaultTracked).map((client) => client.id)
   );
+  const FORK_ONLY_CLIENT_IDS = Object.freeze(
+    CLIENT_CATALOG.filter((client) => client.forkOnly).map((client) => client.id)
+  );
+
+  // P1.3: the bundled fork owns every usage parser in the current catalog.
+  // Keep this projection explicit for scanner filtering and future adapters.
   const LOCALLY_PARSED_CLIENT_IDS = Object.freeze(
     CLIENT_CATALOG.filter((client) => client.locallyParsed).map((client) => client.id)
   );
@@ -118,6 +144,7 @@
     NON_CATALOG_CLIENT_LABELS,
     CLIENT_IDS,
     DEFAULT_CLIENT_IDS,
+    FORK_ONLY_CLIENT_IDS,
     LOCALLY_PARSED_CLIENT_IDS,
     CLIENT_LABELS,
     KNOWN_CLIENT_LIST

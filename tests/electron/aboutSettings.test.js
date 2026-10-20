@@ -39,13 +39,13 @@ test('General settings keeps Tokscale inside a collapsed Advanced disclosure', (
   assert.ok(end < general.indexOf('settings.about.title'));
 });
 
-test('General settings explains Discord presence and identifies Tokscale as an npm CLI dependency', () => {
+test('General settings explains Discord presence and identifies Tokscale as a bundled CLI dependency', () => {
   const html = read('index.html');
   const i18n = read('i18n.js');
 
   assert.match(html, /id="discordRpcInput"[^>]*aria-describedby="discordRpcDescription"[\s\S]*id="discordRpcDescription" class="settings-item-desc"[^>]*settings\.integrations\.discordDescription/);
   assert.equal((i18n.match(/'settings\.integrations\.discordDescription':/g) || []).length, 5);
-  assert.match(i18n, /'settings\.tokscale\.source': '來自 npm 的 CLI 依賴'/);
+  assert.match(i18n, /'settings\.tokscale\.source': '內建的 CLI 依賴'/);
   assert.doesNotMatch(i18n, /'settings\.tokscale\.source': '[^']*(?:Data engine|資料引擎|数据引擎|데이터 엔진|データエンジン)/);
 });
 
@@ -81,12 +81,20 @@ test('maintenance versions stay as compact flat rows instead of nested cards', (
   assert.match(css, /\.maintenance-version-item \{[\s\S]*display: flex;[\s\S]*justify-content: space-between/);
 });
 
-test('Tokscale updates surface a localized status in the collapsed Advanced row', () => {
+test('Tokscale settings expose status without retired npm updater actions', () => {
   const app = read('app.js');
-
-  assert.match(app, /advancedSettingsSummary: document\.getElementById\('advancedSettingsSummary'\)/);
-  assert.match(app, /state\.tokscaleCheck\?\.newer[\s\S]*'settings\.advanced\.tokscaleUpdate'[\s\S]*'settings\.advanced\.summary'/);
-  assert.match(app, /advancedSettingsSummary\.dataset\.i18n = advancedSummaryKey/);
+  const html = read('index.html');
+  const preload = fs.readFileSync(path.join(rendererDir, '..', 'preload.js'), 'utf8');
+  const main = fs.readFileSync(path.join(rendererDir, '..', 'main.js'), 'utf8');
+  assert.match(app, /await window.tokenMonitor.getTokscaleStatus\(\)/);
+  assert.match(preload, /tokscale:getStatus/);
+  assert.match(main, /ipcMain.handle\('tokscale:getStatus'/);
+  for (const source of [app, html, preload, main]) {
+    assert.doesNotMatch(source, /checkTokscaleNpm|downloadTokscaleFromNpm|resetTokscaleToBundled|onTokscalePush|tokscale:checkNpm|tokscale:downloadFromNpm|tokscale:resetToBundled/);
+  }
+  assert.doesNotMatch(html, /id="(?:check|download|reset)TokscaleButton"/);
+  assert.match(preload, /appUpdate:download/);
+  assert.match(main, /ipcMain.handle\('appUpdate:install'/);
 });
 
 test('About uses runtime version and allowlisted Token M links', () => {

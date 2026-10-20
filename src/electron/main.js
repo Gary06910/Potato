@@ -98,7 +98,9 @@ const { createDiagnosticJournal } = require('../shared/diagnosticJournal');
 const { createDiagnosticReportGenerator } = require('./diagnostics');
 const { createDiagnosticSnapshotBuilder, diagnosticStreamDetailCode, selectLocalDeviceRecord } = require('./diagnosticSnapshot');
 const { customPricingPath } = require('../shared/tokscaleConfig');
-const { applyCustomPricing, normalizeCustomPricingSetting } = require('../shared/tokscaleCustomPricing');
+const { createUsageTransform } = require('../shared/usageTransform');
+const { createCursorUsageEventIndex } = require('../shared/providers/cursor/usageEvents');
+const { applyCustomPricing, normalizeCustomPricingSetting, validateCustomPricingSetting } = require('../shared/tokscaleCustomPricing');
 const { normalizeModelAliases, normalizeModelAliasGrouping, projectModelAliasStats, projectModelAliasHistory } = require('./modelAliasPresentation');
 const { createHub } = require('../hub/server');
 const { probeHubBuild } = require('./hubBuildStatus');
@@ -141,13 +143,8 @@ const {
   normalizeHiddenHomeModules,
   normalizeHomeModuleOrder
 } = require('./renderer/homeModulePreferences');
-const {
-  checkNpmForNewer,
-  cleanupStaleStaging,
-  downloadFromNpm,
-  getTokscaleStatus,
-  resetToBundled
-} = require('../shared/tokscaleUpdater');
+const { getTokscaleStatus } = require('../shared/collector');
+const { seedSplitClients } = require('../shared/clientIdentitySplits');
 const {
   appUpdateInstallSupport,
   APP_UPDATE_FEED_ID,
@@ -435,13 +432,20 @@ let appUpdateCacheMigrationPending = false;
 let initialLimitProvidersPending = false;
 let claudeWebCookieMutationRevision = 0;
 let persistedSettingsSnapshot = null;
+let seededClientSplitsPending = false;
 let credentialStore = null;
 let tokenMNotificationRuntime = null;
 let remoteUsageRuntime = null;
 let credentialStorageErrorShown = false;
 let antigravityOAuthLoginController = null;
 let sessionUsageArchive = null;
-const sessionUsageArchiveStore = createSessionUsageArchiveStore();
+const sessionUsageArchiveStore = createSessionUsageArchiveStore({ cursorUsageEvents: createCursorUsageEventIndex() });
+const usageArchiveTransform = createUsageTransform({
+  store: sessionUsageArchiveStore,
+  getSettings: () => settings,
+  isExternalAgentActive,
+  onCaptureFailure: () => diagnosticJournal.record({ subsystem: 'storage', code: 'storage-archive-update-failed' })
+});
 let lastSessionUsageArchiveUpdate = {
   at: null,
   durationMs: null,
@@ -527,6 +531,7 @@ function defaultSettings() {
     deviceId: process.env.TOKEN_MONITOR_DEVICE_ID || defaultDeviceId(),
     lastPostedDeviceId: '',
     clients: clientsCsvForSetting(process.env.TOKEN_MONITOR_CLIENTS),
+    seededClientSplits: '',
     customScanPaths: {},
     clientDisplayOrder: '',
     hiddenClients: '',
@@ -2004,6 +2009,11 @@ function migrateVendorColors(value) {
   const colors = { ...value };
   if (colors.kilo === undefined && colors.kilocode !== undefined) colors.kilo = colors.kilocode;
   delete colors.kilocode;
+  // `micode` was the tracked-client id for MiMo before it was unified with the
+  // limits-provider id. The `xiaomi` key beside it is a different axis (the
+  // model vendor) and deliberately keeps its own override.
+  if (colors.mimo === undefined && colors.micode !== undefined) colors.mimo = colors.micode;
+  delete colors.micode;
   return colors;
 }
 
@@ -2099,6 +2109,7 @@ function ensureSettingsLoaded() {
   if (settings) return settings;
   settings = readSettings();
   const appUpdateNeedsPersistence = appUpdateCacheMigrationPending;
+  const splitNeedsPersistence = seededClientSplitsPending;
   const persistedCodexAccounts = settings.codexManagedAccounts;
   const hydratedCodexAccounts = hydrateCodexManagedAccounts(persistedCodexAccounts);
   const codexNeedsPersistence = JSON.stringify(hydratedCodexAccounts) !== JSON.stringify(persistedCodexAccounts);
@@ -2106,14 +2117,16 @@ function ensureSettingsLoaded() {
   if (codexNeedsPersistence) {
     settings.codexManagedAccounts = hydratedCodexAccounts;
   }
-  if (codexNeedsPersistence || appUpdateNeedsPersistence) {
+  if (codexNeedsPersistence || appUpdateNeedsPersistence || splitNeedsPersistence) {
     if (!saveSettings()) {
       // Keep the runtime identity coherent even if the migration cannot be
       // persisted yet; the next ordinary settings save will retry it.
       if (codexNeedsPersistence) settings.codexManagedAccounts = hydratedCodexAccounts;
       appUpdateCacheMigrationPending = appUpdateNeedsPersistence;
+      seededClientSplitsPending = splitNeedsPersistence;
     } else {
       appUpdateCacheMigrationPending = false;
+      seededClientSplitsPending = false;
     }
   }
   rendererViewState = normalizeInitialRendererViewState(settings.lastViewState, rendererViewState);
@@ -2504,6 +2517,15 @@ function readSettings() {
       ...(savedAppUpdate !== undefined ? { appUpdate: normalizedAppUpdate } : {})
     };
     merged.clients = clientsCsvForSetting(merged.clients);
+    const seeded = seedSplitClients(merged.clients, { applied: merged.seededClientSplits });
+    if (seeded.evaluated.length > 0) {
+      merged.clients = seeded.clients;
+      merged.seededClientSplits = [...new Set([
+        ...String(merged.seededClientSplits || '').split(',').map(value => value.trim()).filter(Boolean),
+        ...seeded.evaluated
+      ])].join(',');
+      seededClientSplitsPending = true;
+    }
     merged.customScanPaths = normalizeCustomScanPaths(merged.customScanPaths);
     // A missing settings file is the only reliable fresh-install signal: a
     // missing limitProviders field also occurs when an existing installation
@@ -2777,37 +2799,16 @@ function ensureSessionUsageArchiveLoaded() {
     // The headless agent owns migration and pruning while its PID is active.
     // Anchor projection must not turn Electron into a second archive writer.
     sessionUsageArchive = isExternalAgentActive()
-      ? readSessionUsageArchiveSnapshot()
+      ? readSessionUsageArchiveSnapshot({ strict: true })
       : sessionUsageArchiveStore.read();
   } catch (error) {
     console.log(`[session-archive] read failed: ${error.message}`);
-    sessionUsageArchive = normalizeSessionUsageArchive({});
+    throw error;
   }
   return sessionUsageArchive;
 }
 
-function updateSessionUsageArchive(summary, now) {
-  const startedAt = Date.now();
-  const finish = (failureCode = null) => {
-    lastSessionUsageArchiveUpdate = {
-      at: new Date().toISOString(),
-      durationMs: Math.max(0, Date.now() - startedAt),
-      failureCode
-    };
-  };
-  try {
-    const result = sessionUsageArchiveStore.capture(summary, now);
-    sessionUsageArchive = result.archive;
-    if (result.error) throw result.error;
-  } catch (error) {
-    finish('archive-write-failed');
-    diagnosticJournal.record({ subsystem: 'storage', code: 'storage-archive-update-failed' });
-    console.log(`[session-archive] write failed: ${error.message}`);
-    return sessionUsageArchive || ensureSessionUsageArchiveLoaded();
-  }
-  finish();
-  return sessionUsageArchive;
-}
+
 
 // Read-only projection of both archives onto a summary. Un-tracked clients and
 // retained sessions add to the period totals, not just to the breakdowns, so
@@ -2829,19 +2830,16 @@ function summaryWithArchivesApplied(summary, sessionArchive, now) {
   return settings?.projectsEnabled === false ? visibleSummary : applyProjectRollups(visibleSummary);
 }
 
-function summaryWithArchivedClientUsage(summary) {
-  const now = sessionUsageArchiveDate(summary);
-  if (settings?.sessionUsageArchiveEnabled === false) return summaryWithArchivesApplied(summary, null, now);
-  if (isExternalAgentActive()) {
-    try {
-      sessionUsageArchive = sessionUsageArchiveStore.refresh(now);
-    } catch (error) {
-      console.log(`[session-archive] refresh failed: ${error.message}`);
-      sessionUsageArchive = sessionUsageArchive || normalizeSessionUsageArchive({});
+function summaryWithArchivedClientUsage(summary, reason, meta = {}) {
+  try {
+    const visible = usageArchiveTransform.transform(summary, reason, meta);
+    if (settings?.sessionUsageArchiveEnabled !== false && meta.preview !== true) {
+      sessionUsageArchive = usageArchiveTransform.ensureLoaded();
     }
-    return summaryWithArchivesApplied(summary, sessionUsageArchive, now);
+    return visible;
+  } finally {
+    lastSessionUsageArchiveUpdate = usageArchiveTransform.getState().lastUpdate;
   }
-  return summaryWithArchivesApplied(summary, updateSessionUsageArchive(summary, now), now);
 }
 
 function applyMacActivationPolicy(state = {}) {
@@ -3093,8 +3091,6 @@ const providerTrayIcons = {};
 let registeredWindowToggleShortcut = '';
 let windowToggleShortcutRegistered = false;
 let defaultTrayIcon = null;
-let tokScaleNpmMetadata = null;
-let tokScaleUpdaterBusy = false;
 function getDefaultTrayIcon() {
   if (!defaultTrayIcon) defaultTrayIcon = buildTrayIcon();
   return defaultTrayIcon;
@@ -3976,7 +3972,7 @@ function startSyncCollector() {
   const sink = {
     async enqueue(summary, revision) {
       seedInitialLimitProviders(summary);
-      if (isExternalAgentActive()) { sessionUsageArchive = null; return; }
+      if (isExternalAgentActive()) { usageArchiveTransform.release(); sessionUsageArchive = null; return; }
       const visibleSummary = {
         ...summary,
         syncUploadIntervalMs: syncUploadIntervalMs()
@@ -4017,7 +4013,7 @@ function startHostCollector() {
   const sink = {
     enqueue(summary) {
       seedInitialLimitProviders(summary);
-      if (isExternalAgentActive()) { sessionUsageArchive = null; return; }
+      if (isExternalAgentActive()) { usageArchiveTransform.release(); sessionUsageArchive = null; return; }
       const visibleSummary = summary;
       lastCollectedDevice = { ...visibleSummary, receivedAt: new Date().toISOString() };
       if (!embeddedHub) return;
@@ -4539,6 +4535,7 @@ function primeLocalStatsFromAnchor(usageOptions, widgetProducerOwner) {
       clients: usageOptions.clients,
       allTimeSince: usageOptions.allTimeSince,
       projectsEnabled: usageOptions.projectsEnabled,
+      customScanPaths: usageOptions.customScanPaths,
       wslScanEnabled: usageOptions.wslScanEnabled,
       wslSupported: process.platform === 'win32',
       hostname: os.hostname(),
@@ -5792,7 +5789,7 @@ function managedPricingSidecarPath() {
   return path.join(app.getPath('userData'), 'tokscale-managed-pricing.json');
 }
 
-function regenerateTokscalePricing() {
+function regenerateTokscalePricing({ throwOnError = false } = {}) {
   try {
     applyCustomPricing(settings.customModelPricing || [], {
       pricingPath: customPricingPath(),
@@ -5800,6 +5797,7 @@ function regenerateTokscalePricing() {
     });
   } catch (error) {
     console.warn(`[pricing] failed to write custom-pricing.json: ${error.message}`);
+    if (throwOnError) throw error;
   }
 }
 
@@ -5810,53 +5808,6 @@ async function refreshAfterPricingChange() {
     }
   } catch (error) {
     console.warn(`[pricing] refresh after pricing change failed: ${error.message}`);
-  }
-}
-
-function stripTokscaleMetadata(result) {
-  if (!result || typeof result !== 'object') return result;
-  const { metadata: _metadata, ...publicResult } = result;
-  return publicResult;
-}
-
-function sendTokscalePush(payload) {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  try { mainWindow.webContents.send('tokscale:push', payload); } catch (_) {}
-}
-
-async function checkTokscaleNpm({ silent = false } = {}) {
-  try {
-    const result = await checkNpmForNewer(app.getVersion());
-    if (result.metadata) tokScaleNpmMetadata = result.metadata;
-    const publicResult = stripTokscaleMetadata(result);
-    sendTokscalePush({ type: 'check', ...publicResult });
-    return publicResult;
-  } catch (error) {
-    if (silent) {
-      console.log(`[tokscale] npm check failed: ${error.message}`);
-      return { supported: true, error: null, silent: true };
-    }
-    return { supported: true, error: error.message };
-  }
-}
-
-async function downloadTokscaleFromNpm() {
-  if (tokScaleUpdaterBusy) return { supported: true, busy: true };
-  tokScaleUpdaterBusy = true;
-  try {
-    if (!tokScaleNpmMetadata) {
-      const checked = await checkNpmForNewer(app.getVersion());
-      if (!checked.supported) return { supported: false };
-      tokScaleNpmMetadata = checked.metadata;
-    }
-    const result = await downloadFromNpm(tokScaleNpmMetadata);
-    const publicResult = stripTokscaleMetadata(result);
-    sendTokscalePush({ type: 'download', ...publicResult });
-    return publicResult;
-  } catch (error) {
-    return { supported: true, error: error.message };
-  } finally {
-    tokScaleUpdaterBusy = false;
   }
 }
 
@@ -6739,7 +6690,6 @@ app.whenReady().then(() => {
   createWindow();
   syncLoginItemSettingFromOs();
   configureWindowToggleShortcut();
-  cleanupStaleStaging().catch((error) => console.log(`[tokscale] staging cleanup failed: ${error.message}`));
   ensureTray();
   if (settings.trayMode) enterTrayMode();
   regenerateTokscalePricing();
@@ -6759,7 +6709,6 @@ app.whenReady().then(() => {
   applyEffectiveRates();                 // use cache/defaults immediately, avoid first-paint gap
   refreshExchangeRates();                // non-blocking: only fetches when stale
   rateRefreshTimer = setInterval(() => { refreshExchangeRates(); }, 6 * 60 * 60 * 1000);
-  setTimeout(() => { checkTokscaleNpm({ silent: true }); }, 2000);
   const notifications = ensureTokenMNotificationRuntime();
   void notifications.start().catch((error) => {
     console.warn('[notifications] startup failed', { code: error?.code || 'startup_failed' });
@@ -6818,6 +6767,7 @@ app.whenReady().then(() => {
     if (isExternalAgentActive()) return { ok: false, error: 'agentActive' };
     try {
       sessionUsageArchiveStore.clear();
+      usageArchiveTransform.reset();
       clearDailyHistoryArchive();
       sessionUsageArchive = normalizeSessionUsageArchive({});
       return { ok: true };
@@ -7068,7 +7018,7 @@ app.whenReady().then(() => {
       commandcodeCookie: patch.commandcodeCookie !== undefined ? normalizeCommandcodeCookie(patch.commandcodeCookie) : (settings.commandcodeCookie || ''),
       ollamaCookie: patch.ollamaCookie !== undefined ? normalizeOllamaCookie(patch.ollamaCookie) : (settings.ollamaCookie || ''),
       customModelPricing: patch.customModelPricing !== undefined
-        ? normalizeCustomPricingSetting(patch.customModelPricing)
+        ? validateCustomPricingSetting(patch.customModelPricing)
         : normalizeCustomPricingSetting(settings.customModelPricing)
     }, windowBehaviorSelection(normalizedPatch));
     settings.archivedClientUsage = normalizeArchivedClientUsage(settings.archivedClientUsage);
@@ -7081,8 +7031,8 @@ app.whenReady().then(() => {
       throw error;
     }
     if (patch?.limitProviders !== undefined) initialLimitProvidersPending = false;
-    if (JSON.stringify(settings.customModelPricing || []) !== previousCustomModelPricing) {
-      regenerateTokscalePricing();
+    if (patch.customModelPricing !== undefined || JSON.stringify(settings.customModelPricing || []) !== previousCustomModelPricing) {
+      regenerateTokscalePricing({ throwOnError: true });
       refreshAfterPricingChange();
     }
     configureWindowToggleShortcut();
@@ -7458,14 +7408,6 @@ app.whenReady().then(() => {
   ipcMain.handle('mimo:setAccountEnabled', (_event, id, enabled) => setMimoManagedAccountEnabled(id, enabled));
   ipcMain.handle('mimo:removeAccount', async (_event, id) => removeMimoManagedAccount(id));
   ipcMain.handle('tokscale:getStatus', () => getTokscaleStatus());
-  ipcMain.handle('tokscale:checkNpm', () => checkTokscaleNpm());
-  ipcMain.handle('tokscale:downloadFromNpm', () => downloadTokscaleFromNpm());
-  ipcMain.handle('tokscale:resetToBundled', async () => {
-    tokScaleNpmMetadata = null;
-    const status = await resetToBundled();
-    sendTokscalePush({ type: 'reset', status });
-    return status;
-  });
   ipcMain.handle('appUpdate:getState', () => deriveAppUpdateState());
   ipcMain.handle('appUpdate:checkNow', () => runAppUpdateCheck({ force: true }));
   ipcMain.handle('appUpdate:download', () => downloadAndPrepareAppUpdate());

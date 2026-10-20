@@ -18,7 +18,7 @@ function readmeTrackedClientIds() {
     deepseek: 'dsh',
     'hermes-agent': 'hermes',
     xai: 'grok',
-    'mimo-code': 'micode',
+    'mimo-code': 'mimo',
     qoder: 'qodercn'
   };
   return fs.readFileSync(path.join(rootDir, 'README.md'), 'utf8')
@@ -45,17 +45,18 @@ test('default tracked clients include current tokscale-supported tools', () => {
   }
 });
 
-test('micode is intentionally NOT default-tracked (mimocode.db double-counts Claude imports)', () => {
-  assert.ok(!DEFAULT_CLIENTS.split(',').includes('micode'),
-    'micode must stay opt-in until tokscale dedups claude-import sessions');
+test('fresh defaults follow the stable MiMo policy without overwriting saved choices', () => {
+  assert.ok(DEFAULT_CLIENTS.split(',').includes('mimo'));
+  assert.equal(clientsCsvForSetting('claude,pi'), 'claude,pi');
+  assert.equal(clientsCsvForSetting('micode'), 'mimo');
 });
 
-test('KNOWN_CLIENTS is a superset of DEFAULT_CLIENTS and still includes opt-in micode', () => {
+test('KNOWN_CLIENTS is a superset of DEFAULT_CLIENTS and includes renamed MiMo and opt-in Qoder CN', () => {
   // Display-preference normalization (hide/pin/reorder) keys off the KNOWN list, not
   // the default-tracked list — so an opt-in client like micode must stay here or its
   // prefs get silently dropped on save/read.
   const known = KNOWN_CLIENTS.split(',');
-  assert.ok(known.includes('micode'), 'micode must remain a known client');
+  assert.ok(known.includes('mimo'), 'micode must remain a known client');
   assert.ok(known.includes('qodercn'), 'qodercn must remain a known client');
   for (const client of DEFAULT_CLIENTS.split(',')) {
     assert.ok(known.includes(client), `${client} (default-tracked) must also be known`);
@@ -67,10 +68,12 @@ test('KNOWN_CLIENTS is a superset of DEFAULT_CLIENTS and still includes opt-in m
 // the catalog against itself. That the renderer actually consumes the catalog is
 // guarded in tests/electron/rendererClientLabels.test.js. README stays a real
 // cross-check because it is hand-authored.
-test('tracked client defaults and README share one display order', () => {
+test('legacy documented tools retain catalog order while P1.3 source integration is pending', () => {
   const known = KNOWN_CLIENTS.split(',');
-  assert.deepEqual(readmeTrackedClientIds(), known);
-  assert.deepEqual(DEFAULT_CLIENTS.split(','), known.filter((client) => !['micode', 'qodercn'].includes(client)));
+  const documented = readmeTrackedClientIds();
+  assert.equal(documented.length, 30);
+  assert.deepEqual(documented, known.filter(id => documented.includes(id)));
+  assert.deepEqual(DEFAULT_CLIENTS.split(','), known.filter((client) => !['catpaw', 'qodercn'].includes(client)));
 });
 
 test('documented client CSV follows the canonical catalog order', () => {

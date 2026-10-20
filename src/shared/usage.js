@@ -5,7 +5,7 @@ const { aggregateLimits, normalizeLimitsSummary } = require('./limits/core');
 const { normalizeClientHealth } = require('./clientHealth');
 const {
   coerceHistory, dayKeyAddDays, hasDisjointReasoning, localDayKey, mergeHistories,
-  normalizeTokscaleClientName
+  normalizeTokscaleClientName, normalizeTokscaleModelNameForClient
 } = require('./history');
 const { REASONIX_CLIENT } = require('./providers/reasonix/paths');
 const { filterReasonixSyntheticSessions, isReasonixSyntheticSession } = require('./providers/reasonix/sessionGuard');
@@ -174,6 +174,210 @@ function stripSessionTextFromDeviceRecord(record) {
   return stripped;
 }
 
+function firstPresent(obj, keys) {
+  if (!obj || typeof obj !== 'object') return undefined;
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
+  }
+  return undefined;
+}
+
+function normalizeTimedOutputTokens(value, outputTokens, durationMs) {
+  return durationMs > 0 ? Math.min(outputTokens, Math.max(0, Math.round(asNumber(value)))) : 0;
+}
+
+function normalizeModelThroughput(value, period) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const result = Object.create(null);
+  for (const [model, counters] of Object.entries(value)) {
+    const key = normalizeModelName(model);
+    if (!key || !counters || typeof counters !== 'object' || Array.isArray(counters)
+      || !['timedTokens', 'timedOutputTokens', 'timedDurationMs'].every((field) => hasOwn(counters, field))) continue;
+    const durationMs = Math.max(0, Math.round(asNumber(counters.timedDurationMs)));
+    const target = result[key] ||= { timedTokens: 0, timedOutputTokens: 0, timedDurationMs: 0 };
+    target.timedTokens += Math.max(0, Math.round(asNumber(counters.timedTokens)));
+    target.timedDurationMs += durationMs;
+    target.timedOutputTokens += normalizeTimedOutputTokens(counters.timedOutputTokens, period.timedOutputTokens, durationMs);
+  }
+  for (const [model, counters] of Object.entries(result)) {
+    counters.timedTokens = Math.min(counters.timedTokens, period.timedTokens);
+    counters.timedDurationMs = Math.min(counters.timedDurationMs, period.timedDurationMs);
+    const outputBound = Math.min(period.timedOutputTokens,
+      hasOwn(period.modelOutputs, model) ? period.modelOutputs[model] : period.outputTokens);
+    counters.timedOutputTokens = normalizeTimedOutputTokens(counters.timedOutputTokens, outputBound, counters.timedDurationMs);
+  }
+  // A malformed map is unavailable; a genuine empty map is an exact zero baseline.
+  if (Object.keys(value).length && !Object.keys(result).length) return undefined;
+  return result;
+}
+
+function entryThroughput(row, output, client) {
+  const performance = row?.performance && typeof row.performance === 'object' ? row.performance : null;
+  const timedDurationMs = Math.max(0, Math.round(firstNumber(performance, TIMED_DURATION_KEYS)));
+  const timedOutput = firstPresent(performance, ['timedOutputTokens', 'timed_output_tokens']);
+  if (timedOutput === undefined) return { timedOutputTokens: timedDurationMs > 0 ? output : 0, timedDurationMs };
+  const reasoning = hasDisjointReasoning(client)
+    ? Math.max(0, Math.round(asNumber(firstPresent(performance, ['timedReasoningTokens', 'timed_reasoning_tokens'])))) : 0;
+  return {
+    timedOutputTokens: normalizeTimedOutputTokens(Math.max(0, Math.round(asNumber(timedOutput))) + reasoning, output, timedDurationMs),
+    timedDurationMs
+  };
+}
+
+function cursorAutoRawModels(source, roundTokens) {
+  const totals = new Map();
+  for (const [client, models] of Object.entries(source || {})) {
+    if (normalizeClientName(client) !== 'cursor' || !models || typeof models !== 'object') continue;
+    for (const [model, value] of Object.entries(models)) {
+      const raw = normalizeModelName(model);
+      if (raw !== 'auto' && raw !== 'default') continue;
+      const next = Math.max(0, roundTokens ? Math.round(asNumber(value)) : asNumber(value));
+      totals.set(raw, (totals.get(raw) || 0) + next);
+    }
+  }
+  return totals;
+}
+
+function reconcileCursorAutoGlobalModels(period, input) {
+  for (const [raw, moved] of cursorAutoRawModels(input.clientModels, true)) {
+    const available = Math.max(0, Math.round(asNumber(period.models[raw])));
+    if (moved <= 0 || moved > available) continue;
+    const exclusive = moved === available;
+    period.models[raw] = available - moved;
+    if (period.models[raw] === 0) delete period.models[raw];
+    period.models['cursor-auto'] = (period.models['cursor-auto'] || 0) + moved;
+    if (exclusive) {
+      for (const key of [
+        'modelCacheReads',
+        'modelCacheWrites',
+        'modelOutputs',
+        'modelUnclassifiedTokens',
+        'modelUnpricedTokens'
+      ]) {
+        if (!period[key]?.[raw]) continue;
+        period[key]['cursor-auto'] = (period[key]['cursor-auto'] || 0) + period[key][raw];
+        delete period[key][raw];
+      }
+    } else {
+      // The source period has one global component bucket for multiple
+      // clients. Keep the token split, but do not invent a cache/output split.
+      for (const key of ['modelCacheReads', 'modelCacheWrites', 'modelOutputs']) delete period[key][raw];
+      period.modelUnclassifiedTokens[raw] = period.models[raw];
+      period.modelUnclassifiedTokens['cursor-auto'] = Math.min(
+        period.models['cursor-auto'],
+        (period.modelUnclassifiedTokens['cursor-auto'] || 0) + moved
+      );
+      period.capabilities.tokenComponents = false;
+    }
+  }
+  for (const [raw, requested] of cursorAutoRawModels(input.clientModelCosts, false)) {
+    const available = Math.max(0, asNumber(period.modelCosts[raw]));
+    if (requested <= 0 || requested > available + 1e-9) continue;
+    const moved = Math.min(requested, available);
+    period.modelCosts[raw] = available - moved;
+    if (period.modelCosts[raw] === 0) delete period.modelCosts[raw];
+    period.modelCosts['cursor-auto'] = (period.modelCosts['cursor-auto'] || 0) + moved;
+  }
+}
+
+function addUnpricedTokens(target, source, maximum = Infinity) {
+  const count = Math.min(maximum, Math.max(0, Math.round(asNumber(source?.unpricedTokens))));
+  if (count > 0) target.unpricedTokens = (target.unpricedTokens || 0) + count;
+}
+
+function unpricedMapTotal(map) {
+  if (!map || typeof map !== 'object' || Array.isArray(map)) return 0;
+  return Object.values(map).reduce(
+    (sum, value) => sum + Math.max(0, Math.round(asNumber(value))),
+    0
+  );
+}
+
+function mergeUnpricedMaps(target, source) {
+  for (const field of ['clientUnpricedTokens', 'modelUnpricedTokens']) {
+    const existingMap = target[field] || Object.create(null);
+    let remaining = Math.max(0, (target.unpricedTokens || 0) - unpricedMapTotal(existingMap));
+    for (const [rawKey, value] of Object.entries(source[field] || {})) {
+      const key = field === 'clientUnpricedTokens' ? normalizeClientName(rawKey) : normalizeModelName(rawKey);
+      if (!key) continue;
+      const count = Math.min(remaining, Math.max(0, Math.round(asNumber(value))));
+      if (!count) continue;
+      const map = target[field] ||= Object.create(null);
+      map[key] = (map[key] || 0) + count;
+      remaining -= count;
+    }
+  }
+  const existingClientModels = target.clientModelUnpricedTokens || Object.create(null);
+  let remaining = Math.max(
+    0,
+    (target.unpricedTokens || 0)
+      - Object.values(existingClientModels).reduce((sum, models) => sum + unpricedMapTotal(models), 0)
+  );
+  for (const [rawClient, models] of Object.entries(source.clientModelUnpricedTokens || {})) {
+    const client = normalizeClientName(rawClient);
+    if (!client) continue;
+    const existingModels = existingClientModels[client] || Object.create(null);
+    let clientRemaining = hasOwn(target.clientUnpricedTokens, client)
+      ? Math.max(0, asNumber(target.clientUnpricedTokens[client]) - unpricedMapTotal(existingModels))
+      : remaining;
+    for (const [rawModel, value] of Object.entries(models || {})) {
+      const model = normalizeModelNameForClient(rawModel, client);
+      if (!model) continue;
+      const count = Math.min(remaining, clientRemaining, Math.max(0, Math.round(asNumber(value))));
+      if (!count) continue;
+      const map = (target.clientModelUnpricedTokens ||= Object.create(null))[client] ||= Object.create(null);
+      map[model] = (map[model] || 0) + count;
+      remaining -= count;
+      clientRemaining -= count;
+    }
+  }
+}
+
+function sessionComponentProvenance(session, source = {}) {
+  const fields = ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens'];
+  const known = fields.reduce((sum, key) => sum + asNumber(session[key]), 0);
+  const invalid = known > session.totalTokens || session.reasoningTokens > session.totalTokens;
+  if (invalid) {
+    for (const key of [...fields, 'reasoningTokens']) session[key] = 0;
+    session.unclassifiedTokens = session.totalTokens;
+    session.tokenComponentsAvailable = false;
+    session.tokenComponentsInvalid = true;
+    return session;
+  }
+  const remaining = Math.max(0, session.totalTokens - known);
+  const supplied = firstPresent(source, ['unclassifiedTokens', 'unclassified_tokens']);
+  session.unclassifiedTokens = supplied === undefined ? remaining : Math.max(remaining, Math.round(asNumber(supplied)));
+  if (session.unclassifiedTokens > remaining) {
+    session.unclassifiedTokens = remaining;
+    session.tokenComponentsInvalid = true;
+  }
+  if (source.tokenComponentsInvalid === true) session.tokenComponentsInvalid = true;
+  session.tokenComponentsAvailable = session.unclassifiedTokens === 0 && !session.tokenComponentsInvalid && source.tokenComponentsAvailable !== false;
+  return session;
+}
+
+function validatePeriodComponents(period) {
+  const invalid = period.cacheReadTokens + period.cacheWriteTokens + period.outputTokens > period.totalTokens;
+  if (invalid) {
+    period.cacheReadTokens = period.cacheWriteTokens = period.outputTokens = 0;
+    period.unclassifiedTokens = period.totalTokens;
+    period.tokenComponentsInvalid = true;
+  }
+  for (const [totals, reads, writes, outputs, unknown] of [
+    ['clients', 'clientCacheReads', 'clientCacheWrites', 'clientOutputs', 'clientUnclassifiedTokens'],
+    ['models', 'modelCacheReads', 'modelCacheWrites', 'modelOutputs', 'modelUnclassifiedTokens']
+  ]) {
+    for (const [key, tokens] of Object.entries(period[totals])) {
+      if (!invalid && asNumber(period[reads][key]) + asNumber(period[writes][key]) + asNumber(period[outputs][key]) <= tokens) continue;
+      delete period[reads][key]; delete period[writes][key]; delete period[outputs][key];
+      period[unknown][key] = tokens;
+      period.tokenComponentsInvalid = true;
+    }
+  }
+  if (period.tokenComponentsInvalid) period.capabilities.tokenComponents = false;
+  return period;
+}
+
 function emptyPeriod() {
   return {
     capabilities: { tokenComponents: true, throughput: true },
@@ -204,6 +408,7 @@ function emptyPeriod() {
     timedTokens: 0,
     timedOutputTokens: 0,
     timedDurationMs: 0,
+    modelThroughput: Object.create(null),
     clients: {},
     clientCosts: {},
     clientCacheReads: {},
@@ -229,6 +434,7 @@ function normalizeClientName(value) {
   if (raw.includes('claude')) return 'claude';
   if (raw.includes('codex')) return 'codex';
   if (raw.includes('hermes')) return 'hermes';
+  if (raw === 'goose') return 'goose';
   if (raw.includes('gemini')) return 'gemini';
   if (raw.includes('cursor')) return 'cursor';
   if (raw.includes('antigravity')) return 'antigravity';
@@ -238,22 +444,33 @@ function normalizeClientName(value) {
   if (raw.includes('grok')) return 'grok';
   if (raw === 'droid') return 'droid';
   if (raw.includes('copilot')) return 'copilot';
+  // Oh My Pi before the generic Pi test: its display name contains "Pi" as a
+  // word, so the Pi heuristic would otherwise capture it. Tokscale reports the
+  // id `omp`; these spellings only appear when a caller passes a display name.
+  if (raw === 'omp' || /^oh[\s_-]*my[\s_-]*pi$/.test(raw)) return 'omp';
   if (/\bpi\b/.test(raw)) return 'pi';
   if (raw.includes('zed')) return 'zed';
   if (/^kilo[\s_-]*code$/.test(raw)) return 'kilo';
   if (/command[\s_-]*code/.test(raw)) return 'commandcode';
-  if (raw.includes('micode')) return 'micode';
+  if (raw.includes('micode') || raw.includes('mimo')) return 'mimo';
+  if (raw === 'muse' || /^muse[\s_-]*code$/.test(raw)) return 'muse';
   if (raw.includes('zcode')) return 'zcode';
   if (raw.includes('kiro')) return 'kiro';
   if (raw.includes('codebuddy')) return 'codebuddy';
   if (raw.includes('workbuddy')) return 'workbuddy';
   if (raw.includes('proma')) return 'proma';
+  if (raw === 'catpaw') return 'catpaw';
   if (raw.includes('qodercn') || raw === 'qoder-cn' || raw === 'qoder cn') return 'qodercn';
   if (raw.includes('reasonix')) return 'reasonix';
   if (/cherry[\s_-]*studio/.test(raw)) return 'cherrystudio';
   if (/lm[\s_-]*studio/.test(raw)) return 'lmstudio';
   if (/^unsloth(?:[\s_-]+(?:studio|api))?$/.test(raw)) return 'unsloth';
   if (raw.includes('dsh')) return 'dsh';
+  if (raw.includes('devin')) return 'devin';
+  if (raw === 'fx') return 'fx';
+  // Tokscale's id for MiniMax Code. The bare vendor name stays a model vendor
+  // and limits provider, so only the product spellings map here.
+  if (raw === 'mcode' || /^minimax[\s_-]*code$/.test(raw)) return 'mcode';
   if (raw.includes('opencode')) return 'opencode';
   if (raw.includes('openclaw') || raw.includes('clawd') || raw.includes('moltbot') || raw.includes('moldbot')) return 'openclaw';
   return raw.replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || null;
@@ -270,7 +487,7 @@ function normalizeModelName(value) {
 }
 
 function normalizeModelNameForClient(value, client) {
-  const normalized = normalizeModelName(value);
+  const normalized = normalizeModelName(normalizeTokscaleModelNameForClient(value, client));
   if (!normalized || normalizeClientName(client) !== REASONIX_CLIENT) return normalized;
   const qualified = normalized.match(/^(?:deepseek|deepseek-flash)\/(.+)$/);
   return qualified?.[1] || normalized;
@@ -486,6 +703,11 @@ function emptySession(client, id) {
     cacheReadTokens: 0,
     cacheWriteTokens: 0,
     reasoningTokens: 0,
+    unclassifiedTokens: 0,
+    tokenComponentsAvailable: true,
+    timedTokens: 0,
+    timedOutputTokens: 0,
+    timedDurationMs: 0,
     startedAt: '',
     lastUsedAt: '',
     projectId: '',
@@ -509,6 +731,13 @@ function mergeSession(target, source) {
   target.cacheReadTokens += Math.max(0, Math.round(asNumber(source.cacheReadTokens)));
   target.cacheWriteTokens += Math.max(0, Math.round(asNumber(source.cacheWriteTokens)));
   target.reasoningTokens += Math.max(0, Math.round(asNumber(source.reasoningTokens)));
+  target.unclassifiedTokens += asNumber(source.unclassifiedTokens);
+  target.tokenComponentsAvailable = target.tokenComponentsAvailable && source.tokenComponentsAvailable === true;
+  if (source.tokenComponentsInvalid) target.tokenComponentsInvalid = true;
+  target.timedTokens += Math.max(0, Math.round(asNumber(source.timedTokens)));
+  target.timedOutputTokens += Math.max(0, Math.round(asNumber(source.timedOutputTokens)));
+  target.timedDurationMs += Math.max(0, Math.round(asNumber(source.timedDurationMs)));
+  addUnpricedTokens(target, source, source.totalTokens);
   const sourceStarted = timestampMs(source.startedAt);
   const targetStarted = timestampMs(target.startedAt);
   if (sourceStarted && (!targetStarted || sourceStarted < targetStarted)) target.startedAt = new Date(sourceStarted).toISOString();
@@ -565,6 +794,9 @@ function sessionFromRow(row) {
   session.messageCount = Math.max(0, Math.round(firstNumber(row, MESSAGE_COUNT_KEYS)));
   Object.assign(session, sessionTokenComponents(row));
   session.outputTokens = Math.max(0, Math.round(outputValueForClient(row, client)));
+  Object.assign(session, entryThroughput(row, session.outputTokens, client));
+  session.timedTokens = Math.max(0, Math.round(firstNumber(row.performance, TIMED_TOKEN_KEYS)));
+  addUnpricedTokens(session, row, session.totalTokens);
   session.startedAt = normalizeIsoTimestamp(firstString(row, STARTED_AT_KEYS));
   session.lastUsedAt = normalizeIsoTimestamp(firstString(row, LAST_USED_AT_KEYS));
   session.projectId = String(row.projectId || row.project_id || '').trim();
@@ -577,7 +809,7 @@ function sessionFromRow(row) {
   if (model && session.costUsd > 0) session.modelCosts[model] = (session.modelCosts[model] || 0) + session.costUsd;
   const provider = normalizeProviderName(row.provider);
   if (provider && session.totalTokens > 0) session.providers[provider] = (session.providers[provider] || 0) + session.totalTokens;
-  return session;
+  return sessionComponentProvenance(session, row);
 }
 
 function normalizeSession(input, fallbackKey) {
@@ -593,6 +825,10 @@ function normalizeSession(input, fallbackKey) {
   session.totalTokens = Math.max(0, Math.round(asNumber(input.totalTokens ?? input.total_tokens ?? input.tokens ?? componentTotal)));
   session.costUsd = asNumber(input.costUsd ?? input.cost_usd ?? input.cost ?? 0);
   session.messageCount = Math.max(0, Math.round(firstNumber(input, MESSAGE_COUNT_KEYS)));
+  session.timedTokens = Math.max(0, Math.round(asNumber(input.timedTokens ?? input.timed_tokens ?? 0)));
+  session.timedDurationMs = Math.max(0, Math.round(asNumber(input.timedDurationMs ?? input.timed_duration_ms ?? 0)));
+  session.timedOutputTokens = normalizeTimedOutputTokens(input.timedOutputTokens ?? input.timed_output_tokens, session.outputTokens, session.timedDurationMs);
+  addUnpricedTokens(session, input, session.totalTokens);
   session.startedAt = normalizeIsoTimestamp(firstString(input, STARTED_AT_KEYS));
   session.lastUsedAt = normalizeIsoTimestamp(firstString(input, LAST_USED_AT_KEYS));
   session.projectId = String(input.projectId || input.project_id || '').trim();
@@ -618,16 +854,50 @@ function normalizeSession(input, fallbackKey) {
     }
   }
   if (input.archived === true || input.deleted === true || input.sourceDeleted === true) session.archived = true;
-  return session;
+  return sessionComponentProvenance(session, input);
+}
+
+function canonicalPeriodClientIds(input) {
+  if (!input || typeof input !== 'object') return input;
+  const result = { ...input };
+  for (const field of ['clients', 'clientCosts', 'clientCacheReads', 'clientCacheWrites', 'clientOutputs', 'clientUnclassifiedTokens', 'clientModels', 'clientModelCosts']) {
+    const source = input[field];
+    if (!source || typeof source !== 'object') continue;
+    const folded = Object.create(null);
+    const nested = field === 'clientModels' || field === 'clientModelCosts';
+    for (const [key, value] of Object.entries(source)) {
+      const canonical = normalizeClientName(key) || key;
+      if (['__proto__', 'constructor', 'prototype'].includes(canonical)) continue;
+      // `mimo` is the migrated snapshot identity. Native sub-sources such as
+      // kilo/kilocode remain additive; this is not a global alias dedupe rule.
+      if (canonical === 'mimo' && key !== canonical && Object.hasOwn(source, canonical)) continue;
+      if (nested) {
+        folded[canonical] ||= Object.create(null);
+        for (const [model, count] of Object.entries(value || {})) folded[canonical][model] = asNumber(folded[canonical][model]) + asNumber(count);
+      } else folded[canonical] = asNumber(folded[canonical]) + asNumber(value);
+    }
+    result[field] = folded;
+  }
+  if (input.sessions && typeof input.sessions === 'object') {
+    result.sessions = Object.fromEntries(Object.entries(input.sessions).filter(([key, value]) => {
+      const session = normalizeSession(value, key);
+      if (!session) return true;
+      const canonicalKey = `${session.client}:${session.sessionId}`;
+      return session.client !== 'mimo' || key === canonicalKey || !Object.hasOwn(input.sessions, canonicalKey);
+    }));
+  }
+  return result;
 }
 
 function normalizePeriod(input, options = {}) {
+  input = canonicalPeriodClientIds(input);
   const period = emptyPeriod();
   if (!input || typeof input !== 'object') {
     // `emptyPeriod()` is also the exact neutral value used by current producers and
     // merge targets, so it is throughput-capable by construction. Missing wire input
     // is different: its zero counters are synthetic and must never seed a live delta.
     period.capabilities.throughput = false;
+    delete period.modelThroughput;
     return period;
   }
   const projectsEnabled = options.projectsEnabled !== false;
@@ -648,6 +918,8 @@ function normalizePeriod(input, options = {}) {
   period.capabilities.tokenComponents = componentCapability === true
     || (componentCapability !== false && (period.totalTokens === 0 || hasLegacyComponentShape));
   period.costUsd = asNumber(input.costUsd ?? input.cost_usd ?? input.cost ?? 0);
+  addUnpricedTokens(period, input, period.totalTokens);
+  mergeUnpricedMaps(period, input);
   period.cacheReadTokens = Math.max(0, Math.round(asNumber(input.cacheReadTokens ?? input.cache_read_tokens ?? 0)));
   period.cacheWriteTokens = Math.max(0, Math.round(asNumber(input.cacheWriteTokens ?? input.cache_write_tokens ?? 0)));
   period.outputTokens = Math.max(0, Math.round(asNumber(input.outputTokens ?? input.output_tokens ?? 0)));
@@ -739,6 +1011,8 @@ function normalizePeriod(input, options = {}) {
       }
     }
   }
+  period.modelThroughput = normalizeModelThroughput(input.modelThroughput, period);
+  if (!period.modelThroughput) delete period.modelThroughput;
   if (input.modelCosts && typeof input.modelCosts === 'object') {
     for (const [model, value] of Object.entries(input.modelCosts)) {
       const key = normalizeModelName(model);
@@ -769,6 +1043,7 @@ function normalizePeriod(input, options = {}) {
       }
     }
   }
+  reconcileCursorAutoGlobalModels(period, input);
   if (input.sessions && typeof input.sessions === 'object') {
     for (const [key, value] of Object.entries(input.sessions)) {
       const session = normalizeSession(value, key);
@@ -790,7 +1065,16 @@ function normalizePeriod(input, options = {}) {
   ) {
     period.capabilities.tokenComponents = false;
   }
-  return period;
+  if (input.tokenComponentsInvalid === true) period.tokenComponentsInvalid = true;
+  // A partial DTO may carry measured output without any total observation.
+  // Preserve that absence through normalization instead of validating against a synthetic zero.
+  if (input.totalTokensAvailable === false || (!hasOwn(input, 'totalTokens') && !hasOwn(input, 'total_tokens')
+    && period.cacheReadTokens + period.cacheWriteTokens + period.outputTokens > 0)) {
+    period.totalTokensAvailable = false;
+    period.capabilities.tokenComponents = false;
+    return period;
+  }
+  return validatePeriodComponents(period);
 }
 
 const UNATTRIBUTED_USAGE_CLIENT = '__unattributed';
@@ -800,26 +1084,48 @@ function addUsageRowToPeriod(period, row, detectedClient = detectClient(row)) {
   const client = detectedClient;
   const tokens = tokenValueForClient(row, client);
   const cost = costValue(row);
-  const cacheRead = Math.max(0, Math.round(firstNumber(row, CACHE_READ_TOKEN_KEYS)));
-  const cacheWrite = Math.max(0, Math.round(firstNumber(row, CACHE_WRITE_TOKEN_KEYS)));
-  const output = Math.max(0, Math.round(outputValueForClient(row, client)));
+  let cacheRead = Math.max(0, Math.round(firstNumber(row, CACHE_READ_TOKEN_KEYS)));
+  let cacheWrite = Math.max(0, Math.round(firstNumber(row, CACHE_WRITE_TOKEN_KEYS)));
+  let output = Math.max(0, Math.round(outputValueForClient(row, client)));
+  const input = Math.max(0, Math.round(firstNumber(row, INPUT_TOKEN_KEYS)));
+  const invalidComponents = input + output + cacheRead + cacheWrite > tokens;
+  const unknown = invalidComponents ? Math.max(0, tokens) : Math.max(0, tokens - input - output - cacheRead - cacheWrite);
+  if (invalidComponents) { cacheRead = cacheWrite = output = 0; period.tokenComponentsInvalid = true; }
+  if (unknown > 0) {
+    period.unclassifiedTokens += unknown;
+    period.capabilities.tokenComponents = false;
+  }
   const performance = row?.performance && typeof row.performance === 'object' ? row.performance : null;
   const timedTokens = Math.max(0, Math.round(firstNumber(performance, TIMED_TOKEN_KEYS)));
-  const timedDurationMs = Math.max(0, Math.round(firstNumber(performance, TIMED_DURATION_KEYS)));
-  // A row contributes its output to the throughput numerator exactly when it contributes to
-  // the denominator. Gating rather than scaling by tokscale's `tokenCoverage` keeps this a
-  // plain counter, which is what lets it merge and delta like every other token field.
-  const timedOutputTokens = timedDurationMs > 0 ? output : 0;
-  let model = detectModel(row, client);
-  if (client === 'cursor' && model === 'auto') model = 'cursor-auto';
+  const { timedOutputTokens, timedDurationMs } = entryThroughput(row, output, client);
+  const model = detectModel(row, client);
+  if (unknown > 0) {
+    if (client) period.clientUnclassifiedTokens[client] = (period.clientUnclassifiedTokens[client] || 0) + unknown;
+    if (model) period.modelUnclassifiedTokens[model] = (period.modelUnclassifiedTokens[model] || 0) + unknown;
+  }
   period.totalTokens += Math.max(0, Math.round(tokens));
   period.costUsd += cost;
+  const unpriced = Math.min(Math.max(0, Math.round(tokens)), Math.max(0, Math.round(asNumber(row.unpricedTokens))));
+  addUnpricedTokens(period, { unpricedTokens: unpriced });
+  if (unpriced > 0) {
+    mergeUnpricedMaps(period, {
+      clientUnpricedTokens: client ? { [client]: unpriced } : {},
+      modelUnpricedTokens: model ? { [model]: unpriced } : {},
+      clientModelUnpricedTokens: client && model ? { [client]: { [model]: unpriced } } : {}
+    });
+  }
   period.cacheReadTokens += cacheRead;
   period.cacheWriteTokens += cacheWrite;
   period.outputTokens += output;
   period.timedTokens += timedTokens;
   period.timedOutputTokens += timedOutputTokens;
   period.timedDurationMs += timedDurationMs;
+  if (model && timedDurationMs > 0) {
+    const counters = period.modelThroughput[model] ||= { timedTokens: 0, timedOutputTokens: 0, timedDurationMs: 0 };
+    counters.timedTokens += timedTokens;
+    counters.timedOutputTokens += timedOutputTokens;
+    counters.timedDurationMs += timedDurationMs;
+  }
   if (client && tokens > 0) {
     period.clients[client] = (period.clients[client] || 0) + Math.round(tokens);
     if (cacheRead > 0) period.clientCacheReads[client] = (period.clientCacheReads[client] || 0) + cacheRead;
@@ -1309,6 +1615,8 @@ function addPeriodInto(target, source) {
     && source.capabilities?.throughput === true;
   target.totalTokens += source.totalTokens;
   target.costUsd += source.costUsd;
+  addUnpricedTokens(target, source, source.totalTokens);
+  mergeUnpricedMaps(target, source);
   target.cacheReadTokens += source.cacheReadTokens;
   target.cacheWriteTokens += source.cacheWriteTokens;
   target.outputTokens += source.outputTokens;
@@ -1316,6 +1624,15 @@ function addPeriodInto(target, source) {
   target.timedTokens += source.timedTokens;
   target.timedOutputTokens += source.timedOutputTokens;
   target.timedDurationMs += source.timedDurationMs;
+  // Absence is unknown attribution, not an exact empty map. It stays unknown
+  // through partition/WSL merges and device aggregation, regardless of input order.
+  if (!source.modelThroughput) delete target.modelThroughput;
+  if (target.modelThroughput) {
+    for (const [model, counters] of Object.entries(source.modelThroughput)) {
+      const merged = target.modelThroughput[model] ||= { timedTokens: 0, timedOutputTokens: 0, timedDurationMs: 0 };
+      for (const field of ['timedTokens', 'timedOutputTokens', 'timedDurationMs']) merged[field] += counters[field];
+    }
+  }
   for (const [client, tokens] of Object.entries(source.clients)) {
     target.clients[client] = (target.clients[client] || 0) + tokens;
     if (source.clientCacheReads?.[client]) target.clientCacheReads[client] = (target.clientCacheReads[client] || 0) + source.clientCacheReads[client];
@@ -1478,6 +1795,9 @@ function aggregateDevices(devices, staleAfterMs, nowMs = Date.now()) {
 // grow (clients/models/clientModels/sessions/...) without per-field bookkeeping.
 function applyPeriodDelta(base, freshToday, anchorToday) {
   const result = deltaValue(base, freshToday, anchorToday, '');
+  if (result && (!base?.modelThroughput || !freshToday?.modelThroughput || !anchorToday?.modelThroughput)) {
+    delete result.modelThroughput;
+  }
   // Older anchors may still contain the pre-native Reasonix stats-path rows.
   // They are not authoritative session detail and must not survive a warm tick
   // merely because the aggregate totals remain valid.

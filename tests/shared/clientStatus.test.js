@@ -5,6 +5,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const { installSourceEnvGuard } = require('../helpers/sourceEnv');
+installSourceEnvGuard(test);
 
 const { statusFromSignals, deriveClientStatus, clientDataDirPresence } = require('../../src/shared/collector');
 const { normalizeDeviceRecord, aggregateDevices } = require('../../src/shared/usage');

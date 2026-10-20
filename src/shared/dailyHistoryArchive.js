@@ -5,8 +5,10 @@ const path = require('node:path');
 const { isDeepStrictEqual } = require('node:util');
 const { sharedDataDir, writeJsonAtomic } = require('./config');
 const {
-  normalizeTokscaleClientName, num, sumOutputTokens, sumTokens
+  normalizeTokscaleClientName, normalizeTokscaleModelNameForClient, normalizeTokscaleModelComponentSummary, num, sumOutputTokens, sumTokens
 } = require('./history');
+
+const { CLIENT_IDENTITY_GENERATION, CLIENT_IDENTITY_SPLITS, isPreSplitEntry } = require('./clientIdentitySplits');
 
 const ARCHIVE_VERSION = 1;
 const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -14,14 +16,14 @@ const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 function observationKey(value) {
   return JSON.stringify([
     normalizeTokscaleClientName(value?.client) || 'unknown',
-    String(value?.modelId || value?.model || value?.model_id || 'unknown')
+    normalizeTokscaleModelNameForClient(value?.modelId || value?.model || value?.model_id || 'unknown', value?.client)
   ]);
 }
 
 function normalizeObservation(value) {
   if (!value || typeof value !== 'object') return null;
   const client = normalizeTokscaleClientName(value.client) || 'unknown';
-  const modelId = String(value.modelId || value.model || value.model_id || 'unknown');
+  const modelId = normalizeTokscaleModelNameForClient(value.modelId || value.model || value.model_id || 'unknown', client);
   const tokens = Math.max(0, Math.round(num(value.tokens)));
   const cost = Math.max(0, num(value.cost));
   const messages = Math.max(0, Math.round(num(value.messages)));
@@ -59,6 +61,7 @@ function normalizeObservation(value) {
     tokens,
     cost,
     messages,
+    ...(typeof value.pricingRevision === 'string' ? { pricingRevision: value.pricingRevision } : {}),
     ...(unclassifiedTokens > 0 ? { unclassifiedTokens } : {}),
     ...(tokenComponentsAvailable ? {
       tokenComponentsAvailable: true,
@@ -135,7 +138,15 @@ function normalizeComponentSummary(value, observations) {
     }
     return result;
   };
-  const perClient = normalizeMap(value.perClient, tokenMaps.perClient);
+  const componentsByClient = Object.create(null);
+  for (const [key, components] of Object.entries(value.perClient || {})) {
+    const client = normalizeTokscaleClientName(key) || key;
+    if (client === 'mimo' && client !== key && Object.hasOwn(value.perClient, client)) continue;
+    const previous = componentsByClient[client];
+    if (!previous) componentsByClient[client] = { ...components };
+    else for (const metric of ['cacheReadTokens', 'cacheWriteTokens', 'outputTokens', 'unclassifiedTokens']) previous[metric] = num(previous[metric]) + num(components?.[metric]);
+  }
+  const perClient = normalizeMap(componentsByClient, tokenMaps.perClient);
   const perModel = normalizeMap(value.perModel, tokenMaps.perModel);
   if (!perClient || !perModel) return null;
   return {
@@ -156,17 +167,22 @@ function normalizeDay(value, fallbackDate = '') {
   const source = Array.isArray(value?.observations)
     ? value.observations
     : Object.values(value?.observations || {});
+  // A canonical persisted row supersedes an old spelling of the same
+  // client/model observation; independent native alias rows still add normally.
+  const canonicalKeys = new Set(source.filter(raw => raw?.client === normalizeTokscaleClientName(raw?.client)).map(observationKey));
   for (const raw of source) {
+    if (normalizeTokscaleClientName(raw?.client) === 'mimo' && raw?.client !== 'mimo' && canonicalKeys.has(observationKey(raw))) continue;
     const observation = normalizeObservation(raw);
     if (!observation) continue;
     const key = observationKey(observation);
     observations[key] = addObservation(observations[key], observation);
   }
   if (Object.keys(observations).length === 0 && num(value?.activeTimeMs) <= 0) return null;
-  const componentSummary = normalizeComponentSummary(value?.componentSummary, observations);
+  const componentSummary = normalizeComponentSummary(normalizeTokscaleModelComponentSummary(value?.componentSummary, source), observations);
   return {
     date,
     activeTimeMs: Math.max(0, Math.round(num(value?.activeTimeMs))),
+    ...(value?.clientIdentityGeneration !== undefined ? { clientIdentityGeneration: num(value.clientIdentityGeneration) } : {}),
     observations,
     ...(componentSummary ? { componentSummary } : {})
   };
@@ -174,6 +190,7 @@ function normalizeDay(value, fallbackDate = '') {
 
 function normalizeDailyHistoryArchive(value) {
   const normalized = { version: ARCHIVE_VERSION, days: {} };
+  if (typeof value?.pricingRevision === 'string') normalized.pricingRevision = value.pricingRevision;
   const source = value?.days && typeof value.days === 'object' ? value.days : {};
   for (const [date, rawDay] of Object.entries(source)) {
     const day = normalizeDay(rawDay, date);
@@ -193,7 +210,18 @@ function graphsArray(graphs) {
   return (Array.isArray(graphs) ? graphs : [graphs]).filter((graph) => graph && typeof graph === 'object');
 }
 
-function observationsFromGraphs(graphs) {
+function foldClientForDate(client, date, options = {}) {
+  if (!client) return client;
+  const day = options.archive?.days?.[date];
+  if (!day || !isPreSplitEntry(day)) return client;
+  for (const { merged, split } of CLIENT_IDENTITY_SPLITS) {
+    if (client !== split) continue;
+    return merged;
+  }
+  return client;
+}
+
+function observationsFromGraphs(graphs, options = {}) {
   const days = new Map();
   for (const graph of graphsArray(graphs)) {
     for (const row of (Array.isArray(graph.contributions) ? graph.contributions : [])) {
@@ -202,7 +230,7 @@ function observationsFromGraphs(graphs) {
       const day = days.get(date) || { date, activeTimeMs: 0, observations: {} };
       day.activeTimeMs += Math.max(0, Math.round(num(row.activeTimeMs ?? row.active_time_ms)));
       for (const raw of (Array.isArray(row?.clients) ? row.clients : [])) {
-        const client = normalizeTokscaleClientName(raw?.client) || 'unknown';
+        const client = foldClientForDate(normalizeTokscaleClientName(raw?.client), date, options) || 'unknown';
         const candidate = normalizeObservation({
           ...raw,
           client,
@@ -234,16 +262,38 @@ function shouldReplaceObservation(previous, incoming) {
 
 function captureDailyHistoryArchive(existingArchive, graphs, options = {}) {
   const archive = normalizeDailyHistoryArchive(existingArchive);
+  const reprice = options.reprice === true;
+  if (typeof options.pricingRevision === 'string') {
+    // Stamp each retained observation before adopting the new revision. A
+    // source absent from this scan must still be repriced when it reappears.
+    const previousRevision = archive.pricingRevision ?? 'legacy';
+    for (const day of Object.values(archive.liveDays || {})) {
+      for (const observation of Object.values(day.observations)) {
+        observation.pricingRevision ??= previousRevision;
+      }
+    }
+  }
   const todayKey = String(options.todayKey || '').slice(0, 10);
   const hasTodayKey = DAY_KEY_RE.test(todayKey);
-  const incomingDays = observationsFromGraphs(graphs);
+  const incomingDays = observationsFromGraphs(graphs, { archive });
+  // A failed/empty graph did not confirm any current prices. Keep the old
+  // revision so a later successful scan still reconciles retained live costs.
+  if (incomingDays.size > 0 && typeof options.pricingRevision === 'string') archive.pricingRevision = options.pricingRevision;
 
   for (const [date, incoming] of incomingDays) {
     if (hasTodayKey && date > todayKey) continue;
-    const previous = archive.days[date] || { date, activeTimeMs: 0, observations: {} };
+    const existing = archive.days[date] || null;
+    const previous = existing || { date, activeTimeMs: 0, observations: {} };
+    // A day already stored without a marker predates the split, so it keeps that
+    // status: its observations genuinely span both products and must keep folding.
+    // Anything else is written at the current generation, which is what stops a
+    // post-split day from being absorbed into the merged id when Pi happens to be
+    // scanned first.
+    const legacy = existing !== null && isPreSplitEntry(existing);
     const next = {
       date,
       activeTimeMs: Math.max(previous.activeTimeMs, incoming.activeTimeMs),
+      ...(legacy ? {} : { clientIdentityGeneration: CLIENT_IDENTITY_GENERATION }),
       observations: { ...previous.observations }
     };
     for (const [key, observation] of Object.entries(incoming.observations)) {
@@ -253,6 +303,13 @@ function captureDailyHistoryArchive(existingArchive, graphs, options = {}) {
     }
     const normalized = normalizeDay(next, date);
     if (normalized) archive.days[date] = normalized;
+    // When the collector rescans with current pricing, matching source usage
+    // owns its price (including explicit zero). Keep archive-only usage and
+    // richer live metadata, but do not let an older live cost undo repricing.
+    const liveDay = archive.liveDays?.[date];
+    if (liveDay && (reprice || typeof options.pricingRevision === 'string')) {
+      archive.liveDays[date] = withReconciledGraphCosts(liveDay, incoming, liveDay, reprice, options.pricingRevision);
+    }
   }
 
   // Presentation and sync windows are intentionally applied later by
@@ -360,6 +417,7 @@ function periodLiveDay(period, date) {
     : null;
   const day = normalizeDay({
     date,
+    clientIdentityGeneration: CLIENT_IDENTITY_GENERATION,
     activeTimeMs: 0,
     observations: [...observations.values()],
     ...(componentSummary ? { componentSummary } : {})
@@ -398,6 +456,34 @@ function liveDayIsGreater(incoming, previous) {
   return dayCost(incoming) !== dayCost(previous);
 }
 
+function withReconciledGraphCosts(day, graphDay, liveDay, reprice = false, pricingRevision) {
+  let changed = false;
+  const observations = Object.fromEntries(Object.entries(day.observations).map(([key, observation]) => {
+    const graphObservation = graphDay.observations[key];
+    const liveObservation = liveDay.observations[key];
+    const revisionChanged = typeof pricingRevision === 'string'
+      && liveObservation?.pricingRevision !== pricingRevision;
+    const useGraphPrice = reprice || revisionChanged;
+    const isCursor = normalizeTokscaleClientName(observation.client) === 'cursor';
+    if ((!useGraphPrice && typeof pricingRevision !== 'string' && !isCursor)
+      || !graphObservation
+      || !liveObservation
+      || num(graphObservation.tokens) !== num(liveObservation.tokens)) {
+      return [key, observation];
+    }
+    const cost = useGraphPrice || (isCursor && num(graphObservation.cost) > 0)
+      ? graphObservation.cost : liveObservation.cost;
+    if (num(cost) === num(observation.cost)
+      && (typeof pricingRevision !== 'string' || observation.pricingRevision === pricingRevision)) return [key, observation];
+    changed = true;
+    return [key, {
+      ...observation, cost,
+      ...(typeof pricingRevision === 'string' ? { pricingRevision } : {})
+    }];
+  }));
+  return changed ? { ...day, observations } : day;
+}
+
 function mergeLiveDayMetadata(liveDay, previousDay) {
   if (!previousDay) return liveDay;
   const observations = Object.fromEntries(Object.entries(liveDay.observations).map(([key, observation]) => {
@@ -427,8 +513,8 @@ function mergeLiveDayMetadata(liveDay, previousDay) {
         cacheWriteTokens: num(previous.cacheWriteTokens),
         outputTokens: num(previous.outputTokens)
       } : {}),
-      ...(unclassifiedTokens > 0 ? { unclassifiedTokens } : {}),
-      ...(unclassifiedTokens === 0 ? { tokenComponentsAvailable: true } : {}),
+      unclassifiedTokens,
+      tokenComponentsAvailable: unclassifiedTokens === 0,
       ...(Math.max(num(observation.reasoningTokens), num(previous.reasoningTokens)) > 0
         ? { reasoningTokens: Math.max(num(observation.reasoningTokens), num(previous.reasoningTokens)) }
         : {})
@@ -451,9 +537,36 @@ function captureLiveDailyHistory(existingArchive, period, options = {}) {
   }
   const incoming = periodLiveDay(period, date);
   if (!incoming) return archive;
+  if (typeof options.pricingRevision === 'string') {
+    for (const observation of Object.values(incoming.observations)) {
+      observation.pricingRevision = options.pricingRevision;
+    }
+  }
   const previous = archive.liveDays?.[date];
-  if (!previous || liveDayIsGreater(incoming, previous)) {
-    archive.liveDays = { ...(archive.liveDays || {}), [date]: incoming };
+  const equalUsage = previous && dayTokens(incoming) === dayTokens(previous);
+  // Revision provenance comes from the retained rows, not a missing model key.
+  // Equal totals can also be reattributed by a parser correction independently
+  // of pricing. Keep the incoming identities and merge only matching metadata.
+  const revisionChanged = equalUsage && typeof options.pricingRevision === 'string'
+    && Object.values(previous.observations).some(observation => (
+      observation.pricingRevision !== options.pricingRevision
+    ));
+  const attributionChanged = equalUsage && (
+    Object.keys(incoming.observations).length !== Object.keys(previous.observations).length
+    || Object.entries(incoming.observations).some(([key, observation]) => (
+      observation.tokens !== previous.observations[key]?.tokens
+    ))
+  );
+  if (!previous || liveDayIsGreater(incoming, previous) || revisionChanged || attributionChanged) {
+    let selected = incoming;
+    if (equalUsage && dayComponentQuality(incoming) < dayComponentQuality(previous)) {
+      selected = mergeLiveDayMetadata(incoming, previous);
+      // A whole-day component summary is reusable only for identical attribution.
+      if (!attributionChanged && previous.componentSummary) {
+        selected.componentSummary = previous.componentSummary;
+      }
+    }
+    archive.liveDays = { ...(archive.liveDays || {}), [date]: selected };
   }
   return archive;
 }
@@ -473,8 +586,8 @@ function graphTimeMetrics(graphs, activeTimeMs) {
 }
 
 function graphFromDailyHistoryArchive(graphs, archive, options = {}) {
-  const currentDays = observationsFromGraphs(graphs);
   const normalizedArchive = normalizeDailyHistoryArchive(archive);
+  const currentDays = observationsFromGraphs(graphs, { archive: normalizedArchive });
   const todayKey = String(options.todayKey || '').slice(0, 10);
   const hasTodayKey = DAY_KEY_RE.test(todayKey);
 
@@ -485,8 +598,11 @@ function graphFromDailyHistoryArchive(graphs, archive, options = {}) {
   for (const [date, liveDay] of Object.entries(normalizedArchive.liveDays || {})) {
     if (hasTodayKey && date > todayKey) continue;
     const previous = currentDays.get(date);
-    if (!previous || liveDayIsGreater(liveDay, previous)) {
-      currentDays.set(date, mergeLiveDayMetadata(liveDay, previous));
+    if (!previous) {
+      currentDays.set(date, liveDay);
+    } else {
+      const selected = liveDayIsGreater(liveDay, previous) ? mergeLiveDayMetadata(liveDay, previous) : previous;
+      currentDays.set(date, withReconciledGraphCosts(selected, previous, liveDay, options.reprice === true));
     }
   }
 

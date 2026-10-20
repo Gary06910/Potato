@@ -88,7 +88,7 @@ test('settings loading owns the app update cache by feed and persists a narrow m
   assert.match(read, /const normalizedAppUpdate = normalizeAppUpdateCache\(savedAppUpdate\)/);
   assert.match(read, /savedAppUpdate !== undefined \? \{ appUpdate: normalizedAppUpdate \} : \{\}/);
   assert.match(load, /const appUpdateNeedsPersistence = appUpdateCacheMigrationPending/);
-  assert.match(load, /if \(codexNeedsPersistence \|\| appUpdateNeedsPersistence\)/);
+  assert.match(load, /if \(codexNeedsPersistence \|\| appUpdateNeedsPersistence \|\| splitNeedsPersistence\)/);
   assert.doesNotMatch(read, /app\.setPath\('userData',/);
 });
 

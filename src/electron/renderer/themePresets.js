@@ -62,7 +62,7 @@
   // synthetic "default" fallback is shown last.
   const VENDOR_ORDER = [
     'claude', 'codex', 'opencode', 'hermes', 'openclaw', 'cursor', 'antigravity', 'cline',
-    'amp', 'droid', 'kimi', 'qwen', 'grok', 'copilot', 'pi', 'zed', 'kilo', 'commandcode', 'micode', 'zcode', 'kiro', 'codebuddy', 'workbuddy', 'proma', 'qodercn', 'reasonix', 'dsh', 'cherrystudio', 'lmstudio', 'unsloth',
+    'amp', 'droid', 'kimi', 'qwen', 'grok', 'copilot', 'pi', 'omp', 'goose', 'zed', 'kilo', 'commandcode', 'mimo', 'muse', 'zcode', 'kiro', 'codebuddy', 'workbuddy', 'proma', 'catpaw', 'qodercn', 'reasonix', 'dsh', 'cherrystudio', 'lmstudio', 'unsloth', 'devin', 'fx', 'mcode',
     'openrouter', 'gemini', 'qoder', 'deepseek', 'xai', 'meta', 'mistral', 'moonshot', 'zai', 'zaiteam', 'cohere', 'xiaomi', 'minimax', 'doubao', 'hunyuan', 'volcengine', 'ollama', 'trae', 'alibaba', 'thirdparty'
   ];
 
@@ -85,21 +85,28 @@
     grok: 'Grok Build',
     copilot: 'GitHub Copilot',
     pi: 'Pi',
+    omp: 'Oh My Pi',
+    goose: 'Goose',
     zed: 'Zed',
     kilo: 'Kilo',
     commandcode: 'Command Code',
-    micode: 'MiMo Code',
+    mimo: 'Xiaomi MiMo',
+    muse: 'Muse Code',
     zcode: 'ZCode',
     kiro: 'Kiro',
     codebuddy: 'CodeBuddy',
     workbuddy: 'WorkBuddy',
     proma: 'Proma',
+    catpaw: 'CatPaw',
     qodercn: 'Qoder CN',
     reasonix: 'Reasonix',
     dsh: 'DeepSeek Harness',
     cherrystudio: 'Cherry Studio',
     lmstudio: 'LM Studio',
     unsloth: 'Unsloth',
+    devin: 'Devin',
+    fx: 'fx',
+    mcode: 'MiniMax Code',
     openrouter: 'OpenRouter',
     gemini: 'Gemini',
     qoder: 'Qoder',
@@ -120,7 +127,7 @@
     ollama: 'Ollama',
     alibaba: 'Alibaba Cloud',
     thirdparty: 'Third-party APIs',
-    default: 'Default'
+    default: 'Default',
   };
 
   const HEX_RE = /^#[0-9a-fA-F]{6}$/;

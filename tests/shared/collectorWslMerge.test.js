@@ -38,7 +38,7 @@ test('full tick merges WSL bundle and marks WSL-only client active', async () =>
   assert.equal(anchorCaptured.wslBundle.today.totalTokens, 9);
 });
 
-test('WSL scans exclude locally parsed Proma while retaining it for marker detection', async () => {
+test('WSL scans pass fork-owned Proma together with marker attribution', async () => {
   let wslOptions = null;
   const collectedAt = '2026-07-10T08:00:00.000Z';
   await collectUsageOnce({
@@ -54,7 +54,7 @@ test('WSL scans exclude locally parsed Proma while retaining it for marker detec
       return { bundle: { today: emptyPeriod(), month: emptyPeriod(), allTime: emptyPeriod() }, detected: [] };
     }
   });
-  assert.equal(wslOptions.clients, 'claude');
+  assert.equal(wslOptions.clients, 'claude,proma');
   assert.equal(wslOptions.trackedClients, 'claude,proma');
   assert.equal(wslOptions.now.toISOString(), collectedAt);
 });

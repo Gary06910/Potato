@@ -876,7 +876,7 @@ test('extractUsageFromTokscale normalizes MiMo Code and ZCode client ids', () =>
     { client: 'ZCode', model: 'glm-4.7', totalTokens: 29 }
   ]);
 
-  assert.equal(period.clients.micode, 23);
+  assert.equal(period.clients.mimo, 23);
   assert.equal(period.clients.zcode, 29);
 });
 
@@ -905,19 +905,19 @@ test('extractUsageFromTokscale passes zcode input straight through (tokscale nor
     ]
   });
 
-  assert.equal(period.clients.zcode, 1050);
-  assert.equal(period.totalTokens, 1050);
+  assert.equal(period.clients.zcode, 1060);
+  assert.equal(period.totalTokens, 1060);
   assert.equal(period.cacheReadTokens, 800);
   assert.equal(period.clientCacheReads.zcode, 800);
-  assert.equal(period.clientOutputs.zcode, 50);
+  assert.equal(period.clientOutputs.zcode, 60);
 
   const session = period.sessions['zcode:sess-z1'];
-  assert.equal(session.totalTokens, 1050);
+  assert.equal(session.totalTokens, 1060);
   assert.equal(session.inputTokens, 200);
   assert.equal(session.cacheReadTokens, 800);
-  assert.equal(session.outputTokens, 50);
+  assert.equal(session.outputTokens, 60);
   assert.equal(session.reasoningTokens, 10);
-  assert.equal(session.models['glm-5.2'], 1050);
+  assert.equal(session.models['glm-5.2'], 1060);
 });
 
 test('extractUsageFromTokscale normalizes Kiro client ids', () => {
@@ -947,7 +947,7 @@ test('extractUsageFromTokscale keeps the canonical Command Code client id', () =
   assert.equal(period.clients.commandcode, 19);
 });
 
-test('normalizeClientName folds both Kilo sources together and maps both Oh My Pi ids to pi', () => {
+test('normalizeClientName folds both Kilo sources together and maps Oh My Pi names to the independent omp identity', () => {
   const period = extractUsageFromTokscale([
     { client: 'kilo', model: 'x', totalTokens: 5 },
     { client: 'kilocode', model: 'x', totalTokens: 13 },
@@ -956,7 +956,7 @@ test('normalizeClientName folds both Kilo sources together and maps both Oh My P
   ]);
 
   assert.equal(period.clients.kilo, 18);
-  assert.equal(period.clients.pi, 18);
+  assert.equal(period.clients.omp, 18);
   assert.ok(!('kilocode' in period.clients));
 });
 

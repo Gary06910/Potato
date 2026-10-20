@@ -8,8 +8,17 @@
 const { REASONIX_CLIENT } = require('./providers/reasonix/paths');
 
 const TOKSCALE_CLIENT_ALIASES = new Map([
-  ['omp', 'pi'],
-  ['kilocode', 'kilo']
+  ['antigravity-cli', 'antigravity'],
+  ['antigravity-extension', 'antigravity'],
+  // `micode` is tokscale's id for MiMo Code, a fossil of the path typo its PR
+  // #784 fixed. Token Monitor's id is `mimo`, so both upstream spellings fold
+  // onto it — including plain `micode`, which is what every device and stored
+  // history record written before the rename still says.
+  ['micode', 'mimo'],
+  ['micode-desktop', 'mimo'],
+  ['kilocode', 'kilo'],
+  ['devin-cli', 'devin'],
+  ['devin-desktop', 'devin']
 ]);
 
 // Canonical Token Monitor identity for client ids emitted by Tokscale. Keep
@@ -19,6 +28,47 @@ function normalizeTokscaleClientName(value) {
   const raw = String(value || '').trim().toLowerCase();
   if (!raw) return null;
   return TOKSCALE_CLIENT_ALIASES.get(raw) || raw;
+}
+
+function normalizeTokscaleModelNameForClient(value, client) {
+  const model = String(value ?? '').trim();
+  if (normalizeTokscaleClientName(client) === 'cursor' && /^(?:auto|default)$/i.test(model)) {
+    return 'cursor-auto';
+  }
+  return model;
+}
+
+function normalizeTokscaleModelComponentSummary(summary, rows) {
+  if (!summary?.perModel) return summary;
+  const renames = new Map();
+  for (const row of rows || []) {
+    const model = String(row?.modelId || row?.model || row?.model_id || 'unknown');
+    const canonical = normalizeTokscaleModelNameForClient(model, row?.client);
+    if (renames.has(model) && renames.get(model) !== canonical) return null;
+    renames.set(model, canonical);
+  }
+  if (![...renames].some(([before, after]) => before !== after)) return summary;
+  const perModel = {};
+  for (const [model, components] of Object.entries(summary.perModel)) {
+    const key = renames.get(model) || model;
+    const previous = perModel[key];
+    perModel[key] = previous ? {
+      cacheReadTokens: num(previous.cacheReadTokens) + num(components?.cacheReadTokens),
+      cacheWriteTokens: num(previous.cacheWriteTokens) + num(components?.cacheWriteTokens),
+      outputTokens: num(previous.outputTokens) + num(components?.outputTokens),
+      unclassifiedTokens: num(previous.unclassifiedTokens) + num(components?.unclassifiedTokens)
+    } : components;
+  }
+  return { ...summary, perModel };
+}
+
+function unpricedTokensFor(value) {
+  return Math.min(Math.max(0, num(value?.tokens)), Math.max(0, Math.round(num(value?.unpricedTokens))));
+}
+
+function addUnpricedTokens(target, source) {
+  const count = unpricedTokensFor(source);
+  if (count > 0) target.unpricedTokens = num(target.unpricedTokens) + count;
 }
 
 function num(value) {
@@ -42,7 +92,7 @@ function normalizeTimeMetrics(value) {
 
 // Tokscale emits these clients' reasoning as a disjoint JSON bucket. History
 // uses the same reasoning-inclusive public output convention as usage.js.
-const TOKSCALE_DISJOINT_REASONING_CLIENTS = new Set([REASONIX_CLIENT, 'codex', 'droid', 'dsh']);
+const TOKSCALE_DISJOINT_REASONING_CLIENTS = new Set([REASONIX_CLIENT, 'antigravity', 'codex', 'droid', 'dsh', 'grok', 'zcode', 'opencode', 'muse', 'codebuddy', 'workbuddy', 'cherrystudio', 'hermes']);
 
 function hasDisjointReasoning(client) {
   return TOKSCALE_DISJOINT_REASONING_CLIENTS.has(String(client).trim().toLowerCase());
@@ -107,6 +157,7 @@ function parseGraphResult(raw) {
     const perModel = {};
     let tokens = 0;
     let cost = 0;
+    let unpricedTokens = 0;
     let messages = 0;
     let cacheReadTokens = 0;
     let cacheWriteTokens = 0;
@@ -117,9 +168,10 @@ function parseGraphResult(raw) {
     for (const c of clientRows) {
       if (!c || typeof c !== 'object') continue;
       const client = normalizeTokscaleClientName(c.client) || 'unknown';
-      const model = String(c.modelId || c.model || c.model_id || 'unknown');
+      const model = normalizeTokscaleModelNameForClient(c.modelId || c.model || c.model_id || 'unknown', client);
       const t = sumTokens(c.tokens, client);
       const cst = num(c.cost);
+      const unpriced = unpricedTokensFor({ tokens: t, unpricedTokens: c.unpricedTokens });
       const cacheRead = num(c.tokens?.cacheRead ?? c.tokens?.cache_read);
       const cacheWrite = num(c.tokens?.cacheWrite ?? c.tokens?.cache_write);
       const output = sumOutputTokens(c.tokens, client);
@@ -135,6 +187,7 @@ function parseGraphResult(raw) {
       const msg = String(client).trim().toLowerCase() === REASONIX_CLIENT ? 0 : num(c.messages);
       tokens += t;
       cost += cst;
+      unpricedTokens += unpriced;
       messages += msg;
       cacheReadTokens += cacheRead;
       cacheWriteTokens += cacheWrite;
@@ -146,6 +199,7 @@ function parseGraphResult(raw) {
         tokens: 0, cost: 0, messages: 0, unclassifiedTokens: 0
       });
       pc.tokens += t; pc.cost += cst; pc.messages += msg;
+      addUnpricedTokens(pc, { tokens: t, unpricedTokens: unpriced });
       if (cacheRead > 0) pc.cacheReadTokens = num(pc.cacheReadTokens) + cacheRead;
       if (cacheWrite > 0) pc.cacheWriteTokens = num(pc.cacheWriteTokens) + cacheWrite;
       if (output > 0) pc.outputTokens = num(pc.outputTokens) + output;
@@ -154,13 +208,14 @@ function parseGraphResult(raw) {
         tokens: 0, cost: 0, unclassifiedTokens: 0
       });
       pm.tokens += t; pm.cost += cst;
+      addUnpricedTokens(pm, { tokens: t, unpricedTokens: unpriced });
       if (cacheRead > 0) pm.cacheReadTokens = num(pm.cacheReadTokens) + cacheRead;
       if (cacheWrite > 0) pm.cacheWriteTokens = num(pm.cacheWriteTokens) + cacheWrite;
       if (output > 0) pm.outputTokens = num(pm.outputTokens) + output;
       pm.unclassifiedTokens += unclassified;
     }
     const componentSummary = applyComponentSummary(
-      row.tokenComponentSummary,
+      normalizeTokscaleModelComponentSummary(row.tokenComponentSummary, clientRows),
       tokens,
       perClient,
       perModel
@@ -190,6 +245,7 @@ function parseGraphResult(raw) {
       date,
       tokens,
       cost,
+      ...(unpricedTokens > 0 ? { unpricedTokens } : {}),
       messages,
       cacheReadTokens,
       cacheWriteTokens,
@@ -275,15 +331,18 @@ function computeStreaks(days, todayKey) {
 }
 
 function addPerClient(target, source, includeTokenComponents = false) {
-  for (const [client, v] of Object.entries(source || {})) {
+  for (const [rawClient, v] of Object.entries(canonicalHistoryClientMap(source) || {})) {
+    const client = normalizeTokscaleClientName(rawClient) || rawClient;
     const t = target[client] || (target[client] = { tokens: 0, cost: 0, messages: 0 });
     t.tokens += num(v.tokens); t.cost += num(v.cost); t.messages += num(v.messages);
+    addUnpricedTokens(t, v);
     if (includeTokenComponents) {
       if (num(v.cacheReadTokens) > 0) t.cacheReadTokens = num(t.cacheReadTokens) + num(v.cacheReadTokens);
       if (num(v.cacheWriteTokens) > 0) t.cacheWriteTokens = num(t.cacheWriteTokens) + num(v.cacheWriteTokens);
       if (num(v.outputTokens) > 0) t.outputTokens = num(t.outputTokens) + num(v.outputTokens);
       const unclassifiedTokens = unclassifiedTokensFor(v);
-      if (unclassifiedTokens > 0) t.unclassifiedTokens = num(t.unclassifiedTokens) + unclassifiedTokens;
+      // Keep explicit zero provenance through repeated merges, just as for models.
+      t.unclassifiedTokens = num(t.unclassifiedTokens) + unclassifiedTokens;
     }
   }
 }
@@ -292,6 +351,7 @@ function addPerModel(target, source, includeTokenComponents = false) {
   for (const [model, v] of Object.entries(source || {})) {
     const t = target[model] || (target[model] = { tokens: 0, cost: 0 });
     t.tokens += num(v.tokens); t.cost += num(v.cost);
+    addUnpricedTokens(t, v);
     if (includeTokenComponents) {
       if (num(v.cacheReadTokens) > 0) t.cacheReadTokens = num(t.cacheReadTokens) + num(v.cacheReadTokens);
       if (num(v.cacheWriteTokens) > 0) t.cacheWriteTokens = num(t.cacheWriteTokens) + num(v.cacheWriteTokens);
@@ -326,6 +386,7 @@ function monthlyRollup(days) {
     if (month.length !== 7) continue;
     const m = byMonth.get(month) || { month, tokens: 0, cost: 0, activeTimeMs: 0, perClient: {}, perModel: {} };
     m.tokens += num(d.tokens); m.cost += num(d.cost); m.activeTimeMs += num(d.activeTimeMs);
+    addUnpricedTokens(m, d);
     addPerClient(m.perClient, d.perClient);
     addPerModel(m.perModel, d.perModel);
     byMonth.set(month, m);
@@ -367,7 +428,7 @@ function normalizeHistory(graphData, options = {}) {
   const capDays = Number.isFinite(options.capDays) ? options.capDays : DEFAULT_CAP_DAYS;
   const todayKey = String(options.todayKey || localDayKey()).slice(0, 10);
   const full = (graphData && Array.isArray(graphData.contributions) ? graphData.contributions : [])
-    .slice()
+    .map(canonicalHistoryRow)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const daily = rollingDailyWindow(full, todayKey, capDays).map((d) => ({ ...d }));
@@ -376,6 +437,7 @@ function normalizeHistory(graphData, options = {}) {
   const monthly = monthlyRollup(full);
   const totalTokens = full.reduce((s, d) => s + num(d.tokens), 0);
   const totalCost = full.reduce((s, d) => s + num(d.cost), 0);
+  const unpricedTokens = full.reduce((s, d) => s + unpricedTokensFor(d), 0);
   const messages = full.reduce((s, d) => s + num(d.messages), 0);
   const activeDays = full.reduce((s, d) => s + (num(d.tokens) > 0 ? 1 : 0), 0);
   const peakDayTokens = full.reduce((m, d) => Math.max(m, num(d.tokens)), 0);
@@ -388,6 +450,7 @@ function normalizeHistory(graphData, options = {}) {
     monthly,
     summary: {
       totalTokens, totalCost, activeDays, currentStreak, longestStreak,
+      ...(unpricedTokens > 0 ? { unpricedTokens } : {}),
       peakDayTokens, favoriteModel: favoriteModelOf(full), messages,
       activeTimeMs,
       ...(timeMetrics ? { timeMetrics } : {})
@@ -407,6 +470,7 @@ function mergeDailyMaps(histories) {
           perClient: {}, perModel: {}
         };
       cur.tokens += num(d.tokens); cur.cost += num(d.cost); cur.messages += num(d.messages); cur.activeTimeMs += num(d.activeTimeMs);
+      addUnpricedTokens(cur, d);
       cur.cacheReadTokens += num(d.cacheReadTokens);
       cur.cacheWriteTokens += num(d.cacheWriteTokens);
       cur.outputTokens += num(d.outputTokens);
@@ -426,6 +490,7 @@ function mergeMonthlyMaps(histories) {
     for (const m of (h && Array.isArray(h.monthly) ? h.monthly : [])) {
       const cur = byMonth.get(m.month) || { month: m.month, tokens: 0, cost: 0, activeTimeMs: 0, perClient: {}, perModel: {} };
       cur.tokens += num(m.tokens); cur.cost += num(m.cost); cur.activeTimeMs += num(m.activeTimeMs);
+      addUnpricedTokens(cur, m);
       addPerClient(cur.perClient, m.perClient);
       addPerModel(cur.perModel, m.perModel);
       byMonth.set(m.month, cur);
@@ -451,6 +516,7 @@ function mergeHistories(histories, options = {}) {
 
   const totalTokens = monthly.reduce((s, m) => s + num(m.tokens), 0);
   const totalCost = monthly.reduce((s, m) => s + num(m.cost), 0);
+  const unpricedTokens = monthly.reduce((s, m) => s + unpricedTokensFor(m), 0);
   const messages = monthly.reduce((s, m) => {
     for (const v of Object.values(m.perClient || {})) s += num(v.messages);
     return s;
@@ -466,17 +532,38 @@ function mergeHistories(histories, options = {}) {
     monthly,
     summary: {
       totalTokens, totalCost, activeDays, currentStreak, longestStreak,
+      ...(unpricedTokens > 0 ? { unpricedTokens } : {}),
       peakDayTokens, favoriteModel, messages, activeTimeMs
     }
   };
 }
 
 // Defensively normalize arbitrary wire JSON to the { daily, monthly, summary } shape.
+function canonicalHistoryClientMap(value) {
+  if (!value || typeof value !== 'object') return value;
+  if (Object.keys(value).every(key => normalizeTokscaleClientName(key) === key)) return value;
+  const result = Object.create(null);
+  for (const [key, row] of Object.entries(value)) {
+    const id = normalizeTokscaleClientName(key) || key;
+    if (id === 'mimo' && id !== key && Object.hasOwn(value, id)) continue;
+    const previous = result[id];
+    if (!previous) result[id] = { ...row };
+    else for (const [metric, count] of Object.entries(row || {})) {
+      if (typeof count === 'number') previous[metric] = num(previous[metric]) + count;
+    }
+  }
+  return result;
+}
+
+function canonicalHistoryRow(row) {
+  return row?.perClient ? { ...row, perClient: canonicalHistoryClientMap(row.perClient) } : row;
+}
+
 function coerceHistory(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
   return {
-    daily: Array.isArray(src.daily) ? src.daily : [],
-    monthly: Array.isArray(src.monthly) ? src.monthly : [],
+    daily: Array.isArray(src.daily) ? src.daily.map(canonicalHistoryRow) : [],
+    monthly: Array.isArray(src.monthly) ? src.monthly.map(canonicalHistoryRow) : [],
     summary: src.summary && typeof src.summary === 'object' ? src.summary : {}
   };
 }
@@ -486,8 +573,9 @@ function historyPreview(history, options = {}) {
   const dailyDays = Number.isFinite(options.dailyDays) ? options.dailyDays : 30;
   const monthlyMonths = Number.isFinite(options.monthlyMonths) ? options.monthlyMonths : 12;
   const h = coerceHistory(history);
-  const daily = h.daily.slice(-dailyDays).map((d) => ({ date: d.date, tokens: num(d.tokens), cost: num(d.cost), activeTimeMs: num(d.activeTimeMs) }));
-  const monthly = h.monthly.slice(-monthlyMonths).map((m) => ({ month: m.month, tokens: num(m.tokens), cost: num(m.cost), activeTimeMs: num(m.activeTimeMs) }));
+  const missingPrice = (row) => unpricedTokensFor(row) > 0 ? { unpricedTokens: unpricedTokensFor(row) } : {};
+  const daily = h.daily.slice(-dailyDays).map((d) => ({ date: d.date, tokens: num(d.tokens), cost: num(d.cost), activeTimeMs: num(d.activeTimeMs), ...missingPrice(d) }));
+  const monthly = h.monthly.slice(-monthlyMonths).map((m) => ({ month: m.month, tokens: num(m.tokens), cost: num(m.cost), activeTimeMs: num(m.activeTimeMs), ...missingPrice(m) }));
   return { daily, monthly, summary: h.summary };
 }
 
@@ -547,7 +635,7 @@ function deviceHistoryRevision(devices) {
 }
 
 module.exports = {
-  hasDisjointReasoning, num, normalizeTokscaleClientName, sumOutputTokens, sumTokens,
+  hasDisjointReasoning, num, normalizeTokscaleClientName, normalizeTokscaleModelNameForClient, normalizeTokscaleModelComponentSummary, sumOutputTokens, sumTokens,
   parseGraphResult, computeIntensities, localDayKey, dayKeyAddDays,
   computeStreaks, monthlyRollup, normalizeHistory, mergeHistories,
   coerceHistory, historyPreview, historyRevision, deviceHistoryRevision

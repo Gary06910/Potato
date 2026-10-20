@@ -3590,7 +3590,7 @@ html.is-windows .settings-panel select option {
 .row-icon-zed        { -webkit-mask-image: url(../../../assets/icons/zed.svg);           mask-image: url(../../../assets/icons/zed.svg); }
 .row-icon-kilo       { -webkit-mask-image: url(../../../assets/icons/kilo.svg);          mask-image: url(../../../assets/icons/kilo.svg); }
 .row-icon-commandcode { -webkit-mask-image: url(../../../assets/icons/commandcode.svg);   mask-image: url(../../../assets/icons/commandcode.svg); }
-.row-icon-micode     { -webkit-mask-image: url(../../../assets/icons/xiaomi.svg);       mask-image: url(../../../assets/icons/xiaomi.svg); }
+.row-icon-mimo     { -webkit-mask-image: url(../../../assets/icons/xiaomi.svg);       mask-image: url(../../../assets/icons/xiaomi.svg); }
 .row-icon-zcode      { -webkit-mask-image: url(../../../assets/icons/zai.svg);          mask-image: url(../../../assets/icons/zai.svg); }
 .row-icon-kiro       { -webkit-mask-image: url(../../../assets/icons/kiro.svg);          mask-image: url(../../../assets/icons/kiro.svg); }
 .row-icon-codebuddy  { -webkit-mask-image: url(../../../assets/icons/codebuddy.svg);     mask-image: url(../../../assets/icons/codebuddy.svg); }
@@ -6160,6 +6160,71 @@ html.is-windows .limit-live-badge {
 
 
 
+.custom-pricing-rate-heading { margin: 0; color: var(--muted); font-size: 0.625rem; line-height: 1.45; }
+
+.custom-pricing-advanced { min-width: 0; }
+.custom-pricing-advanced summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  list-style: none;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.65625rem;
+  font-weight: 500;
+  line-height: 1.45;
+  user-select: none;
+}
+.custom-pricing-advanced summary::-webkit-details-marker { display: none; }
+.custom-pricing-advanced summary:hover { color: var(--blue); }
+.custom-pricing-advanced summary:focus-visible {
+  border-radius: 3px;
+  outline: 1px solid rgba(115, 189, 245, 0.72);
+  outline-offset: 3px;
+}
+.custom-pricing-advanced-meta { display: flex; align-items: center; gap: 8px; }
+.cursor-account-group .custom-pricing-advanced > summary .cursor-disclosure-icon { transform: rotate(0deg); }
+.cursor-account-group .custom-pricing-advanced[open] > summary .cursor-disclosure-icon { transform: rotate(180deg); }
+.custom-pricing-advanced-body { display: grid; gap: 8px; padding-top: 8px; }
+.custom-pricing-help-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.custom-pricing-help-row > .settings-note { flex: 1 1 200px; }
+.custom-pricing-help-button {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--blue);
+  font-size: 0.625rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.custom-pricing-help-button:hover { text-decoration: underline; }
+.custom-pricing-help-button:focus-visible,
+.custom-pricing-help button:focus-visible { outline: 1px solid rgba(115, 189, 245, 0.72); outline-offset: 3px; }
+.custom-pricing-help {
+  position: fixed;
+  inset: auto;
+  position-area: top span-left;
+  position-try-fallbacks: flip-block, flip-inline;
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  box-sizing: border-box;
+  margin: 8px 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid rgba(var(--line-rgb), 0.22);
+  border-radius: 10px;
+  background: rgb(var(--glass-rgb));
+  color: var(--text);
+  font-size: 0.625rem;
+}
+.custom-pricing-help:popover-open { display: grid; gap: 10px; }
+.custom-pricing-help::backdrop { background: transparent; }
+.custom-pricing-help-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
 .custom-pricing-approx {
   margin-left: 8px;
   opacity: 0.7;
@@ -6192,12 +6257,10 @@ html.is-windows .limit-live-badge {
 
 .custom-pricing-row .managed-account-meta {
   min-width: 0;
-  overflow: hidden;
   color: var(--muted);
   font-size: 9px;
   line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
 
@@ -7367,3 +7430,12 @@ html.is-windows .limit-live-badge {
 .limits-source summary { cursor: pointer; }
 .limits-source-path { overflow-wrap: anywhere; margin-block: 6px; user-select: text; }
 .limits-source .settings-actions { flex-wrap: wrap; }
+
+/* Catalog identity presentation; new source integrations follow in P1.3. */
+.row-icon-omp { -webkit-mask-image: url(../../../assets/icons/omp.svg); mask-image: url(../../../assets/icons/omp.svg); }
+.row-icon-goose { -webkit-mask-image: url(../../../assets/icons/goose.svg); mask-image: url(../../../assets/icons/goose.svg); }
+.row-icon-muse { -webkit-mask-image: url(../../../assets/icons/meta.svg); mask-image: url(../../../assets/icons/meta.svg); }
+.row-icon-catpaw { -webkit-mask-image: url(../../../assets/icons/catpaw.svg); mask-image: url(../../../assets/icons/catpaw.svg); }
+.row-icon-devin { -webkit-mask-image: url(../../../assets/icons/devin.svg); mask-image: url(../../../assets/icons/devin.svg); }
+.row-icon-fx { -webkit-mask-image: url(../../../assets/icons/fx.svg); mask-image: url(../../../assets/icons/fx.svg); }
+.row-icon-mcode { -webkit-mask-image: url(../../../assets/icons/minimax.svg); mask-image: url(../../../assets/icons/minimax.svg); }

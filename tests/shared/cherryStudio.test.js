@@ -5,6 +5,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const { installSourceEnvGuard } = require('../helpers/sourceEnv');
+installSourceEnvGuard(test);
 
 const {
   cherryStudioTranscriptRoots,
@@ -56,7 +58,11 @@ test('Cherry Studio roots mirror tokscale AppData resolution per platform', () =
     assert.deepEqual(cherryStudioTranscriptRoots({ homeDir: home, platform, env }), expected);
     assert.deepEqual(
       clientSourceRoots('cherrystudio', { homeDir: home, platform, env }).cherrystudio,
-      expected.map(([id, dir]) => ({ id, dir }))
+      [...expected.map(([id, dir]) => ({ id, dir })), {
+        id: 'cherrystudio-db',
+        dir: path.join(base, 'CherryStudio', 'Data'),
+        sourcePath: path.join(base, 'CherryStudio', 'Data', 'cherrystudio.sqlite')
+      }]
     );
   }
 });
@@ -85,19 +91,22 @@ test('Cherry Studio V1 and V2 roots feed watches and source health', () => {
     const legacyRoots = expected.filter((dir) => !dir.includes(path.join('Data', 'Agents')));
     const roots = clientSourceRoots('cherrystudio').cherrystudio;
 
-    assert.deepEqual(roots, expected.map((dir) => ({ id: 'cherrystudio-transcripts', dir })));
-    assert.deepEqual(clientWatchCandidates('cherrystudio').cherrystudio, expected);
+    const dataDir = path.join(appData, 'CherryStudio', 'Data');
+    assert.deepEqual(roots, [...expected.map((dir) => ({ id: 'cherrystudio-transcripts', dir })), {
+      id: 'cherrystudio-db', dir: dataDir, sourcePath: path.join(dataDir, 'cherrystudio.sqlite')
+    }]);
+    assert.deepEqual(clientWatchCandidates('cherrystudio').cherrystudio, [...expected, dataDir]);
 
     const assertSourceState = (existingRoots) => {
       for (const dir of existingRoots) fs.mkdirSync(dir, { recursive: true });
       try {
-        assert.deepEqual(watchPathsForClients('cherrystudio').sort(), existingRoots.slice().sort());
+        assert.deepEqual(watchPathsForClients('cherrystudio').sort(), [...existingRoots, ...(fs.existsSync(dataDir) ? [dataDir] : [])].sort());
         const checks = clientSourceChecks('cherrystudio');
-        assert.deepEqual(checks.cherrystudio, [{ id: 'cherrystudio-transcripts', exists: true }]);
+        assert.deepEqual(checks.cherrystudio, [{ id: 'cherrystudio-transcripts', exists: true }, { id: 'cherrystudio-db', exists: false }]);
         const health = deriveClientHealth('cherrystudio', { clients: {} }, { sourceChecks: checks });
         assert.equal(health.clients.cherrystudio.source.state, 'detected');
       } finally {
-        for (const dir of existingRoots) fs.rmSync(dir, { recursive: true, force: true });
+        for (const dir of existingRoots) fs.renameSync(dir, dir + '.retained');
       }
     };
 
@@ -109,7 +118,7 @@ test('Cherry Studio V1 and V2 roots feed watches and source health', () => {
     else process.env.APPDATA = previousAppData;
     if (previousXdgConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
     else process.env.XDG_CONFIG_HOME = previousXdgConfigHome;
-    fs.rmSync(home, { recursive: true, force: true });
+    void home;
   }
 });
 
@@ -134,7 +143,7 @@ test('Cherry Studio ignores foreign-platform roots for watches and source health
     assert.equal(watchPaths.includes(foreignRoot), false);
     assert.deepEqual(watchPaths, []);
     const checks = clientSourceChecks('cherrystudio');
-    assert.deepEqual(checks.cherrystudio, [{ id: 'cherrystudio-transcripts', exists: false }]);
+    assert.deepEqual(checks.cherrystudio, [{ id: 'cherrystudio-transcripts', exists: false }, { id: 'cherrystudio-db', exists: false }]);
     const health = deriveClientHealth('cherrystudio', { clients: {} }, { sourceChecks: checks });
     assert.equal(health.clients.cherrystudio.source.state, 'missing');
   } finally {
@@ -143,6 +152,6 @@ test('Cherry Studio ignores foreign-platform roots for watches and source health
     else process.env.APPDATA = previousAppData;
     if (previousXdgConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
     else process.env.XDG_CONFIG_HOME = previousXdgConfigHome;
-    fs.rmSync(home, { recursive: true, force: true });
+    void home;
   }
 });

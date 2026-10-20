@@ -11,8 +11,7 @@ const {
   LOCALLY_PARSED_CLIENT_IDS
 } = require('./clientCatalog');
 
-// Clients read by a local adapter instead of tokscale (collector.js excludes
-// these from the tokscale client filter).
+// P1.3 delegates Proma and Qoder CN usage exclusively to the bundled fork.
 const PARSE_LOCAL_CLIENTS = LOCALLY_PARSED_CLIENT_IDS;
 
 // Tracked on a fresh install.
@@ -24,7 +23,11 @@ const DEFAULT_CLIENTS = DEFAULT_CLIENT_IDS.join(',');
 const KNOWN_CLIENTS = CLIENT_IDS.join(',');
 
 const LEGACY_CLIENT_ID_ALIASES = Object.freeze({
-  kilocode: 'kilo'
+  kilocode: 'kilo',
+  'devin-cli': 'devin',
+  'devin-desktop': 'devin',
+  micode: 'mimo',
+  'micode-desktop': 'mimo'
 });
 
 function normalizeTrackedClientId(value) {
@@ -51,8 +54,9 @@ function clientsCsvForSetting(value, fallback = DEFAULT_CLIENTS) {
 
 module.exports = {
   DEFAULT_CLIENTS,
-  PARSE_LOCAL_CLIENTS,
   KNOWN_CLIENTS,
+  PARSE_LOCAL_CLIENTS,
+  LEGACY_CLIENT_ID_ALIASES,
   clientsCsvForSetting,
   normalizeClientsCsv,
   normalizeTrackedClientId

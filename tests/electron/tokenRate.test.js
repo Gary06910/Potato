@@ -191,7 +191,7 @@ test('live rate ignores untimed changes but keeps the baseline current', () => {
   assert.equal(sample.burn, 12000);
 });
 
-test('live rate sums active device samples, then retains the last value dimmed for three minutes', () => {
+test('live rate weights active device counter samples by duration, then retains the last value dimmed for three minutes', () => {
   let now = 0;
   const tracker = tokenRateApi.createLiveTokenRateGroupTracker({ now: () => now, activeMs: 8000, clearMs: 180000 });
   const baseA = { timedTokens: 100, timedOutputTokens: 10, timedDurationMs: 100 };
@@ -225,8 +225,8 @@ test('live rate sums active device samples, then retains the last value dimmed f
   ]);
   assert.equal(second.changed, true);
   assert.deepEqual(second.sample, {
-    speed: 50,
-    burn: 13200,
+    speed: 26.25,
+    burn: 6750,
     sampledAt: 200,
     expiresAt: 8100,
     deviceCount: 2,

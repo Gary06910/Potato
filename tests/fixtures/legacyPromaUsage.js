@@ -1,5 +1,8 @@
 'use strict';
 
+// Legacy parity-fixture helpers; production Collector/WSL usage belongs to Tokscale.
+// Do not reintroduce these adapters into live or history collection.
+
 /**
  * Proma session usage parser.
  *

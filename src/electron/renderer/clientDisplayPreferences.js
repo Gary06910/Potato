@@ -6,7 +6,8 @@
   if (root) root.TokenMonitorClientDisplayPreferences = api;
 })(typeof window !== 'undefined' ? window : null, function createClientDisplayPreferencesApi() {
   function normalizeId(value) {
-    return String(value || '').trim().toLowerCase();
+    const id = String(value || '').trim().toLowerCase();
+    return ({ micode: 'mimo', 'micode-desktop': 'mimo', kilocode: 'kilo', 'devin-cli': 'devin', 'devin-desktop': 'devin' })[id] || id;
   }
 
   function clientIds(clients) {

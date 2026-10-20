@@ -324,10 +324,15 @@ test('every source-root id the collector emits is in the allowlist', () => {
   for (const id of ['antigravity-ide-source', 'antigravity-cli-data']) {
     assert.ok(CLIENT_SOURCE_CHECK_IDS.includes(id));
   }
-  // And nothing in the allowlist is dead weight. Two ids are exempt because they
-  // are discovered rather than constructed: `hermes-profile` comes from profiles
-  // found on disk, and `wsl-home` only appears on Windows with a running distro.
-  const discoveryDependent = new Set(['copilot-otel-exporter', 'hermes-profile', 'wsl-home']);
+  // And nothing in the allowlist is dead weight. Some ids are exempt because no
+  // client can construct them here: `copilot-otel-exporter` and `hermes-profile`
+  // come from files found on disk, `wsl-home` only appears on Windows with a
+  // running distro, and CatPaw is both platform- and discovery-conditional —
+  // `catpaw-data` is built only on darwin/win32, and `catpaw-db` only once an
+  // account database is actually found.
+  const discoveryDependent = new Set([
+    'copilot-otel-exporter', 'hermes-profile', 'wsl-home', 'catpaw-data', 'catpaw-db'
+  ]);
   const checked = new Set([...emitted, 'antigravity-ide-source', 'antigravity-cli-data']);
   for (const id of CLIENT_SOURCE_CHECK_IDS) {
     if (discoveryDependent.has(id)) continue;
@@ -341,7 +346,7 @@ test('Claude source roots follow CLAUDE_CONFIG_DIR like tokscale', () => {
   os.homedir = () => path.join(path.sep, 'home', 'alice');
   process.env.CLAUDE_CONFIG_DIR = path.join(path.sep, 'srv', 'claude-config');
   try {
-    assert.deepEqual(clientSourceRoots('claude').claude, [
+    assert.deepEqual(clientSourceRoots('claude').claude.filter(({ optional }) => !optional), [
       { id: 'claude-projects', dir: path.join(path.sep, 'srv', 'claude-config', 'projects') },
       { id: 'claude-transcripts', dir: path.join(path.sep, 'srv', 'claude-config', 'transcripts') }
     ]);
@@ -369,6 +374,9 @@ test('the Cursor cache stays home-relative while Antigravity follows the config 
   assert.deepEqual(roots.antigravity, [{
     id: 'tokscale-antigravity-cache',
     dir: path.join(appData, 'tokscale', 'antigravity-cache')
+  }, {
+    id: 'antigravity-extension-data',
+    dir: path.join(homeDir, '.gemini', 'antigravity', 'conversations')
   }]);
   // The sync lock lives inside the Antigravity cache, so it has to move with it.
   assert.equal(
@@ -392,6 +400,9 @@ test('TOKSCALE_CONFIG_DIR moves the Antigravity cache but not the Cursor one', (
   assert.deepEqual(roots.antigravity, [{
     id: 'tokscale-antigravity-cache',
     dir: path.join('C:\\iso\\tokscale', 'antigravity-cache')
+  }, {
+    id: 'antigravity-extension-data',
+    dir: path.join(homeDir, '.gemini', 'antigravity', 'conversations')
   }]);
 });
 
@@ -431,12 +442,16 @@ test('labelling roots keeps diagnostics separate from watcher roots', () => {
 test('clientSourceChecks collapses same-kind roots into one entry', () => {
   const checks = clientSourceChecks('copilot,zed,cline,antigravity');
   const ids = (client) => checks[client].map((check) => check.id);
-  assert.deepEqual(ids('copilot'), ['copilot-otel', 'copilot-data', 'vscode-workspace-storage']);
+  // The desktop and CLI databases are distinct sources, not same-kind variants:
+  // both can exist at once, so each reports its own check.
+  assert.deepEqual(ids('copilot'), ['copilot-otel', 'copilot-data', 'copilot-session-store', 'vscode-workspace-storage']);
   assert.deepEqual(ids('zed'), ['zed-threads']);
   assert.deepEqual(ids('cline'), ['cline-tasks', 'cline-cli-sessions']);
-  // antigravity's watch candidate is only the tokscale cache; its two real
-  // sources are separate checks so the record can tell them apart.
-  assert.deepEqual(ids('antigravity'), ['tokscale-antigravity-cache', 'antigravity-ide-source', 'antigravity-cli-data']);
+  // The extension database is a direct parser source alongside the synced IDE
+  // cache and the separate CLI database.
+  assert.deepEqual(ids('antigravity'), [
+    'tokscale-antigravity-cache', 'antigravity-extension-data', 'antigravity-ide-source', 'antigravity-cli-data'
+  ]);
   for (const list of Object.values(checks)) {
     for (const check of list) assert.equal(typeof check.exists, 'boolean');
   }
@@ -453,16 +468,33 @@ test('Qoder CN source health requires local.db, not only its watch parent', () =
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-qodercn-health-'));
   const dbPath = path.join(tempRoot, 'cache', 'db', 'local.db');
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const previous = process.env.TOKEN_MONITOR_QODER_CN_DB_PATH;
+  const projectsPath = path.join(tempRoot, 'projects');
+  const previousDb = process.env.TOKEN_MONITOR_QODER_CN_DB_PATH;
+  const previousProjects = process.env.TOKEN_MONITOR_QODER_CN_PROJECTS_PATH;
   process.env.TOKEN_MONITOR_QODER_CN_DB_PATH = dbPath;
+  process.env.TOKEN_MONITOR_QODER_CN_PROJECTS_PATH = projectsPath;
   try {
     const roots = clientSourceRoots('qodercn').qodercn;
     assert.equal(roots[0].dir, path.dirname(dbPath));
     assert.equal(roots[0].sourcePath, dbPath);
-    assert.deepEqual(clientSourceChecks('qodercn').qodercn, [{ id: 'qodercn-db', exists: false }]);
+    // The DB check keys on the file, not its watch parent, so an empty
+    // SharedClientCache tree is never mistaken for an install; the transcript
+    // tree is a second, alternative source for 2026-09+ builds.
+    assert.deepEqual(clientSourceChecks('qodercn').qodercn, [
+      { id: 'qodercn-db', exists: false },
+      { id: 'qodercn-projects', exists: false }
+    ]);
+    // A database-less build is still detected through its JSONL projects tree.
+    fs.mkdirSync(projectsPath, { recursive: true });
+    assert.deepEqual(clientSourceChecks('qodercn').qodercn, [
+      { id: 'qodercn-db', exists: false },
+      { id: 'qodercn-projects', exists: true }
+    ]);
   } finally {
-    if (previous === undefined) delete process.env.TOKEN_MONITOR_QODER_CN_DB_PATH;
-    else process.env.TOKEN_MONITOR_QODER_CN_DB_PATH = previous;
+    if (previousDb === undefined) delete process.env.TOKEN_MONITOR_QODER_CN_DB_PATH;
+    else process.env.TOKEN_MONITOR_QODER_CN_DB_PATH = previousDb;
+    if (previousProjects === undefined) delete process.env.TOKEN_MONITOR_QODER_CN_PROJECTS_PATH;
+    else process.env.TOKEN_MONITOR_QODER_CN_PROJECTS_PATH = previousProjects;
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
@@ -474,13 +506,15 @@ test('diagnostic roots expose antigravity native sources without treating them a
     'antigravity-ide-source',
     'antigravity-ide-source',
     'antigravity-cli-data',
-    'tokscale-antigravity-cache'
+    'tokscale-antigravity-cache',
+    'antigravity-extension-data'
   ]);
   assert.deepEqual(
     diagnostics.slice(0, 3).map(({ dir }) => dir.split(/[\\/]/).at(-1)),
     ['antigravity', 'antigravity-ide', 'antigravity-backup']
   );
   assert.equal(diagnostics[3].dir.split(/[\\/]/).at(-1), 'conversations');
+  assert.equal(diagnostics[5].dir, path.join(os.homedir(), '.gemini', 'antigravity', 'conversations'));
   for (const root of diagnostics) {
     assert.equal(typeof root.dir, 'string');
     assert.equal(typeof root.exists, 'boolean');
@@ -951,4 +985,53 @@ test('aggregateDevices carries health per device and never rolls it up', () => {
   // A top-level rollup is the one shape that would reach /api/public/stats,
   // which drops `devices` and spreads everything else.
   assert.equal(Object.hasOwn(aggregate, 'clientHealth'), false);
+});
+
+test('Muse watches the same XDG sessions root used for source detection', () => {
+  const homeDir = path.join(os.tmpdir(), 'muse-source-home');
+  const env = { XDG_DATA_HOME: path.join(homeDir, 'xdg') };
+  const options = { homeDir, env };
+  const dir = path.join(env.XDG_DATA_HOME, 'muse', 'sessions');
+  assert.deepEqual(clientSourceRoots('muse', options).muse, [{ id: 'muse-sessions', dir }]);
+  assert.deepEqual(clientWatchCandidates('muse', options).muse, [dir]);
+  assert.deepEqual(clientSourceChecks('muse', options).muse.map((check) => check.id), ['muse-sessions']);
+});
+
+test('fx watches the home-relative sessions root used for source detection', () => {
+  const homeDir = path.join(os.tmpdir(), 'fx-source-home');
+  const options = { homeDir };
+  const dir = path.join(homeDir, '.fx', 'sessions');
+  assert.deepEqual(clientSourceRoots('fx', options).fx, [{ id: 'fx-sessions', dir }]);
+  assert.deepEqual(clientWatchCandidates('fx', options).fx, [dir]);
+  assert.deepEqual(clientSourceChecks('fx', options).fx.map((check) => check.id), ['fx-sessions']);
+});
+
+test('MiniMax Code watches every runtime store and the headless captures', () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcode-source-'));
+  const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcode-linked-'));
+  try {
+    fs.mkdirSync(path.join(homeDir, '.minimax-work'));
+    fs.mkdirSync(path.join(homeDir, '.minimax'));
+    fs.symlinkSync(path.join(homeDir, '.minimax'), path.join(homeDir, '.mavis'), 'junction');
+    // A profile that is itself a link is still read by the fork, so it is watched too.
+    fs.symlinkSync(elsewhere, path.join(homeDir, '.mavis-team'), 'junction');
+    const env = { HOME: homeDir };
+    const options = { homeDir, env };
+    const sessions = (name) => path.join(homeDir, name, 'v2', 'sessions');
+    const headless = (...parts) => path.join(homeDir, ...parts, 'tokscale', 'headless', 'mcode');
+    assert.deepEqual(clientSourceRoots('mcode', options).mcode, [
+      { id: 'mcode-sessions', dir: sessions('.minimax') },
+      { id: 'mcode-sessions', dir: sessions('.mavis-team'), optional: true },
+      { id: 'mcode-sessions', dir: sessions('.minimax-work'), optional: true },
+      { id: 'mcode-sessions', dir: headless('.config'), optional: true },
+      { id: 'mcode-sessions', dir: headless('Library', 'Application Support'), optional: true }
+    ]);
+
+    const custom = path.join(homeDir, 'custom-data');
+    const overridden = clientSourceRoots('mcode', { homeDir, env: { ...env, MAVIS_DATA_DIR: custom } }).mcode;
+    assert.deepEqual(overridden.slice(0, 1), [{ id: 'mcode-sessions', dir: path.join(custom, 'v2', 'sessions') }]);
+  } finally {
+    void homeDir;
+    void elsewhere;
+  }
 });

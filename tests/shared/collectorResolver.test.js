@@ -6,14 +6,14 @@ const test = require('node:test');
 
 const { decideResolver, kimiWorkSessionsRoots } = require('../../src/shared/collector');
 
-test('decideResolver prefers downloaded binary only when it is newer than bundled', () => {
+test('decideResolver always prefers bundled fork over a newer standalone binary', () => {
   const bundled = { source: 'bundled', version: '2.1.3', path: '/bundled/tokscale' };
   const downloaded = { source: 'downloaded', version: '2.3.0', path: '/downloaded/tokscale' };
 
-  assert.equal(decideResolver({ downloaded, bundled }), downloaded);
+  assert.equal(decideResolver({ downloaded, bundled }), bundled);
 });
 
-test('decideResolver keeps bundled as floor when bundled is same or newer', () => {
+test('decideResolver keeps bundled when standalone is same or older', () => {
   const bundled = { source: 'bundled', version: '2.5.0', path: '/bundled/tokscale' };
   const downloaded = { source: 'downloaded', version: '2.3.0', path: '/downloaded/tokscale' };
 
@@ -24,7 +24,8 @@ test('decideResolver keeps bundled as floor when bundled is same or newer', () =
 test('decideResolver falls back to JS shim when no bundled binary exists', () => {
   const shim = { source: 'shim', version: '2.1.3', path: '/shim/bin.js' };
 
-  assert.equal(decideResolver({ downloaded: null, bundled: null, shim }), shim);
+  assert.equal(decideResolver({ downloaded: { source: 'downloaded', version: '99.0.0' }, bundled: null, shim }), shim);
+  assert.equal(decideResolver({ downloaded: { source: 'downloaded', version: '99.0.0' }, bundled: null }), null);
 });
 
 test('kimiWorkSessionsRoots mirrors platform paths and relocated Windows shares', () => {

@@ -41,7 +41,7 @@ test('app.js takes client identity from the catalog and keeps no copy of it', ()
 
 test('renderer known clients include current tokscale-supported tools', () => {
   const clients = knownClientIds();
-  for (const client of ['cline', 'amp', 'kimi', 'qwen', 'grok', 'copilot', 'pi', 'zed', 'kilo', 'commandcode', 'micode', 'zcode', 'kiro', 'codebuddy', 'workbuddy', 'reasonix', 'dsh']) {
+  for (const client of ['cline', 'amp', 'kimi', 'qwen', 'grok', 'copilot', 'pi', 'zed', 'kilo', 'commandcode', 'mimo', 'zcode', 'kiro', 'codebuddy', 'workbuddy', 'reasonix', 'dsh']) {
     assert.ok(clients.includes(client), `${client} should be a known renderer client`);
   }
 });
@@ -56,7 +56,7 @@ test('renderer distinguishes Grok model and Grok Build tool icons', () => {
 
 test('renderer reuses vendor icons for MiMo Code and ZCode tool rows', () => {
   const styles = rendererStyles();
-  assert.match(styles, /\.row-icon-micode\s*\{[^}]*assets\/icons\/xiaomi\.svg/s);
+  assert.match(styles, /\.row-icon-mimo\s*\{[^}]*assets\/icons\/xiaomi\.svg/s);
   assert.match(styles, /\.row-icon-zcode\s*\{[^}]*assets\/icons\/zai\.svg/s);
 });
 
@@ -97,7 +97,8 @@ test('renderer maps MiMo provider rows to the Xiaomi brand icon', () => {
   const source = rendererSource();
   const styles = rendererStyles();
 
-  assert.match(source, /clientsWithIcon = new Set\(\[[\s\S]*'xiaomi', 'mimo'/);
+  assert.match(source, /clientsWithIcon = new Set\(\[[\s\S]*'mimo'/);
+  assert.match(source, /clientsWithIcon = new Set\(\[[\s\S]*'xiaomi'/);
   assert.match(styles, /\.row-icon-xiaomi,\s*\.row-icon-mimo\s*\{[^}]*assets\/icons\/xiaomi\.svg/s);
 });
 

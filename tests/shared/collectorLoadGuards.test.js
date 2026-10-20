@@ -588,7 +588,7 @@ test('Antigravity source events target its umbrella client without watching sync
     await waitForCondition(() => updates.length === 2);
     assert.equal(syncCalls, 1, 'a source event inside the floor reuses the fresh cache');
     const targeted = calls[calls.length - 1];
-    assert.equal(targeted[targeted.indexOf('--client') + 1], 'antigravity,antigravity-cli');
+    assert.equal(targeted[targeted.indexOf('--client') + 1], 'antigravity,antigravity-cli,antigravity-extension');
     assert.ok(targeted.includes('--today'));
 
     // The floor defers that sync, it does not drop it. No second event follows —
@@ -598,7 +598,7 @@ test('Antigravity source events target its umbrella client without watching sync
     await waitForCondition(() => syncCalls === 2);
     await waitForCondition(() => updates.length === 3);
     const caughtUp = calls[calls.length - 1];
-    assert.equal(caughtUp[caughtUp.indexOf('--client') + 1], 'antigravity,antigravity-cli');
+    assert.equal(caughtUp[caughtUp.indexOf('--client') + 1], 'antigravity,antigravity-cli,antigravity-extension');
     assert.ok(caughtUp.includes('--today'), 'the catch-up rescans behind the sync it waited for');
   } finally {
     Date.now = originalNow;
@@ -721,7 +721,7 @@ test('a catch-up that comes due mid-tick keeps its targeted scan scope', async (
     await waitForCondition(() => syncCalls === 2, 4000);
     const caughtUp = calls[calls.length - 1];
     const scanned = caughtUp[caughtUp.indexOf('--client') + 1];
-    assert.equal(scanned, 'antigravity,antigravity-cli', 'the catch-up stays targeted');
+    assert.equal(scanned, 'antigravity,antigravity-cli,antigravity-extension', 'the catch-up stays targeted');
     assert.equal(scanned.includes('claude'), false, 'and never widens to every tracked client');
   } finally {
     Date.now = originalNow;
@@ -914,7 +914,7 @@ test('a failed forced sync hands the source event back instead of eating it', as
     t.mock.timers.reset();
     await waitForCondition(() => syncCalls === 3, 4000);
     const retried = calls[calls.length - 1];
-    assert.equal(retried[retried.indexOf('--client') + 1], 'antigravity,antigravity-cli');
+    assert.equal(retried[retried.indexOf('--client') + 1], 'antigravity,antigravity-cli,antigravity-extension');
   } finally {
     Date.now = originalNow;
     if (handle) handle.stop();
@@ -1383,7 +1383,7 @@ test('an Antigravity CLI event rescans without paying for an IDE sync', async ()
     await waitForCondition(() => updates.length === 2);
     assert.equal(syncCalls, 1, 'a CLI-only event leaves the sync on its idle cadence');
     const targeted = calls[calls.length - 1];
-    assert.equal(targeted[targeted.indexOf('--client') + 1], 'antigravity,antigravity-cli');
+    assert.equal(targeted[targeted.indexOf('--client') + 1], 'antigravity,antigravity-cli,antigravity-extension');
     assert.ok(targeted.includes('--today'));
   } finally {
     if (handle) handle.stop();
@@ -2027,7 +2027,7 @@ test('watchPathsForClients follows XDG_DATA_HOME for OpenCode, MiMo, and Zed', (
     assert.ok(dirs.includes(path.join(tmp, xdgRoot, 'zed', 'threads')));
     assert.ok(!dirs.includes(path.join(tmp, '.local', 'share', 'opencode')));
     assert.deepEqual(clientDataDirPresence('opencode,micode,zed'), {
-      opencode: true, micode: true, zed: true
+      opencode: true, mimo: true, zed: true
     });
   } finally {
     os.homedir = originalHomedir;
@@ -2108,17 +2108,18 @@ test('watchPathsForClients keeps bounded tool roots but leaves Kiro IDE globalSt
   os.homedir = () => tmp;
   try {
     const { clientDataDirPresence, watchPathsForClients } = freshCollector();
-    const dirs = watchPathsForClients('pi,zed,kilo,micode,zcode,kiro,codebuddy,workbuddy');
+    const dirs = watchPathsForClients('pi,omp,zed,kilo,micode,zcode,kiro,codebuddy,workbuddy');
     assert.ok(dirs.includes(path.join(tmp, '.pi', 'agent', 'sessions')));
     assert.ok(dirs.includes(path.join(tmp, '.omp', 'agent', 'sessions')));
+    assert.ok(!watchPathsForClients('pi').includes(path.join(tmp, '.omp', 'agent', 'sessions')));
+    assert.ok(!watchPathsForClients('omp').includes(path.join(tmp, '.pi', 'agent', 'sessions')));
     assert.ok(dirs.includes(path.join(tmp, '.local', 'share', 'zed', 'threads')));
     assert.ok(dirs.includes(path.join(tmp, 'Library', 'Application Support', 'Zed', 'threads')));
     assert.ok(dirs.includes(path.join(tmp, '.local', 'share', 'kilo')));
     assert.ok(dirs.includes(path.join(tmp, '.config', 'Code', 'User', 'globalStorage', 'kilocode.kilo-code', 'tasks')));
     assert.ok(dirs.includes(path.join(tmp, '.vscode-server', 'data', 'User', 'globalStorage', 'kilocode.kilo-code', 'tasks')));
-    // Tokscale does not scan Kilo's native macOS/Windows VS Code globalStorage,
-    // so we must not watch it (would be a dead watch + a false "active" status).
-    assert.ok(!dirs.includes(path.join(tmp, 'Library', 'Application Support', 'Code', 'User', 'globalStorage', 'kilocode.kilo-code', 'tasks')));
+    // The pinned 4.20 scanner also reads native VS Code task roots.
+    assert.ok(dirs.includes(path.join(tmp, 'Library', 'Application Support', 'Code', 'User', 'globalStorage', 'kilocode.kilo-code', 'tasks')));
     assert.ok(dirs.includes(path.join(tmp, '.local', 'share', 'mimocode')));
     assert.ok(dirs.includes(path.join(tmp, '.zcode', 'projects')));
     // Kiro sessions and the bounded kiro-cli database keep seconds-level
@@ -2133,8 +2134,8 @@ test('watchPathsForClients keeps bounded tool roots but leaves Kiro IDE globalSt
     assert.ok(dirs.includes(path.join(tmp, '.codebuddy', 'projects')));
     assert.ok(dirs.includes(path.join(tmp, '.workbuddy', 'projects')));
     assert.ok(dirs.includes(path.join(tmp, '.workbuddy-ai', 'projects')));
-    assert.deepEqual(clientDataDirPresence('pi,zed,kilo,micode,zcode,kiro,codebuddy,workbuddy'), {
-      pi: true, zed: true, kilo: true, micode: true, zcode: true, kiro: true, codebuddy: true, workbuddy: true
+    assert.deepEqual(clientDataDirPresence('pi,omp,zed,kilo,micode,zcode,kiro,codebuddy,workbuddy'), {
+      pi: true, omp: true, zed: true, kilo: true, mimo: true, zcode: true, kiro: true, codebuddy: true, workbuddy: true
     });
   } finally {
     os.homedir = originalHomedir;
@@ -2232,7 +2233,7 @@ test('watchIgnoreMatcher prunes the Hermes runtime but keeps the state.db family
     // The runtime / logs / cache under ~/.hermes are pruned (never recursed).
     assert.equal(ignored(path.join(hermes, 'hermes-agent')), true);
     assert.equal(ignored(path.join(hermes, 'hermes-agent', 'node_modules')), true);
-    assert.equal(ignored(path.join(hermes, 'logs')), true);
+    assert.equal(ignored(path.join(hermes, 'logs')), false);
     assert.equal(ignored(path.join(hermes, 'cache', 'blob')), true);
     // Other clients' paths are never touched by the matcher.
     assert.equal(ignored(path.join(tmp, '.claude', 'projects', 'p', 'a.jsonl')), false);
@@ -2269,7 +2270,7 @@ test('watchIgnoreMatcher keeps profile dirs and their db family so profile chang
     assert.equal(ignored(path.join(profileDir, 'state.db-wal')), false);
     assert.equal(ignored(path.join(profileDir, 'state.db-shm')), false);
     // Junk inside a profile dir is still pruned.
-    assert.equal(ignored(path.join(profileDir, 'logs')), true);
+    assert.equal(ignored(path.join(profileDir, 'logs')), false);
   } finally {
     os.homedir = originalHomedir;
     if (previousHermesHome === undefined) delete process.env.HERMES_HOME;
@@ -2292,9 +2293,9 @@ test('watchIgnoreMatcher honors HERMES_HOME and is absent when Hermes is not tra
     assert.deepEqual(watchPathsForClients('hermes'), [hermesHome]);
     const ignored = watchIgnoreMatcher('hermes');
     assert.equal(ignored(path.join(hermesHome, 'state.db-wal')), false);
-    assert.equal(ignored(path.join(hermesHome, 'logs')), true);
+    assert.equal(ignored(path.join(hermesHome, 'logs')), false);
     // No Hermes tracked, no matcher, so other watchers run unchanged.
-    assert.equal(watchIgnoreMatcher('claude,codex'), undefined);
+    assert.equal(watchIgnoreMatcher('claude,codex')(path.join(tmp, '.claude', 'projects', 's.jsonl')), false);
   } finally {
     os.homedir = originalHomedir;
     if (previousHermesHome === undefined) delete process.env.HERMES_HOME;
@@ -2830,9 +2831,9 @@ test('live watch events scan only changed clients and preserve the other client 
               sessionId: `${client}-session`,
               model: `${client}-model`,
               totalTokens: tokens,
-              input: tokens,
+              input: 0,
               cacheRead: tokens,
-              output: tokens,
+              output: 0,
               cost: tokens / 100
             };
           });
@@ -3123,91 +3124,22 @@ test('a zcode shm event does not spawn a scan while a -wal change still does', a
   }
 });
 
-test('collector preserves Qoder CN while publishing other clients after a bounded SQLite read fails', async () => {
-  const tmp = withTmpHome([]);
-  const originalSharedDir = process.env.TOKEN_MONITOR_SHARED_DIR;
+test('collector retains the complete trusted snapshot when native Qoder CN fails', async t => {
+  const tmp = withTmpHome([]), prior = process.env.TOKEN_MONITOR_SHARED_DIR;
   process.env.TOKEN_MONITOR_SHARED_DIR = tmp;
-
-  const qoderCnUsagePath = require.resolve('../../src/shared/providers/qodercn/usage');
-  const qoderCnUsage = require(qoderCnUsagePath);
-  const originalRows = qoderCnUsage.collectQoderCnRows;
-  const originalPeriods = qoderCnUsage.buildQoderCnPeriods;
-  let failReads = false;
-  let claudeTokens = 3;
-  qoderCnUsage.collectQoderCnRows = async () => {
-    if (failReads) {
-      const error = new Error('qodercn sqlite read budget exceeded (rows limit 100000)');
-      error.code = 'QODER_CN_READ_BUDGET_EXCEEDED';
-      throw error;
-    }
-    return [];
-  };
-  qoderCnUsage.buildQoderCnPeriods = () => ({
-    today: { entries: [{ client: 'qodercn', model: 'qmodel', input: 7 }] },
-    month: { entries: [{ client: 'qodercn', model: 'qmodel', input: 7 }] },
-    allTime: { entries: [{ client: 'qodercn', model: 'qmodel', input: 7 }] }
-  });
-  delete require.cache[collectorPath];
-
-  let handle = null;
-  try {
-    const { startCollector } = freshCollector();
-    const previews = [];
-    const updates = [];
-    const collectorOptions = {
-      clients: 'claude,qodercn',
-      allTimeSince: '2024-01-01',
-      commandTimeoutMs: 1000,
-      deviceId: 'test-device',
-      agentVersion: 'test',
-      intervalMs: 60 * 60 * 1000,
-      watchEnabled: false,
-      limitsEnabled: false,
-      historyEnabled: false,
-      runTokscale: async () => ({ entries: [{ client: 'claude', model: 'm', input: claudeTokens }] })
-    };
-    handle = startCollector({
-      ...collectorOptions,
-      onPreview: (summary) => previews.push(summary),
-      onUpdate: (summary) => updates.push(summary)
-    });
-
-    await waitForCondition(() => updates.length === 1);
-    const anchorPath = path.join(tmp, 'collector-anchor.json');
-    const firstAnchor = JSON.parse(fs.readFileSync(anchorPath, 'utf8'));
-    assert.equal(firstAnchor.qoderCnPeriods.today.clients.qodercn, 7);
-    const initialPreviewCount = previews.length;
-    failReads = true;
-    claudeTokens = 5;
-    await handle.tick('manual');
-
-    assert.equal(updates.length, 2, 'a Qoder CN failure must not suppress fresh data from other clients');
-    assert.equal(updates.at(-1).today.clients.qodercn, 7, 'final update keeps the last Qoder CN period');
-    assert.equal(updates.at(-1).today.clients.claude, 5, 'final update publishes the fresh Claude period');
-    const fallbackAnchor = JSON.parse(fs.readFileSync(anchorPath, 'utf8'));
-    assert.equal(fallbackAnchor.fullScanAt, firstAnchor.fullScanAt, 'a fallback is not recorded as a successful full scan');
-    const failedPreviews = previews.slice(initialPreviewCount);
-    assert.equal(failedPreviews.length, 2, 'the failed full scan still emits its two host previews');
-    assert.equal(Object.prototype.hasOwnProperty.call(failedPreviews.at(-1), 'qoderCnStatus'), false);
-    assert.equal(failedPreviews.at(-1).today.clients.qodercn, 7, 'preview keeps the anchored Qoder CN today partition');
-    assert.equal('month' in failedPreviews.at(-1), false, 'preview keeps the last complete month while Qoder CN is unavailable');
-
-    handle.stop();
-    handle = startCollector({
-      ...collectorOptions,
-      onUpdate: (summary) => updates.push(summary)
-    });
-    await waitForCondition(() => updates.length === 3);
-    assert.equal(updates.at(-1).today.clients.qodercn, 7, 'a persisted anchor keeps Qoder CN data after restart');
-  } finally {
-    if (handle) handle.stop();
-    qoderCnUsage.collectQoderCnRows = originalRows;
-    qoderCnUsage.buildQoderCnPeriods = originalPeriods;
-    if (originalSharedDir === undefined) delete process.env.TOKEN_MONITOR_SHARED_DIR;
-    else process.env.TOKEN_MONITOR_SHARED_DIR = originalSharedDir;
-    delete require.cache[collectorPath];
-    fs.rmSync(tmp, { recursive: true, force: true });
-  }
+  t.after(() => { if (prior === undefined) delete process.env.TOKEN_MONITOR_SHARED_DIR; else process.env.TOKEN_MONITOR_SHARED_DIR = prior; });
+  const updates = [], errors = []; let fail = false;
+  const { startCollector } = freshCollector();
+  const handle = startCollector({ clients: 'claude,qodercn', homeDir: tmp, env: {}, allTimeSince: '2024-01-01', intervalMs: 3600000,
+    watchEnabled: false, historyEnabled: false, wslScanEnabled: false,
+    runTokscale: async () => { if (fail) throw Error('native Qoder read failed'); return { entries: [{client:'claude',model:'m',input:3},{client:'qodercn',model:'m',input:7}] }; },
+    onUpdate: s => updates.push(s), onError: e => errors.push(e.message) });
+  t.after(() => handle.stop()); await handle.whenIdle();
+  const anchor = fs.readFileSync(path.join(tmp, 'collector-anchor.json'));
+  fail = true; assert.equal(await handle.tick('manual'), false);
+  assert.equal(updates.length, 1); assert.equal(updates[0].allTime.totalTokens, 10);
+  assert.equal(errors.length, 1); assert.deepEqual(fs.readFileSync(path.join(tmp, 'collector-anchor.json')), anchor);
+  fail = false; await handle.refreshClient('qodercn'); assert.equal(updates.length, 2);
 });
 
 test('collector does not reuse persisted Qoder CN periods after the DB path changes', async () => {
@@ -3233,7 +3165,7 @@ test('collector does not reuse persisted Qoder CN periods after the DB path chan
     fullScanAt: new Date(Date.now() - 5 * 60 * 1000).toISOString()
   }));
 
-  const qoderCnUsagePath = require.resolve('../../src/shared/providers/qodercn/usage');
+  const qoderCnUsagePath = require.resolve('../fixtures/legacyQoderCnUsage');
   const qoderCnUsage = require(qoderCnUsagePath);
   const originalRows = qoderCnUsage.collectQoderCnRows;
   qoderCnUsage.collectQoderCnRows = async () => {
@@ -3274,124 +3206,23 @@ test('collector does not reuse persisted Qoder CN periods after the DB path chan
   }
 });
 
-test('collector publishes other clients when Qoder CN fails before the first complete snapshot', async () => {
-  const tmp = withTmpHome([]);
-  const originalSharedDir = process.env.TOKEN_MONITOR_SHARED_DIR;
-  process.env.TOKEN_MONITOR_SHARED_DIR = tmp;
-
-  const qoderCnUsagePath = require.resolve('../../src/shared/providers/qodercn/usage');
-  const qoderCnUsage = require(qoderCnUsagePath);
-  const originalRows = qoderCnUsage.collectQoderCnRows;
-  let qoderCnReads = 0;
-  let claudeTokens = 3;
-  qoderCnUsage.collectQoderCnRows = async () => {
-    qoderCnReads += 1;
-    throw new Error('Qoder CN unavailable before first complete snapshot');
-  };
-  delete require.cache[collectorPath];
-
-  let handle = null;
-  try {
-    const { startCollector } = freshCollector();
-    const updates = [];
-    handle = startCollector({
-      clients: 'claude,qodercn',
-      allTimeSince: '2024-01-01',
-      commandTimeoutMs: 1000,
-      deviceId: 'test-device',
-      agentVersion: 'test',
-      intervalMs: 60 * 60 * 1000,
-      watchEnabled: false,
-      anchorPersistenceEnabled: false,
-      limitsEnabled: false,
-      historyEnabled: false,
-      runTokscale: async () => ({ entries: [{ client: 'claude', model: 'm', input: claudeTokens }] }),
-      onUpdate: (summary) => updates.push(summary)
-    });
-
-    await waitForCondition(() => updates.length === 1);
-    claudeTokens = 5;
-    await handle.tick('incremental', { todayOnly: true });
-
-    assert.equal(qoderCnReads, 2, 'Qoder CN is retried on the incremental read');
-    assert.equal(updates.length, 2, 'a first-read Qoder CN failure must not suppress other clients');
-    assert.equal(updates.at(-1).today.clients.claude, 5, 'the incremental Claude period is published');
-  } finally {
-    if (handle) handle.stop();
-    qoderCnUsage.collectQoderCnRows = originalRows;
-    if (originalSharedDir === undefined) delete process.env.TOKEN_MONITOR_SHARED_DIR;
-    else process.env.TOKEN_MONITOR_SHARED_DIR = originalSharedDir;
-    delete require.cache[collectorPath];
-    fs.rmSync(tmp, { recursive: true, force: true });
-  }
+test('collector fails closed before its first native Qoder CN baseline and retries', async t => {
+  const tmp = withTmpHome([]), updates = [], errors = []; let fail = true;
+  const { startCollector } = freshCollector();
+  const handle = startCollector({ clients:'qodercn',homeDir:tmp,env:{},allTimeSince:'2024-01-01',intervalMs:3600000,watchEnabled:false,historyEnabled:false,wslScanEnabled:false,anchorPersistenceEnabled:false,
+    runTokscale:async()=>{ if(fail)throw Error('Qoder unavailable');return {entries:[{client:'qodercn',model:'m',input:7}]};},onUpdate:s=>updates.push(s),onError:e=>errors.push(e.message) });
+  t.after(()=>handle.stop());await handle.whenIdle();assert.equal(updates.length,0);assert.equal(errors.length,1);
+  fail=false;await handle.tick('manual');assert.equal(updates.length,1);assert.equal(updates[0].allTime.totalTokens,7);
 });
 
-test('collector publishes live periods when only Qoder CN history read fails', async () => {
-  const tmp = withTmpHome([]);
-  const originalSharedDir = process.env.TOKEN_MONITOR_SHARED_DIR;
-  process.env.TOKEN_MONITOR_SHARED_DIR = tmp;
-
-  const qoderCnUsagePath = require.resolve('../../src/shared/providers/qodercn/usage');
-  const qoderCnUsage = require(qoderCnUsagePath);
-  const originalRows = qoderCnUsage.collectQoderCnRows;
-  const originalHistory = qoderCnUsage.buildQoderCnHistoryGraph;
-  let failHistory = false;
-  const todayKey = localDayKey();
-  qoderCnUsage.collectQoderCnRows = async () => [];
-  qoderCnUsage.buildQoderCnHistoryGraph = () => {
-    if (failHistory) throw new Error('temporary Qoder CN history read failure');
-    return {
-      contributions: [{
-        date: todayKey,
-        clients: [{ client: 'qodercn', modelId: 'qmodel', tokens: { input: 2 }, cost: 0, messages: 1 }]
-      }]
-    };
-  };
-  delete require.cache[collectorPath];
-
-  let handle = null;
-  try {
-    const { startCollector } = freshCollector();
-    const updates = [];
-    handle = startCollector({
-      clients: 'claude,qodercn',
-      allTimeSince: '2024-01-01',
-      commandTimeoutMs: 1000,
-      deviceId: 'test-device',
-      agentVersion: 'test',
-      intervalMs: 60 * 60 * 1000,
-      watchEnabled: false,
-      anchorPersistenceEnabled: false,
-      limitsEnabled: false,
-      historyEnabled: true,
-      runTokscale: async () => ({ entries: [{ client: 'claude', model: 'm', input: 3 }] }),
-      runGraph: async () => ({
-        contributions: [{
-          date: todayKey,
-          clients: [{ client: 'claude', modelId: 'm', tokens: { input: 3 }, cost: 0, messages: 1 }]
-        }]
-      }),
-      onUpdate: (summary) => updates.push(summary)
-    });
-
-    await waitForCondition(() => updates.length === 1);
-    failHistory = true;
-    await handle.tick('manual', { forceHistory: true });
-
-    assert.equal(updates.length, 2, 'history-only failure must not suppress fresh live periods');
-    assert.equal(Object.prototype.hasOwnProperty.call(updates.at(-1), 'qoderCnStatus'), false);
-    assert.equal(updates.at(-1).history.daily[0].perClient.claude.tokens, 3);
-    assert.equal(updates.at(-1).history.daily[0].perClient.qodercn.tokens, 2);
-    assert.equal(updates.at(-1).today.clients.claude, 3);
-  } finally {
-    if (handle) handle.stop();
-    qoderCnUsage.collectQoderCnRows = originalRows;
-    qoderCnUsage.buildQoderCnHistoryGraph = originalHistory;
-    if (originalSharedDir === undefined) delete process.env.TOKEN_MONITOR_SHARED_DIR;
-    else process.env.TOKEN_MONITOR_SHARED_DIR = originalSharedDir;
-    delete require.cache[collectorPath];
-    fs.rmSync(tmp, { recursive: true, force: true });
-  }
+test('collector publishes live native periods when the combined history scan fails', async t => {
+  const tmp = withTmpHome([]), updates = []; let fail = false;
+  const { startCollector } = freshCollector(); const todayKey=localDayKey();
+  const handle=startCollector({clients:'claude,qodercn',homeDir:tmp,env:{},allTimeSince:'2024-01-01',intervalMs:3600000,watchEnabled:false,historyEnabled:true,wslScanEnabled:false,anchorPersistenceEnabled:false,
+    runTokscale:async()=>({entries:[{client:'claude',model:'m',input:3},{client:'qodercn',model:'m',input:7}]}),
+    runGraph:async()=>{if(fail)throw Error('native graph unavailable');return {contributions:[{date:todayKey,clients:[{client:'qodercn',modelId:'m',tokens:{input:7},cost:0,messages:1}]}]};},onUpdate:s=>updates.push(s)});
+  t.after(()=>handle.stop());await handle.whenIdle();assert.equal(updates[0].history.daily[0].perClient.qodercn.tokens,7);
+  fail=true;await handle.tick('manual',{forceHistory:true});assert.equal(updates.length,2);assert.equal(updates[1].allTime.totalTokens,10);assert.equal(handle.getDiagnostics().lastHistoryFailureCode,'history-graph-failed');
 });
 
 test('smart collection coalesces watch events into one targeted interval tick', async () => {

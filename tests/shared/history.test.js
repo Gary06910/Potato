@@ -101,7 +101,7 @@ test('parseGraphResult folds client rows into perClient/perModel and derives day
   });
 });
 
-test('parseGraphResult folds OMP graph rows into the existing Pi history identity', () => {
+test('parseGraphResult keeps Pi and OMP graph identities separate', () => {
   const { contributions } = parseGraphResult({
     contributions: [{
       date: '2026-08-25',
@@ -121,9 +121,10 @@ test('parseGraphResult folds OMP graph rows into the existing Pi history identit
   });
 
   assert.deepEqual(contributions[0].perClient, {
-    pi: { tokens: 30, cost: 3, messages: 2, unclassifiedTokens: 0 }
+    pi: { tokens: 10, cost: 1, messages: 1, unclassifiedTokens: 0 },
+    omp: { tokens: 20, cost: 2, messages: 1, unclassifiedTokens: 0 }
   });
-  assert.equal(Object.hasOwn(contributions[0].perClient, 'omp'), false);
+  assert.equal(Object.hasOwn(contributions[0].perClient, 'omp'), true);
 });
 
 test('parseGraphResult folds Kilo extension and CLI rows into one history identity', () => {
@@ -231,7 +232,7 @@ test('monthlyRollup sums tokens/cost and merges perClient/perModel by month', ()
       perClient: { claude: { tokens: 10, cost: 1, messages: 2 } },
       perModel: { opus: { tokens: 10, cost: 1 } } },
     { date: '2026-06-01', tokens: 5, cost: 0.5, messages: 1,
-      perClient: { claude: { tokens: 5, cost: 0.5, messages: 1 } },
+      perClient: { claude: { tokens: 5, cost: 0.5, messages: 1, unclassifiedTokens: 0 } },
       perModel: { opus: { tokens: 5, cost: 0.5 } } },
     { date: '2026-06-02', tokens: 7, cost: 0.7, messages: 1,
       perClient: { codex: { tokens: 7, cost: 0.7, messages: 1 } },
@@ -305,8 +306,8 @@ test('mergeHistories sums daily across devices and recomputes derived fields', (
   const d7 = m.daily.find((d) => d.date === '2026-06-07');
   assert.equal(d7.tokens, 25);                         // 20 + 5
   assert.equal(d7.activeTimeMs, 150000);                // 120000 + 30000
-  assert.deepEqual(d7.perClient.claude, { tokens: 20, cost: 2, messages: 1 });
-  assert.deepEqual(d7.perClient.codex, { tokens: 5, cost: 0.5, messages: 1 });
+  assert.deepEqual(d7.perClient.claude, { tokens: 20, cost: 2, messages: 1, unclassifiedTokens: 0 });
+  assert.deepEqual(d7.perClient.codex, { tokens: 5, cost: 0.5, messages: 1, unclassifiedTokens: 0 });
   assert.equal(d7.intensity, 4);                       // highest-cost merged day
   assert.equal(m.summary.totalTokens, 35);
   assert.equal(m.summary.currentStreak, 2);

@@ -195,7 +195,7 @@ test('an anchored watch tick does not re-read session files that only appear in 
   }
 });
 
-test('an all-client fallback preserves parse-local partitions that were not refreshed', async () => {
+test('an all-client fallback refreshes fork-owned Proma exactly once', async () => {
   const { collectUsageOnce, localTodayKey } = freshCollector();
   const calls = [];
   const anchorClients = { claude: 10, codex: 20, proma: 5 };
@@ -213,7 +213,7 @@ test('an all-client fallback preserves parse-local partitions that were not refr
   const runTokscale = async ({ clients }) => {
     calls.push(clients);
     if (clients === 'codex') return tokscaleRows({ claude: 99 });
-    return tokscaleRows({ claude: 10, codex: 20 });
+    return tokscaleRows({ claude: 10, codex: 20, proma: 5 });
   };
 
   const summary = await collectUsageOnce({
@@ -226,7 +226,7 @@ test('an all-client fallback preserves parse-local partitions that were not refr
     projectsEnabled: false
   });
 
-  assert.deepEqual(calls, ['codex', 'claude,codex']);
+  assert.deepEqual(calls, ['codex', 'claude,codex,proma']);
   assert.equal(summary.today.totalTokens, 35);
   assert.equal(summary.today.clients.proma, 5);
   assert.equal(summary.month.clients.proma, 5);

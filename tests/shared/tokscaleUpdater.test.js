@@ -1,51 +1,60 @@
-﻿'use strict';
+'use strict';
 
 const assert = require('node:assert/strict');
-const crypto = require('node:crypto');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const test = require('node:test');
+const { getTokscaleStatus, readTokscaleBundledBuild } = require('../../src/shared/collector');
+const manifest = require('../../scripts/vendor/tokscale.json');
 
-const { validatePackageJsonIdentity, verifyIntegrity } = require('../../src/shared/tokscaleUpdater');
-
-test('verifyIntegrity validates npm SRI sha512 strings', () => {
-  const body = Buffer.from('tokscale tarball');
-  const digest = crypto.createHash('sha512').update(body).digest('base64');
-
-  assert.equal(verifyIntegrity(body, `sha512-${digest}`), true);
-  assert.equal(verifyIntegrity(Buffer.from('changed'), `sha512-${digest}`), false);
+test('retired updater exposes read-only status and no npm or cleanup operations', () => {
+  const updater = require('../../src/shared/tokscaleUpdater');
+  assert.equal(updater.getTokscaleStatus, getTokscaleStatus);
+  for (const key of ['downloadFromNpm', 'checkNpmForNewer', 'resetToBundled', 'cleanupStaleStaging']) {
+    assert.equal(updater[key], undefined);
+  }
 });
 
-test('verifyIntegrity rejects unsupported or malformed integrity strings', () => {
-  const body = Buffer.from('tokscale tarball');
-  const digest = crypto.createHash('sha256').update(body).digest('base64');
-
-  assert.equal(verifyIntegrity(body, `sha256-${digest}`), false);
-  assert.equal(verifyIntegrity(body, 'not-sri'), false);
+test('bundled build metadata is declared provenance and rejects invalid manifests', () => {
+  assert.deepEqual(readTokscaleBundledBuild(), { releaseTag: manifest.releaseTag, commit: manifest.commit });
+  assert.equal(readTokscaleBundledBuild({ ...manifest, mode: 'upstream' }), null);
+  assert.equal(readTokscaleBundledBuild({ ...manifest, commit: 'invalid' }), null);
+  assert.equal(readTokscaleBundledBuild(null), null);
 });
 
-test('validatePackageJsonIdentity accepts matching package metadata', () => {
-  assert.doesNotThrow(() => validatePackageJsonIdentity({
-    name: '@tokscale/cli-darwin-arm64',
-    version: '2.3.0',
-    os: ['darwin'],
-    cpu: ['arm64']
-  }, {
-    packageName: '@tokscale/cli-darwin-arm64',
-    version: '2.3.0',
-    platform: 'darwin',
-    arch: 'arm64'
-  }));
-});
-
-test('validatePackageJsonIdentity rejects package, version, os, or cpu mismatches', () => {
-  const expected = {
-    packageName: '@tokscale/cli-darwin-arm64',
-    version: '2.3.0',
-    platform: 'darwin',
-    arch: 'arm64'
-  };
-
-  assert.throws(() => validatePackageJsonIdentity({ name: 'tokscale', version: '2.3.0' }, expected), /package name/i);
-  assert.throws(() => validatePackageJsonIdentity({ name: expected.packageName, version: '2.2.0' }, expected), /package version/i);
-  assert.throws(() => validatePackageJsonIdentity({ name: expected.packageName, version: expected.version, os: ['linux'] }, expected), /package os/i);
-  assert.throws(() => validatePackageJsonIdentity({ name: expected.packageName, version: expected.version, cpu: ['x64'] }, expected), /package cpu/i);
+test('legacy current.json and standalone files survive status and command resolution unchanged', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'potato-p1-pointer-'));
+  const oldBinary = path.join(home, 'standalone.exe');
+  const pointer = path.join(home, 'tokscale', 'current.json');
+  const cache = path.join(home, 'tokscale', 'cache.json');
+  fs.mkdirSync(path.dirname(pointer), { recursive: true });
+  fs.writeFileSync(oldBinary, 'standalone binary sentinel');
+  fs.chmodSync(oldBinary, 0o755);
+  const files = [oldBinary, pointer, cache];
+  for (const document of [
+    JSON.stringify({ version: '99.0.0', platform: `${process.platform}-${process.arch}`, path: oldBinary }),
+    '{malformed legacy pointer'
+  ]) {
+    fs.writeFileSync(pointer, document);
+    fs.writeFileSync(cache, 'legacy user cache sentinel');
+    const before = files.map((file) => fs.readFileSync(file));
+    const code = `const c = require('./src/shared/collector');
+      const s = c.getTokscaleStatus();
+      const command = c.tokscaleCommand();
+      console.log(JSON.stringify({ status: s, selected: c.resolvePlatformBinary(), command: command.bin }));`;
+    const child = spawnSync(process.execPath, ['-e', code], {
+      cwd: path.resolve(__dirname, '../..'),
+      env: { ...process.env, TOKEN_MONITOR_SHARED_DIR: home }, encoding: 'utf8'
+    });
+    assert.equal(child.status, 0, child.stderr);
+    const result = JSON.parse(child.stdout);
+    assert.equal(result.status.current.source, 'bundled');
+    assert.equal(result.status.current.version, '4.20.0');
+    assert.equal(result.command, result.selected.path);
+    assert.notEqual(result.command, oldBinary);
+    assert.deepEqual(files.map((file) => fs.readFileSync(file)), before);
+  }
+  // Evidence fixtures are retained; no user pointer, binary, or cache is removed.
 });

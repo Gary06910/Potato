@@ -39,7 +39,7 @@ test('configFingerprint normalizes clients and includes allTimeSince and project
   const b = configFingerprint('claude,codex', '2024-01-01');
   // whitespace-normalised to the same value
   assert.equal(a, b, 'whitespace should be normalized');
-  assert.match(a, /^claude,codex\|2024-01-01\|projects:on$/);
+  assert.match(a, /^claude,codex\|2024-01-01\|projects:on\|source:[a-f0-9]{64}\|pricing:[a-f0-9]{64}$/);
 
   const c = configFingerprint('claude', '2024-01-01');
   assert.notEqual(a, c, 'different clients should differ');
@@ -53,13 +53,13 @@ test('configFingerprint normalizes clients and includes allTimeSince and project
 
 test('configFingerprint handles undefined and empty clients', () => {
   const a = configFingerprint(undefined, '2024-01-01');
-  assert.equal(a, '|2024-01-01|projects:on', 'undefined clients should produce empty string before pipe');
+  assert.match(a, /^\|2024-01-01\|projects:on\|source:[a-f0-9]{64}\|pricing:[a-f0-9]{64}$/);
 
   const b = configFingerprint('', '2024-01-01');
-  assert.equal(b, '|2024-01-01|projects:on', 'empty clients should produce same as undefined');
+  assert.equal(b, a, 'empty clients should produce same as undefined');
 
   const c = configFingerprint('claude', undefined);
-  assert.match(c, /\|undefined\|projects:on$/, 'undefined allTimeSince produces string "undefined"');
+  assert.match(c, /\|undefined\|projects:on\|source:[a-f0-9]{64}\|pricing:[a-f0-9]{64}$/, 'undefined allTimeSince produces string "undefined"');
 });
 
 test('configFingerprint labels the Qoder CN database path explicitly', () => {
@@ -71,7 +71,7 @@ test('configFingerprint labels the Qoder CN database path explicitly', () => {
     dbPath
   );
   assert.equal(
-    fingerprint,
+    fingerprint.split('|source:')[0],
     `claude,qodercn|2024-01-01|projects:on|qodercn:${path.resolve(dbPath)}`
   );
 });

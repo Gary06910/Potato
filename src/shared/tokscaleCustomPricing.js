@@ -1,6 +1,7 @@
 'use strict';
 
-const { readJson, writeJsonAtomic } = require('./config');
+const fs = require('node:fs');
+const { writeJsonAtomic } = require('./config');
 
 const INVALID_UNIT_PRICE = Symbol('invalid custom pricing value');
 
@@ -12,7 +13,7 @@ function toUnitPrice(value) {
   return value;
 }
 
-// Array<{modelId,inputPerM,outputPerM,cacheReadPerM}> -> cleaned array.
+// Array<{modelId,inputPerM,outputPerM,cacheReadPerM,cacheWritePerM,cacheWrite1hPerM}> -> cleaned array.
 // Mirrors tokscale's rule: at least one of input/output must be present.
 // A present zero is an explicit free price; undefined means unset.
 function normalizeCustomPricingSetting(value) {
@@ -25,9 +26,13 @@ function normalizeCustomPricingSetting(value) {
     const inputPerM = toUnitPrice(raw.inputPerM);
     const outputPerM = toUnitPrice(raw.outputPerM);
     const cacheReadPerM = toUnitPrice(raw.cacheReadPerM);
-    if ([inputPerM, outputPerM, cacheReadPerM].includes(INVALID_UNIT_PRICE)) continue;
+    const cacheWritePerM = toUnitPrice(raw.cacheWritePerM);
+    const cacheWrite1hPerM = toUnitPrice(raw.cacheWrite1hPerM);
+    if ([inputPerM, outputPerM, cacheReadPerM, cacheWritePerM, cacheWrite1hPerM].includes(INVALID_UNIT_PRICE)) continue;
     if (inputPerM === undefined && outputPerM === undefined) continue;
-    byId.set(modelId, { modelId, inputPerM, outputPerM, cacheReadPerM });
+    byId.set(modelId, { modelId, inputPerM, outputPerM, cacheReadPerM,
+      ...(cacheWritePerM !== undefined ? { cacheWritePerM } : {}),
+      ...(cacheWrite1hPerM !== undefined ? { cacheWrite1hPerM } : {}) });
   }
   return [...byId.values()];
 }
@@ -40,6 +45,8 @@ function buildTokscaleModels(entries) {
     if (e.inputPerM !== undefined) m.input_cost_per_million_tokens = e.inputPerM;
     if (e.outputPerM !== undefined) m.output_cost_per_million_tokens = e.outputPerM;
     if (e.cacheReadPerM !== undefined) m.cache_read_input_token_cost_per_million_tokens = e.cacheReadPerM;
+    if (e.cacheWritePerM !== undefined) m.cache_creation_input_token_cost_per_million_tokens = e.cacheWritePerM;
+    if (e.cacheWrite1hPerM !== undefined) m.cache_creation_input_token_cost_per_million_tokens_above_1hr = e.cacheWrite1hPerM;
     models[e.modelId] = m;
   }
   return models;
@@ -59,15 +66,38 @@ function mergeManaged(existingModels, managedModels, previousManagedIds) {
 // Orchestrate: read existing file + sidecar, merge, write both atomically.
 // No-op (creates nothing) when there are no overrides and no prior state, so a
 // fresh install with no overrides never litters tokscale's config dir.
+function readPricingDocument(filePath) {
+  try {
+    const value = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid pricing document');
+    return value;
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+function validateCustomPricingSetting(value) {
+  if (!Array.isArray(value)) throw new Error('Custom pricing must be a list');
+  for (const row of value) {
+    if (!row || typeof row.modelId !== 'string' || !row.modelId.trim()
+      || ['inputPerM', 'outputPerM', 'cacheReadPerM', 'cacheWritePerM', 'cacheWrite1hPerM'].some(key => toUnitPrice(row[key]) === INVALID_UNIT_PRICE)
+      || (toUnitPrice(row.inputPerM) === undefined && toUnitPrice(row.outputPerM) === undefined)) {
+      throw new Error('Invalid custom pricing entry');
+    }
+  }
+  return normalizeCustomPricingSetting(value);
+}
+
 function applyCustomPricing(settingValue, { pricingPath, sidecarPath }) {
   const managedModels = buildTokscaleModels(normalizeCustomPricingSetting(settingValue));
 
-  const existing = readJson(pricingPath, null);
+  const existing = readPricingDocument(pricingPath);
   const existingModels = (existing && typeof existing === 'object' && existing.models && typeof existing.models === 'object')
     ? existing.models
     : {};
 
-  const sidecar = readJson(sidecarPath, null);
+  const sidecar = readPricingDocument(sidecarPath);
   const previousManagedIds = (sidecar && Array.isArray(sidecar.managedIds)) ? sidecar.managedIds : [];
 
   if (Object.keys(managedModels).length === 0 && previousManagedIds.length === 0 && existing === null) {
@@ -76,13 +106,15 @@ function applyCustomPricing(settingValue, { pricingPath, sidecarPath }) {
 
   const { models, managedIds } = mergeManaged(existingModels, managedModels, previousManagedIds);
 
-  writeJsonAtomic(pricingPath, { models });
+  const manualFields = existing && typeof existing === 'object' && !Array.isArray(existing) ? existing : {};
+  writeJsonAtomic(pricingPath, { ...manualFields, models });
   writeJsonAtomic(sidecarPath, { version: 1, managedIds });
   return { models, managedIds };
 }
 
 module.exports = {
   normalizeCustomPricingSetting,
+  validateCustomPricingSetting,
   buildTokscaleModels,
   mergeManaged,
   applyCustomPricing

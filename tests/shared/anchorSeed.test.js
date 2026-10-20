@@ -10,7 +10,7 @@ const test = require('node:test');
 
 const { deviceRecordFromAnchor } = require('../../src/shared/anchorSeed');
 const { configFingerprint } = require('../../src/shared/collector');
-const { qoderCnDataPaths } = require('../../src/shared/providers/qodercn/usage');
+const { qoderCnDataPaths } = require('../fixtures/legacyQoderCnUsage');
 const { aggregateDevices, emptyPeriod } = require('../../src/shared/usage');
 
 const CLIENTS = 'claude,codex';

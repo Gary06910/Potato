@@ -34,7 +34,7 @@ function fakeTokscaleSpawn() {
 
 async function withQoderCollectorMock(mocks, callback) {
   const collectorPath = require.resolve('../../src/shared/collector');
-  const qoderCnUsage = require('../../src/shared/providers/qodercn/usage');
+  const qoderCnUsage = require('../fixtures/legacyQoderCnUsage');
   const originals = Object.fromEntries(Object.keys(mocks).map((key) => [key, qoderCnUsage[key]]));
   Object.assign(qoderCnUsage, mocks);
   delete require.cache[collectorPath];
@@ -133,8 +133,8 @@ test('collectUsageOnce returns empty usage without spawning tokscale when client
   }
 });
 
-test('collectUsageOnce handles proma-only tracking without spawning tokscale', async () => {
-  const promaPath = require.resolve('../../src/shared/providers/proma/usage');
+test('collectUsageOnce handles proma-only tracking through the fork without the local adapter', async () => {
+  const promaPath = require.resolve('../fixtures/legacyPromaUsage');
   const collectorPath = require.resolve('../../src/shared/collector');
   const promaUsage = require(promaPath);
   const originalBuildPromaPeriods = promaUsage.buildPromaPeriods;
@@ -158,11 +158,11 @@ test('collectUsageOnce handles proma-only tracking without spawning tokscale', a
       limitsEnabled: false,
       runTokscale: async () => {
         tokscaleCalls += 1;
-        throw new Error('tokscale should not run for proma-only tracking');
+        return { entries: [{ client: 'proma', model: 'm', input: tokscaleCalls === 1 ? 12 : tokscaleCalls === 2 ? 20 : 30, output: tokscaleCalls === 1 ? 3 : 0 }] };
       }
     });
 
-    assert.equal(tokscaleCalls, 0);
+    assert.equal(tokscaleCalls, 3);
     assert.deepEqual(summary.trackedClients, ['proma']);
     assert.equal(summary.today.clients.proma, 15);
     assert.equal(summary.month.clients.proma, 20);
@@ -173,7 +173,7 @@ test('collectUsageOnce handles proma-only tracking without spawning tokscale', a
   }
 });
 
-test('collectUsageOnce handles qodercn-only tracking without spawning tokscale', async () => {
+test('collectUsageOnce handles qodercn-only tracking through the fork without the local adapter', async () => {
   let tokscaleCalls = 0;
 
   await withQoderCollectorMock({
@@ -193,11 +193,11 @@ test('collectUsageOnce handles qodercn-only tracking without spawning tokscale',
       limitsEnabled: false,
       runTokscale: async () => {
         tokscaleCalls += 1;
-        throw new Error('tokscale should not run for qodercn-only tracking');
+        return { entries: [{ client: 'qodercn', model: 'qmodel', input: tokscaleCalls === 1 ? 12 : tokscaleCalls === 2 ? 20 : 30, output: tokscaleCalls === 1 ? 3 : 0 }] };
       }
     });
 
-    assert.equal(tokscaleCalls, 0);
+    assert.equal(tokscaleCalls, 3);
     assert.deepEqual(summary.trackedClients, ['qodercn']);
     assert.equal(summary.today.clients['qodercn'], 15);
     assert.equal(summary.month.clients['qodercn'], 20);
@@ -206,7 +206,7 @@ test('collectUsageOnce handles qodercn-only tracking without spawning tokscale',
 });
 
 test('anchored Proma refresh derives broader windows from the combined fresh today period', async () => {
-  const promaPath = require.resolve('../../src/shared/providers/proma/usage');
+  const promaPath = require.resolve('../fixtures/legacyPromaUsage');
   const collectorPath = require.resolve('../../src/shared/collector');
   const promaUsage = require(promaPath);
   const originalBuildPromaPeriods = promaUsage.buildPromaPeriods;
@@ -242,13 +242,13 @@ test('anchored Proma refresh derives broader windows from the combined fresh tod
       limitsEnabled: false,
       todayOnlyAnchor: anchor,
       runTokscale: async ({ clients, flags }) => {
-        assert.equal(clients, 'claude');
+        assert.equal(clients, 'claude,proma');
         assert.deepEqual(flags, ['--today']);
-        return { entries: [{ client: 'claude', model: 'm', input: 15 }] };
+        return { entries: [{ client: 'claude', model: 'm', input: 15 }, { client: 'proma', model: 'm', input: 8 }] };
       }
     });
 
-    assert.equal(receivedAllTimeSince, '2026-01-01');
+    assert.equal(receivedAllTimeSince, null, 'retired local parser must not run');
     assert.equal(summary.today.totalTokens, 23);
     assert.equal(summary.month.totalTokens, 158);
     assert.equal(summary.allTime.totalTokens, 1508);

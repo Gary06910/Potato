@@ -6,6 +6,7 @@
   if (root) root.TokenMonitorTrayProviderIcons = api;
 })(typeof window !== 'undefined' ? window : null, function createTrayProviderIconsApi() {
   const SPECIAL_ICON_SOURCES = {
+    mcode: '../../../assets/icons/minimax.svg',
     claude: '../../../assets/icons/tray-claude.svg',
     'claude-brand': '../../../assets/icons/claude.svg',
     codex: '../../../assets/icons/tray-codex.svg',
@@ -14,8 +15,10 @@
     factory: '../../../assets/icons/droid.svg',
     kimi: '../../../assets/icons/kimi.svg',
     mimo: '../../../assets/icons/xiaomi.svg',
-    grok: '../../../assets/icons/grok.svg',
     micode: '../../../assets/icons/xiaomi.svg',
+    'micode-desktop': '../../../assets/icons/xiaomi.svg',
+    grok: '../../../assets/icons/grok.svg',
+    muse: '../../../assets/icons/meta.svg',
     zcode: '../../../assets/icons/zai.svg',
     zaiteam: '../../../assets/icons/zai.svg'
   };

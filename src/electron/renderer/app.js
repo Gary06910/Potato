@@ -23,8 +23,8 @@ const tokenRateApi = window.TokenMonitorTokenRate;
 const { tokenRatePerSecond, tokenBurnPerMinute } = tokenRateApi;
 const reducedMotionMedia = window.matchMedia?.('(prefers-reduced-motion: reduce)');
 const clientsWithIcon = new Set([
-  'claude', 'codex', 'opencode', 'hermes', 'openclaw', 'cursor', 'antigravity', 'cline', 'amp', 'droid', 'kimi', 'qwen', 'grok', 'copilot', 'pi', 'zed', 'kilo', 'commandcode', 'micode', 'zcode', 'kiro', 'codebuddy', 'workbuddy', 'proma', 'qodercn', 'reasonix', 'dsh', 'cherrystudio', 'lmstudio', 'unsloth',
-  'gemini', 'xai', 'openrouter', 'deepseek', 'meta', 'mistral', 'moonshot', 'zai', 'zaiteam', 'cohere', 'xiaomi', 'mimo', 'minimax', 'doubao', 'volcengine', 'qoder', 'trae', 'ollama', 'thirdparty', 'hunyuan'
+  'claude', 'codex', 'opencode', 'hermes', 'openclaw', 'cursor', 'antigravity', 'cline', 'amp', 'droid', 'kimi', 'qwen', 'grok', 'copilot', 'pi', 'omp', 'goose', 'zed', 'kilo', 'commandcode', 'mimo', 'muse', 'zcode', 'kiro', 'codebuddy', 'workbuddy', 'proma', 'catpaw', 'qodercn', 'reasonix', 'dsh', 'cherrystudio', 'lmstudio', 'unsloth', 'devin', 'fx', 'mcode',
+  'gemini', 'xai', 'openrouter', 'deepseek', 'meta', 'mistral', 'moonshot', 'zai', 'zaiteam', 'cohere', 'xiaomi', 'minimax', 'doubao', 'volcengine', 'qoder', 'trae', 'ollama', 'thirdparty', 'hunyuan'
 ]);
 // Limits rows mark more ids than there are tracked clients: every provider, plus
 // relay ids that only ever appear as a limits row and have no catalog entry.
@@ -310,7 +310,7 @@ function normalizeInitialViewValue(value, allowed, fallback) {
   return allowed.has(raw) ? raw : fallback;
 }
 
-const state = { period: normalizeInitialViewValue(initialViewState.period, viewPeriodValues, 'today'), appUpdate: null, breakdown: normalizeInitialViewValue(initialViewState.breakdown, viewBreakdownValues, 'home'), viewSwitcherOpen: false, viewSwitcherHasOpened: false, limitDetailTooltipHasOpened: false, limitDetailTooltipActive: false, limitDetailTooltipRenderPending: false, settings: null, windowVisible: new URLSearchParams(window.location.search).get('windowHidden') !== '1', stats: null, homeHistory: null, homeHistoryBusy: false, homeHistoryRequested: false, homeHistorySignature: '', homeHistoryRetries: 0, homeHistoryRetryTimer: null, homeActivityScrollLeft: null, homeActivityFollowEnd: true, homeActivityResizeObserver: null, serviceStatus: null, serviceStatusBusy: false, serviceProvidersExpanded: false, trendSettingsExpanded: false, trendsActivating: false, homeSettingsExpanded: false, homeLimitSettingsExpanded: false, limitProviderSettingsExpanded: '', clientHealthExpanded: '', clientSources: clientSourceCacheApi.createClientSourceCache(), clientSourcesKey: '', clientSourcesRequest: 0, subscriptionEditingId: '', subscriptionTopUps: [], subscriptionFormBase: null, subscriptionEditorTransitionId: 0, serviceStatusTicker: null, refreshTimer: null, refreshBusy: false, refreshFeedbackTimer: null, currentTotal: 0, rowSignature: '', streamConnected: false, streamFailure: null, mode: 'idle', appInfo: null, systemDarkUi: false, tokscaleStatus: null, tokscaleCheck: null, tokscaleBusy: false, hubInfo: null, hubBuildStatus: null, cursorAccount: { status: null, error: '' }, cursorAccountExpanded: false, codexAccountExpanded: false, codexAccountError: '', codexSignInBusy: false, codexSignInFlowId: '', codexLoginUrl: '', codexLoginStatus: '', codexLoginOutput: '', codexWorkspaceChoices: [], codexWorkspaceId: '', codexActiveAccount: null, codexPendingActiveAccount: null, codexPendingActiveAccountUntil: 0, codexPendingActiveAccountTimer: null, codexSystemSwitchingAccountId: '', codexSystemSwitchErrorAccountId: '', codexSystemSwitchError: '', codexSwitchPopoverHasOpened: false, codexSwitchPopoverActive: false, codexSwitchPopoverRenderPending: false, customPricingExpanded: false, claudeAccountExpanded: false, claudePendingCheckSince: 0, opencodeProfileCount: 0, opencodeCookieExpanded: false, openrouterProfileCount: 0, openrouterAccountExpanded: false, thirdPartyProfileCount: 0, thirdPartyAccountExpanded: false, deepseekAccountExpanded: false, deepseekPendingCheckSince: 0, minimaxAccountExpanded: false, minimaxPendingCheckSince: 0, factoryAccountExpanded: false, factoryPendingCheckSince: 0, zaiAccountExpanded: false, zaiPendingCheckSince: 0, zaiteamAccountExpanded: false, zaiteamPendingCheckSince: 0, volcengineAccountExpanded: false, volcenginePendingCheckSince: 0, volcengineAgentExpanded: false, qoderAccountExpanded: false, qoderPendingCheckSince: 0, commandcodeAccountExpanded: false, commandcodePendingCheckSince: 0, kimiAccountExpanded: false, kimiPendingCheckSince: 0, ollamaAccountExpanded: false, ollamaPendingCheckSince: 0, mimoAccountExpanded: false, mimoAccountError: '', antigravityAccountExpanded: false, antigravityAccountError: '', antigravitySignInBusy: false, copilotAccountExpanded: false, copilotManualExpanded: false, copilotPendingCheckSince: 0, copilotSignInBusy: false, copilotSignInCancelable: false, copilotSignInFlowId: '', copilotAuthorizeMessage: '', copilotLoginStatus: '', copilotErrorMessage: '', floatingBubble: initialFloatingBubble, suppressInitialNumberAnimation: window.__TOKEN_MONITOR_SUPPRESS_INITIAL_NUMBER_ANIMATION__ === true, openSession: null, detailSort: 'time', recordingWindowShortcut: false, windowShortcutInvalid: false, toolSearchQuery: '', limitProviderSearchQuery: '' };
+const state = { period: normalizeInitialViewValue(initialViewState.period, viewPeriodValues, 'today'), appUpdate: null, breakdown: normalizeInitialViewValue(initialViewState.breakdown, viewBreakdownValues, 'home'), viewSwitcherOpen: false, viewSwitcherHasOpened: false, limitDetailTooltipHasOpened: false, limitDetailTooltipActive: false, limitDetailTooltipRenderPending: false, settings: null, windowVisible: new URLSearchParams(window.location.search).get('windowHidden') !== '1', stats: null, homeHistory: null, homeHistoryBusy: false, homeHistoryRequested: false, homeHistorySignature: '', homeHistoryRetries: 0, homeHistoryRetryTimer: null, homeActivityScrollLeft: null, homeActivityFollowEnd: true, homeActivityResizeObserver: null, serviceStatus: null, serviceStatusBusy: false, serviceProvidersExpanded: false, trendSettingsExpanded: false, trendsActivating: false, homeSettingsExpanded: false, homeLimitSettingsExpanded: false, limitProviderSettingsExpanded: '', clientHealthExpanded: '', clientSources: clientSourceCacheApi.createClientSourceCache(), clientSourcesKey: '', clientSourcesRequest: 0, subscriptionEditingId: '', subscriptionTopUps: [], subscriptionFormBase: null, subscriptionEditorTransitionId: 0, serviceStatusTicker: null, refreshTimer: null, refreshBusy: false, refreshFeedbackTimer: null, currentTotal: 0, rowSignature: '', streamConnected: false, streamFailure: null, mode: 'idle', appInfo: null, systemDarkUi: false, tokscaleStatus: null, hubInfo: null, hubBuildStatus: null, cursorAccount: { status: null, error: '' }, cursorAccountExpanded: false, codexAccountExpanded: false, codexAccountError: '', codexSignInBusy: false, codexSignInFlowId: '', codexLoginUrl: '', codexLoginStatus: '', codexLoginOutput: '', codexWorkspaceChoices: [], codexWorkspaceId: '', codexActiveAccount: null, codexPendingActiveAccount: null, codexPendingActiveAccountUntil: 0, codexPendingActiveAccountTimer: null, codexSystemSwitchingAccountId: '', codexSystemSwitchErrorAccountId: '', codexSystemSwitchError: '', codexSwitchPopoverHasOpened: false, codexSwitchPopoverActive: false, codexSwitchPopoverRenderPending: false, customPricingExpanded: false, claudeAccountExpanded: false, claudePendingCheckSince: 0, opencodeProfileCount: 0, opencodeCookieExpanded: false, openrouterProfileCount: 0, openrouterAccountExpanded: false, thirdPartyProfileCount: 0, thirdPartyAccountExpanded: false, deepseekAccountExpanded: false, deepseekPendingCheckSince: 0, minimaxAccountExpanded: false, minimaxPendingCheckSince: 0, factoryAccountExpanded: false, factoryPendingCheckSince: 0, zaiAccountExpanded: false, zaiPendingCheckSince: 0, zaiteamAccountExpanded: false, zaiteamPendingCheckSince: 0, volcengineAccountExpanded: false, volcenginePendingCheckSince: 0, volcengineAgentExpanded: false, qoderAccountExpanded: false, qoderPendingCheckSince: 0, commandcodeAccountExpanded: false, commandcodePendingCheckSince: 0, kimiAccountExpanded: false, kimiPendingCheckSince: 0, ollamaAccountExpanded: false, ollamaPendingCheckSince: 0, mimoAccountExpanded: false, mimoAccountError: '', antigravityAccountExpanded: false, antigravityAccountError: '', antigravitySignInBusy: false, copilotAccountExpanded: false, copilotManualExpanded: false, copilotPendingCheckSince: 0, copilotSignInBusy: false, copilotSignInCancelable: false, copilotSignInFlowId: '', copilotAuthorizeMessage: '', copilotLoginStatus: '', copilotErrorMessage: '', floatingBubble: initialFloatingBubble, suppressInitialNumberAnimation: window.__TOKEN_MONITOR_SUPPRESS_INITIAL_NUMBER_ANIMATION__ === true, openSession: null, detailSort: 'time', recordingWindowShortcut: false, windowShortcutInvalid: false, toolSearchQuery: '', limitProviderSearchQuery: '' };
 state.zedAccountExpanded = false;
 state.zedPendingCheckSince = 0;
 state.toolDetailMode = 'tokens';
@@ -415,13 +415,6 @@ Object.assign(els, {
   advancedSettingsSummary: document.getElementById('advancedSettingsSummary'),
   tokscaleGroup: document.getElementById('tokscaleGroup'),
   tokscaleInstalled: document.getElementById('tokscaleInstalled'),
-  tokscaleBundledLine: document.getElementById('tokscaleBundledLine'),
-  tokscaleBundled: document.getElementById('tokscaleBundled'),
-  tokscaleNpm: document.getElementById('tokscaleNpm'),
-  tokscaleMessage: document.getElementById('tokscaleMessage'),
-  checkTokscaleButton: document.getElementById('checkTokscaleButton'),
-  downloadTokscaleButton: document.getElementById('downloadTokscaleButton'),
-  resetTokscaleButton: document.getElementById('resetTokscaleButton'),
   openTokscaleLinkButton: document.getElementById('openTokscaleLinkButton'),
   aboutVersion: document.getElementById('aboutVersion'),
   openRepositoryButton: document.getElementById('openRepositoryButton'),
@@ -1504,74 +1497,14 @@ function colorWithAlpha(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function setTokscaleMessage(text = '', tone = '') {
-  if (!els.tokscaleMessage) return;
-  els.tokscaleMessage.textContent = text;
-  els.tokscaleMessage.classList.toggle('error', tone === 'error');
-  els.tokscaleMessage.classList.toggle('success', tone === 'success');
-}
-
-function mergeTokscalePayload(payload) {
-  if (!payload || typeof payload !== 'object') return;
-  if (payload.status) state.tokscaleStatus = payload.status;
-  else if (payload.supported === false) state.tokscaleStatus = { supported: false };
-  else if (payload.current || payload.bundled || payload.downloaded) {
-    state.tokscaleStatus = {
-      ...(state.tokscaleStatus || { supported: true }),
-      supported: payload.supported !== false,
-      current: payload.current ?? state.tokscaleStatus?.current ?? null,
-      bundled: payload.bundled ?? state.tokscaleStatus?.bundled ?? null,
-      downloaded: payload.downloaded ?? state.tokscaleStatus?.downloaded ?? null
-    };
-  }
-  if (payload.npm || payload.checkedAt) {
-    state.tokscaleCheck = {
-      newer: Boolean(payload.newer),
-      npm: payload.npm || state.tokscaleCheck?.npm || null,
-      checkedAt: payload.checkedAt || state.tokscaleCheck?.checkedAt || null
-    };
-  }
-  if (payload.downloaded === true && state.tokscaleCheck?.npm?.version === payload.version) {
-    state.tokscaleCheck = { ...state.tokscaleCheck, newer: false };
-  }
-}
-
 function renderTokscaleStatus() {
   if (!els.tokscaleGroup) return;
   const status = state.tokscaleStatus;
-  const advancedSummaryKey = state.tokscaleCheck?.newer
-    ? 'settings.advanced.tokscaleUpdate'
-    : 'settings.advanced.summary';
-  if (els.advancedSettingsSummary) {
-    els.advancedSettingsSummary.dataset.i18n = advancedSummaryKey;
-    els.advancedSettingsSummary.textContent = t(advancedSummaryKey);
-  }
-  if (status?.supported === false) {
-    els.tokscaleGroup.classList.add('hidden');
-    return;
-  }
-  els.tokscaleGroup.classList.remove('hidden');
+  els.tokscaleGroup.classList.toggle('hidden', status?.supported === false);
   const current = status?.current;
-  const source = current?.source === 'downloaded'
-    ? (current.installedAt
-      ? t('settings.tokscale.downloadedSourceWithAge', { age: compactAge(current.installedAt) })
-      : t('settings.tokscale.downloadedSource'))
-    : t('settings.tokscale.bundledSource');
-  els.tokscaleInstalled.textContent = current ? `${versionText(current.version)} (${source})` : t('settings.common.notFound');
-  els.tokscaleBundledLine.classList.toggle('hidden', !status?.downloaded || !status?.bundled);
-  els.tokscaleBundled.textContent = status?.bundled ? versionText(status.bundled.version) : '—';
-  if (state.tokscaleCheck?.npm?.version) {
-    els.tokscaleNpm.textContent = state.tokscaleCheck.newer
-      ? versionText(state.tokscaleCheck.npm.version)
-      : t('settings.appUpdate.latestWithStatus', { version: state.tokscaleCheck.npm.version, status: t('settings.tokscale.currentSuffix') });
-  } else {
-    els.tokscaleNpm.textContent = t('settings.common.notChecked');
-  }
-  els.checkTokscaleButton.disabled = state.tokscaleBusy;
-  els.downloadTokscaleButton.disabled = state.tokscaleBusy;
-  els.resetTokscaleButton.disabled = state.tokscaleBusy;
-  els.downloadTokscaleButton.classList.toggle('hidden', !state.tokscaleCheck?.newer);
-  els.resetTokscaleButton.classList.toggle('hidden', !status?.downloaded);
+  els.tokscaleInstalled.textContent = current
+    ? `${versionText(current.version)} (${t('settings.tokscale.bundledSource')})`
+    : t('settings.common.notFound');
 }
 
 async function refreshTokscaleStatus() {
@@ -1580,60 +1513,10 @@ async function refreshTokscaleStatus() {
     state.tokscaleStatus = await window.tokenMonitor.getTokscaleStatus();
     renderTokscaleStatus();
   } catch (error) {
-    setTokscaleMessage(error.message, 'error');
+    console.warn(`[tokscale] status query failed: ${error.message}`);
   }
 }
 
-async function checkTokscaleNpm() {
-  state.tokscaleBusy = true;
-  setTokscaleMessage(t('settings.tokscale.checkingNpm'));
-  renderTokscaleStatus();
-  try {
-    const result = await window.tokenMonitor.checkTokscaleNpm();
-    if (result?.error) throw new Error(result.error);
-    mergeTokscalePayload(result);
-    if (state.tokscaleStatus?.supported === false) return;
-    setTokscaleMessage(state.tokscaleCheck?.newer ? t('settings.tokscale.newerOnNpm') : t('settings.tokscale.bundledCurrent'));
-  } catch (error) {
-    setTokscaleMessage(error.message, 'error');
-  } finally {
-    state.tokscaleBusy = false;
-    renderTokscaleStatus();
-  }
-}
-
-async function downloadTokscaleFromNpm() {
-  state.tokscaleBusy = true;
-  setTokscaleMessage(t('settings.tokscale.downloading'));
-  renderTokscaleStatus();
-  try {
-    const result = await window.tokenMonitor.downloadTokscaleFromNpm();
-    if (result?.error) throw new Error(result.error);
-    mergeTokscalePayload(result);
-    setTokscaleMessage(t('settings.tokscale.downloaded', { version: versionText(result.version) }), 'success');
-  } catch (error) {
-    setTokscaleMessage(error.message, 'error');
-  } finally {
-    state.tokscaleBusy = false;
-    renderTokscaleStatus();
-  }
-}
-
-async function resetTokscaleToBundled() {
-  state.tokscaleBusy = true;
-  setTokscaleMessage(t('settings.tokscale.resetting'));
-  renderTokscaleStatus();
-  try {
-    state.tokscaleStatus = await window.tokenMonitor.resetTokscaleToBundled();
-    state.tokscaleCheck = null;
-    setTokscaleMessage(t('settings.tokscale.usingBundled'), 'success');
-  } catch (error) {
-    setTokscaleMessage(error.message, 'error');
-  } finally {
-    state.tokscaleBusy = false;
-    renderTokscaleStatus();
-  }
-}
 function easeOutQuart(t) { return 1 - Math.pow(1 - t, 4); }
 
 // A single in-flight tween on the headline number. Without cancelling it, an
@@ -13870,9 +13753,6 @@ els.resetZoomButton.addEventListener('click', async () => {
   await saveSettings({ zoomFactor: defaultAppearance.zoomFactor });
 });
 els.openConfigButton.addEventListener('click', () => window.tokenMonitor.openUserData());
-els.checkTokscaleButton?.addEventListener('click', checkTokscaleNpm);
-els.downloadTokscaleButton?.addEventListener('click', downloadTokscaleFromNpm);
-els.resetTokscaleButton?.addEventListener('click', resetTokscaleToBundled);
 els.openTokscaleLinkButton?.addEventListener('click', () => window.tokenMonitor.openExternal?.('https://github.com/junhoyeo/tokscale'));
 els.openRepositoryButton?.addEventListener('click', () => window.tokenMonitor.openExternal?.(TOKEN_MONITOR_REPOSITORY_URL));
 els.openWebsiteButton?.addEventListener('click', () => window.tokenMonitor.openExternal?.(TOKEN_MONITOR_WEBSITE_URL));
@@ -14046,10 +13926,6 @@ window.tokenMonitor.onHubPush?.((payload) => {
   if (settingsVisible) renderHubStatus();
 });
 
-window.tokenMonitor.onTokscalePush?.((payload) => {
-  mergeTokscalePayload(payload);
-  if (isSettingsSurfaceVisible()) renderTokscaleStatus();
-});
 
 function renderConnectionStatus(surface = visibleStatsSurface()) {
   if (surface !== 'main') return;
@@ -17596,6 +17472,8 @@ function customPricingMeta(ov) {
   if (typeof ov.cacheReadPerM === 'number') parts.push(`${t('settings.customPricing.cacheRead')} $${ov.cacheReadPerM}`);
   if (typeof ov.inputPerM === 'number') parts.push(`${t('settings.customPricing.input')} $${ov.inputPerM}`);
   if (typeof ov.outputPerM === 'number') parts.push(`${t('settings.customPricing.output')} $${ov.outputPerM}`);
+  if (typeof ov.cacheWritePerM === 'number') parts.push(`${t('settings.customPricing.cacheWrite')} $${ov.cacheWritePerM}`);
+  if (typeof ov.cacheWrite1hPerM === 'number') parts.push(`${t('settings.customPricing.cacheWrite1h')} $${ov.cacheWrite1hPerM}`);
   return parts.length ? `${parts.join(' · ')} / 1M` : '';
 }
 
@@ -17638,8 +17516,8 @@ function renderCustomPricing() {
     remove.className = 'managed-account-remove custom-pricing-remove';
     remove.textContent = t('settings.customPricing.remove');
     remove.addEventListener('click', async () => {
-      const next = customPricingFormApi.removeOverride(state.settings?.customModelPricing || [], ov.modelId);
-      await saveSettings({ customModelPricing: next });
+      const next = customPricingFormApi.removeOverride(overrides, ov.modelId);
+      try { await saveSettings({ customModelPricing: next }); } catch (_) { return; }
       renderCustomPricing();
     });
     row.append(main, remove);
@@ -17660,6 +17538,18 @@ function setupCustomPricingUI() {
   const inputEl = document.getElementById('customPricingInput');
   const outputEl = document.getElementById('customPricingOutput');
   const cacheReadEl = document.getElementById('customPricingCacheRead');
+  const cacheWriteEl = document.getElementById('customPricingCacheWrite');
+  const cacheWrite1hEl = document.getElementById('customPricingCacheWrite1h');
+  const advanced = document.getElementById('customPricingAdvanced');
+  const advancedSummary = document.getElementById('customPricingAdvancedSummary');
+  const help = document.getElementById('customPricingHelp');
+  const rateFields = [
+    [inputEl, 'inputPerM'], [outputEl, 'outputPerM'], [cacheReadEl, 'cacheReadPerM'],
+    [cacheWriteEl, 'cacheWritePerM'], [cacheWrite1hEl, 'cacheWrite1hPerM']
+  ];
+  let lookupRevision = 0;
+  let pricingEdit = null;
+  const editedFields = new Set();
   const hintEl = document.getElementById('customPricingHint');
   const errorEl = document.getElementById('customPricingError');
   const saveButton = document.getElementById('customPricingSaveButton');
@@ -17671,10 +17561,15 @@ function setupCustomPricingUI() {
   const selectedModelId = () => (select.value === '__manual__' ? manualInput.value.trim() : select.value);
 
   const resetForm = () => {
-    inputEl.value = ''; outputEl.value = ''; cacheReadEl.value = '';
+    lookupRevision += 1;
+    editedFields.clear();
+    advanced.open = false;
+    if (help.matches(':popover-open')) help.hidePopover();
+    for (const [el] of rateFields) el.value = '';
+    updateAdvancedSummary();
     manualInput.value = ''; manualInput.classList.add('hidden');
-    for (const id of ['customPricingInputApprox', 'customPricingOutputApprox', 'customPricingCacheReadApprox']) {
-      const span = document.getElementById(id);
+    for (const [el] of rateFields) {
+      const span = document.getElementById(el.id + 'Approx');
       if (span) span.textContent = '';
     }
     showHint(''); showError('');
@@ -17705,6 +17600,7 @@ function setupCustomPricingUI() {
     resetForm();
   };
   openCustomPricingForm = (prefill) => {
+    pricingEdit = { entries: structuredClone(state.settings?.customModelPricing || []) };
     resetForm();
     populateModels();
     if (prefill && prefill.modelId) {
@@ -17716,10 +17612,11 @@ function setupCustomPricingUI() {
         manualInput.classList.remove('hidden');
         manualInput.value = prefill.modelId;
       }
-      inputEl.value = prefill.inputPerM ?? '';
-      outputEl.value = prefill.outputPerM ?? '';
-      cacheReadEl.value = prefill.cacheReadPerM ?? '';
-      for (const el of [inputEl, outputEl, cacheReadEl]) el.dispatchEvent(new Event('input'));
+      for (const [el, key] of rateFields) {
+        el.value = prefill[key] ?? '';
+        updateApproximation(el);
+      }
+      advanced.open = cacheWriteEl.value !== '' || cacheWrite1hEl.value !== '';
     }
     form.classList.remove('hidden');
     addButton.classList.add('hidden');
@@ -17729,6 +17626,10 @@ function setupCustomPricingUI() {
   cancelButton.addEventListener('click', closeForm);
 
   select.addEventListener('change', async () => {
+    const revision = ++lookupRevision;
+    editedFields.clear();
+    advanced.open = false;
+    for (const [el] of rateFields) { el.value = ''; updateApproximation(el); }
     showError('');
     manualInput.classList.toggle('hidden', select.value !== '__manual__');
     if (!select.value || select.value === '__manual__') { showHint(''); return; }
@@ -17736,27 +17637,42 @@ function setupCustomPricingUI() {
     showHint(t('settings.customPricing.lookingUp'));
     try {
       const res = await window.tokenMonitor.lookupModelPricing(id);
+      if (revision !== lookupRevision) return;
       if (res?.ok && res.result?.pricing) {
         const p = customPricingFormApi.perMillionFromPricing(res.result);
-        if (p.inputPerM !== undefined) inputEl.value = p.inputPerM;
-        if (p.outputPerM !== undefined) outputEl.value = p.outputPerM;
-        if (p.cacheReadPerM !== undefined) cacheReadEl.value = p.cacheReadPerM;
-        for (const el of [inputEl, outputEl, cacheReadEl]) el.dispatchEvent(new Event('input'));
+        for (const [el, key] of rateFields) {
+          if (!editedFields.has(key)) el.value = p[key] ?? '';
+          updateApproximation(el);
+        }
         showHint(t('settings.customPricing.currentPrice', { key: res.result.matchedKey || id, source: res.result.source || '' }));
       } else {
         showHint(t('settings.customPricing.noCurrentPrice'));
       }
     } catch (_) {
+      if (revision !== lookupRevision) return;
       showHint(t('settings.customPricing.noCurrentPrice'));
     }
   });
 
-  for (const el of [inputEl, outputEl, cacheReadEl]) {
+  function updateAdvancedSummary() {
+    const count = [cacheWriteEl, cacheWrite1hEl].filter(el => el.value !== '').length;
+    advancedSummary.textContent = count ? t('settings.customPricing.advancedConfigured', { count }) : '';
+  }
+
+  function updateApproximation(el) {
+    updateAdvancedSummary();
+    const span = document.getElementById(el.id + 'Approx');
+    if (!span) return;
+    const v = Number(el.value);
+    span.textContent = (el.value !== '' && Number.isFinite(v)) ? `≈ ${formatCost(v)} / 1M` : '';
+  }
+
+  for (const [el, key] of rateFields) {
+    const writeDescription = el === cacheWrite1hEl ? ' customPricingWriteNote' : '';
+    el.setAttribute('aria-describedby', 'customPricingRateUnits customPricingCoverageNote customPricingHint customPricingError' + writeDescription);
     el.addEventListener('input', () => {
-      const span = document.getElementById(el.id + 'Approx');
-      if (!span) return;
-      const v = Number(el.value);
-      span.textContent = (el.value !== '' && Number.isFinite(v)) ? `≈ ${formatCost(v)} / 1M` : '';
+      editedFields.add(key);
+      updateApproximation(el);
     });
   }
 
@@ -17764,17 +17680,24 @@ function setupCustomPricingUI() {
     showError('');
     const modelId = selectedModelId();
     if (!modelId) { showError(t('settings.customPricing.errorNoModel')); return; }
-    const entry = {
-      modelId,
-      inputPerM: inputEl.value === '' ? undefined : Number(inputEl.value),
-      outputPerM: outputEl.value === '' ? undefined : Number(outputEl.value),
-      cacheReadPerM: cacheReadEl.value === '' ? undefined : Number(cacheReadEl.value)
-    };
-    if (!customPricingFormApi.hasUsableBasePrice(entry)) { showError(t('settings.customPricing.errorNoPrice')); return; }
-    const next = customPricingFormApi.upsertOverride(state.settings?.customModelPricing || [], entry);
-    await saveSettings({ customModelPricing: next });
-    closeForm();
-    renderCustomPricing();
+    const entry = { modelId };
+    for (const [el, key] of rateFields) entry[key] = el.value === '' ? undefined : Number(el.value);
+    if (!customPricingFormApi.hasUsableBasePrice(entry)) {
+      if ([entry.cacheWritePerM, entry.cacheWrite1hPerM].some(value => value !== undefined && (!Number.isFinite(value) || value < 0))) advanced.open = true;
+      showError(t('settings.customPricing.errorNoPrice'));
+      return;
+    }
+    const next = customPricingFormApi.upsertOverride(pricingEdit?.entries || [], entry);
+    saveButton.disabled = true;
+    try {
+      await saveSettings({ customModelPricing: next });
+      closeForm();
+      renderCustomPricing();
+    } catch (_) {
+      showError(t('settings.customPricing.saveFailed'));
+    } finally {
+      saveButton.disabled = false;
+    }
   });
 
   renderCustomPricing();

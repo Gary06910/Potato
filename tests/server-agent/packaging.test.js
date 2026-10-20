@@ -107,7 +107,7 @@ test('Tokscale package metadata remains sourced from the pinned vendor manifest'
   const rootPackage = packageScript.rootPackageJson();
   const vendorManifest = JSON.parse(read(path.join(root, 'scripts', 'vendor', 'tokscale.json')));
   packageScript.assertPackagingContracts(rootPackage, JSON.parse(read(runtimePath)), vendorManifest);
-  assert.equal(vendorManifest.baseVersion, '4.17.0');
+  assert.equal(vendorManifest.baseVersion, '4.20.0');
   assert.equal(vendorManifest.platforms['linux-x64'].package, '@tokscale/cli-linux-x64-gnu');
   assert.equal(vendorManifest.platforms['linux-x64'].asset, 'tokscale-linux-x64');
   assert.equal(packageScript.createServerAgentPackageManifest(rootPackage).dependencies['electron-updater'], undefined);
@@ -158,7 +158,7 @@ test('server package manifest uses root version and has no desktop entry point',
   assert.equal(Object.hasOwn(manifest, 'devDependencies'), false);
   assert.equal(Object.hasOwn(manifest.dependencies, 'electron-updater'), false);
   assert.equal(Object.hasOwn(manifest.dependencies, '@xhayper/discord-rpc'), false);
-  assert.equal(manifest.dependencies.tokscale, '^4.17.0');
+  assert.equal(manifest.dependencies.tokscale, '^4.20.0');
 });
 
 test('Linux package source includes the systemd user-service assets', () => {

@@ -1,5 +1,8 @@
 'use strict';
 
+// Legacy parity-fixture helpers; production Collector/WSL usage belongs to Tokscale.
+// Do not reintroduce these adapters into live or history collection.
+
 const { execFile } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
@@ -7,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { promisify } = require('node:util');
 const execFileAsync = promisify(execFile);
-const { customPricingPath } = require('../../tokscaleConfig');
+const { customPricingPath } = require('../../src/shared/tokscaleConfig');
 const QODER_CN_DB_SUFFIX = path.join('SharedClientCache', 'cache', 'db', 'local.db');
 // Qoder CN stores internal model codes (model_info.model_key) instead of real
 // model names. Official display names come from the app's bundled i18n keys

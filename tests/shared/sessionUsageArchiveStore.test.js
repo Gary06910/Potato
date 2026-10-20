@@ -72,14 +72,13 @@ function databaseWithRowsHook(hook) {
       if (!/SELECT session_key, entry_json FROM sessions/.test(sql)) return statement;
       return new Proxy(statement, {
         get(target, property) {
-          if (property !== 'all') {
+          if (property !== 'iterate') {
             const value = target[property];
             return typeof value === 'function' ? value.bind(target) : value;
           }
-          return (...args) => {
-            const rows = target.all(...args);
+          return function* (...args) {
+            yield* target.iterate(...args);
             hook();
-            return rows;
           };
         }
       });

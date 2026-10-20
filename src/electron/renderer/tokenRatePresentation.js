@@ -137,10 +137,8 @@
     return { getSample, observe, reset, value };
   }
 
-  // Hub devices publish independently. Taking one delta from the aggregate would make the
-  // headline jump between whichever device happened to upload last, and dividing summed
-  // tokens by summed model-busy time would be an average rather than fleet throughput. Keep
-  // one matched-counter tracker per device, then add only samples that are still live.
+  // Hub devices publish independently. Keep matched counters per device, then
+  // divide summed tokens by summed observed duration for the active samples.
   function createLiveTokenRateGroupTracker({ now = defaultNow, activeMs = 8000, clearMs = 180000 } = {}) {
     if (typeof now !== 'function') throw new TypeError('now must be a function');
     const lifetime = positiveNumber(activeMs);
@@ -219,9 +217,14 @@
     function getSample() {
       const samples = activeSamples();
       if (samples.length) {
+        const counters = samples.reduce((sum, sample) => ({
+          timedTokens: sum.timedTokens + sample.timedTokens,
+          timedOutputTokens: sum.timedOutputTokens + sample.timedOutputTokens,
+          timedDurationMs: sum.timedDurationMs + sample.timedDurationMs
+        }), { timedTokens: 0, timedOutputTokens: 0, timedDurationMs: 0 });
         lastDisplaySample = {
-          speed: cappedTokenRate(samples.reduce((sum, sample) => sum + sample.speed, 0)),
-          burn: cappedTokenRate(samples.reduce((sum, sample) => sum + sample.burn, 0)),
+          speed: tokenRatePerSecond(counters),
+          burn: tokenBurnPerMinute(counters),
           sampledAt: Math.max(...samples.map((sample) => sample.sampledAt)),
           deviceCount: samples.length,
           revision

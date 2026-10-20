@@ -63,7 +63,7 @@ test('every tokscale alias normalizes back to the client that owns it', () => {
 test('tokscaleClientFilter expands a targeted client to all of its aliases', () => {
   for (const [client, aliases] of Object.entries(TOKSCALE_CLIENT_ALIASES)) {
     const filter = tokscaleClientFilter(client).split(',');
-    assert.ok(filter.includes(client), `targeting "${client}" dropped the client itself`);
+    assert.equal(filter.includes(client), !['mimo', 'devin'].includes(client), `umbrella scan contract for ${client}`);
     for (const alias of aliases) {
       assert.ok(
         filter.includes(alias),

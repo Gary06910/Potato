@@ -37,7 +37,7 @@ test('an external agent keeps anchor archive loading read-only', () => {
   const ensureArchive = functionSource('function ensureSessionUsageArchiveLoaded()');
   assert.match(
     ensureArchive,
-    /isExternalAgentActive\(\)\s*\? readSessionUsageArchiveSnapshot\(\)\s*:\s*sessionUsageArchiveStore\.read\(\)/
+    /isExternalAgentActive\(\)\s*\? readSessionUsageArchiveSnapshot\(\{ strict: true \}\)\s*:\s*sessionUsageArchiveStore\.read\(\)/
   );
 });
 

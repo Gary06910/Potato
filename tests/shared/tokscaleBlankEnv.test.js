@@ -10,6 +10,7 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const test = require('node:test');
+const { tokscaleConfigDir } = require('../../src/shared/tokscaleConfig');
 
 const {
   clientSourceRoots,
@@ -75,7 +76,7 @@ test('the XDG fallback follows an absolute native HOME on Windows, like the scan
   const expected = path.join(portable, '.local', 'share', 'amp', 'threads');
 
   assert.equal(clientSourceRoots('amp', options).amp[0].dir, expected);
-  assert.deepEqual(clientWatchCandidates('amp', options).amp, [expected], 'the watcher must observe the scanned tree');
+  assert.deepEqual(clientWatchCandidates('amp', options).amp, [expected, path.join(tokscaleConfigDir(options), 'amp-cache', 'threads')], 'the watcher must observe the scanned tree');
 
   // The other PathRoot::XdgData clients hang off the same fallback, so they move
   // together rather than only Amp being corrected.
@@ -176,10 +177,11 @@ test('a blank XDG_DATA_HOME resolves a usable root for Token Monitor', () => {
   const home = path.join(path.sep, 'tmp', 'amp-blank-consistency');
   const expected = path.join(home, '.local', 'share', 'amp', 'threads');
   for (const blank of ['', '   ', '\t']) {
-    process.env.XDG_DATA_HOME = blank;
-    const roots = clientSourceRoots('amp', { homeDir: home, platform: 'linux' }).amp;
+    // This fallback fixture must not inherit the runner's config overrides.
+    const options = { homeDir: home, platform: 'linux', env: { XDG_DATA_HOME: blank } };
+    const roots = clientSourceRoots('amp', options).amp.filter(({ optional }) => !optional);
     assert.deepEqual(roots, [{ id: 'amp-threads', dir: expected }]);
-    assert.deepEqual(clientWatchCandidates('amp', { homeDir: home, platform: 'linux' }).amp, [expected]);
+    assert.deepEqual(clientWatchCandidates('amp', options).amp, [expected, path.join(home, '.config', 'tokscale', 'amp-cache', 'threads')]);
   }
 });
 
@@ -204,7 +206,7 @@ test('an injected env wins over process.env for the XDG data root', () => {
   );
   assert.deepEqual(
     clientWatchCandidates('amp', options).amp,
-    [path.join('/tmp/injected-xdg', 'amp', 'threads')]
+    [path.join('/tmp/injected-xdg', 'amp', 'threads'), path.join(tokscaleConfigDir(options), 'amp-cache', 'threads')]
   );
 
   // The other PathRoot::XdgData clients read the same injected value rather than

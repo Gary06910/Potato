@@ -98,7 +98,8 @@ const limitsOptions = {
   opencodeCookie
 };
 let sessionUsageArchive;
-const sessionUsageArchiveStore = dryRun ? null : createSessionUsageArchiveStore();
+const cursorUsageEvents = require('../shared/providers/cursor/usageEvents').createCursorUsageEventIndex();
+const sessionUsageArchiveStore = dryRun ? null : createSessionUsageArchiveStore({ cursorUsageEvents });
 
 function summaryWithSessionUsageArchive(summary, now = new Date()) {
   let visibleSummary = summary;
@@ -106,20 +107,22 @@ function summaryWithSessionUsageArchive(summary, now = new Date()) {
     const archiveDate = sessionUsageArchiveDate(summary, now);
     if (dryRun) {
       sessionUsageArchive = updateSessionUsageArchive(
-        sessionUsageArchive || readSessionUsageArchiveSnapshot(),
+        sessionUsageArchive || readSessionUsageArchiveSnapshot({ strict: true }),
         summary,
-        archiveDate
+        archiveDate,
+        { cursorUsageEvents }
       ).archive;
     } else {
       const result = sessionUsageArchiveStore.capture(summary, archiveDate);
+      if (result.error) throw result.error;
       sessionUsageArchive = result.archive;
-      if (result.error) console.error(`[session-archive] update failed: ${result.error.message}`);
     }
     visibleSummary = applySessionUsageArchive(summary, sessionUsageArchive, {
       now: archiveDate,
       canonical: !dryRun
     });
   }
+  delete visibleSummary.sessionUsageArchiveFullScan;
   return projectsEnabled ? applyProjectRollups(visibleSummary) : visibleSummary;
 }
 

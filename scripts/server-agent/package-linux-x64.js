@@ -61,9 +61,9 @@ function assertPackagingContracts(rootPackage, runtimeManifest, vendorManifest) 
     throw new Error('server-agent packaging target must remain linux x64');
   }
   if (vendorManifest.mode !== 'override') throw new Error('Tokscale vendor manifest mode must remain override');
-  if (vendorManifest.baseVersion !== '4.17.0') throw new Error('Tokscale vendor baseVersion must remain 4.17.0');
-  if (rootPackage.dependencies?.tokscale !== '^4.17.0') {
-    throw new Error('root Tokscale dependency must remain pinned to ^4.17.0');
+  if (vendorManifest.baseVersion !== '4.20.0') throw new Error('Tokscale vendor baseVersion must remain 4.20.0');
+  if (rootPackage.dependencies?.tokscale !== '^4.20.0') {
+    throw new Error('root Tokscale dependency must remain pinned to ^4.20.0');
   }
   const { entry } = resolveManifestEntry(vendorManifest, 'linux-x64');
   if (entry.package !== '@tokscale/cli-linux-x64-gnu' || entry.asset !== 'tokscale-linux-x64') {

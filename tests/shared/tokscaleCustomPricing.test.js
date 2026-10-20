@@ -124,7 +124,7 @@ test('applyCustomPricing writes tokscale file + sidecar and round-trips through 
       });
     assert.deepEqual(JSON.parse(fs.readFileSync(sidecarPath, 'utf8')), { version: 1, managedIds: ['mimo-v2.5-pro', 'free'] });
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    /* Retain this isolated fixture for P1.4 evidence. */
   }
 });
 
@@ -146,7 +146,33 @@ test('applyCustomPricing keeps a manual entry and clears our removed one', () =>
     });
     assert.deepEqual(JSON.parse(fs.readFileSync(sidecarPath, 'utf8')), { version: 1, managedIds: [] });
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    /* Retain this isolated fixture for P1.4 evidence. */
+  }
+});
+
+test('applyCustomPricing preserves manual provider rules when managed models change or clear', () => {
+  const dir = tmpDir();
+  try {
+    const pricingPath = path.join(dir, 'custom-pricing.json');
+    const sidecarPath = path.join(dir, 'sidecar.json');
+    const manual = {
+      $schema: './custom-pricing.schema.json',
+      provider_overrides: [{
+        provider_id: 'private-gateway', model_id: 'model',
+        pricing: { input_cost_per_million_tokens: 1, output_cost_per_million_tokens: 2 }
+      }]
+    };
+    fs.writeFileSync(pricingPath, JSON.stringify({ ...manual, models: {} }));
+
+    applyCustomPricing([{ modelId: 'managed', inputPerM: 3 }], { pricingPath, sidecarPath });
+    assert.deepEqual(JSON.parse(fs.readFileSync(pricingPath, 'utf8')), {
+      ...manual, models: { managed: { input_cost_per_million_tokens: 3 } }
+    });
+
+    applyCustomPricing([], { pricingPath, sidecarPath });
+    assert.deepEqual(JSON.parse(fs.readFileSync(pricingPath, 'utf8')), { ...manual, models: {} });
+  } finally {
+    /* Retain this isolated fixture for P1.4 evidence. */
   }
 });
 
@@ -162,6 +188,55 @@ test('applyCustomPricing is a no-op when no overrides and no prior state (no fil
     assert.equal(fs.existsSync(sidecarPath), false);
     assert.deepEqual(result, { models: {}, managedIds: [] });
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    /* Retain this isolated fixture for P1.4 evidence. */
+  }
+});
+
+test('cache-write rates round-trip with zero distinct from unset and reject invalid rates', () => {
+  const entries = normalizeCustomPricingSetting([
+    { modelId: 'complete', inputPerM: 3, outputPerM: 15, cacheWritePerM: 3.75, cacheWrite1hPerM: 6 },
+    { modelId: 'zero-write', outputPerM: 1, cacheWritePerM: 0, cacheWrite1hPerM: 0 },
+    { modelId: 'partial', inputPerM: 1, cacheWritePerM: '', cacheWrite1hPerM: null }
+  ]);
+  assert.equal(entries[0].cacheWrite1hPerM, 6);
+  const models = buildTokscaleModels(entries);
+  assert.deepEqual(models.complete, {
+    input_cost_per_million_tokens: 3, output_cost_per_million_tokens: 15,
+    cache_creation_input_token_cost_per_million_tokens: 3.75,
+    cache_creation_input_token_cost_per_million_tokens_above_1hr: 6
+  });
+  assert.equal(models['zero-write'].cache_creation_input_token_cost_per_million_tokens, 0);
+  assert.equal(models['zero-write'].cache_creation_input_token_cost_per_million_tokens_above_1hr, 0);
+  assert.deepEqual(models.partial, { input_cost_per_million_tokens: 1 });
+  for (const key of ['cacheWritePerM', 'cacheWrite1hPerM']) {
+    for (const value of [-1, Number.NaN, Infinity, false, '1']) {
+      assert.deepEqual(normalizeCustomPricingSetting([{ modelId: 'bad', inputPerM: 1, [key]: value }]), []);
+    }
+  }
+  const dir = tmpDir();
+  try {
+    const pricingPath = path.join(dir, 'custom-pricing.json');
+    const sidecarPath = path.join(dir, 'sidecar.json');
+    applyCustomPricing(entries, { pricingPath, sidecarPath });
+    assert.deepEqual(JSON.parse(fs.readFileSync(pricingPath, 'utf8')).models, models);
+    applyCustomPricing([{ modelId: 'complete', inputPerM: 1 }], { pricingPath, sidecarPath });
+    assert.deepEqual(JSON.parse(fs.readFileSync(pricingPath, 'utf8')).models, { complete: { input_cost_per_million_tokens: 1 } });
+    applyCustomPricing([], { pricingPath, sidecarPath });
+    assert.deepEqual(JSON.parse(fs.readFileSync(pricingPath, 'utf8')).models, {});
+  } finally { /* Retain this isolated fixture for P1.4 evidence. */ }
+});
+
+test('strict settings validation rejects malformed entries without changing legacy normalization', () => {
+  const { validateCustomPricingSetting } = require('../../src/shared/tokscaleCustomPricing');
+  for (const value of [null, {}, [{ modelId: 'm', inputPerM: 0, cacheWrite1hPerM: -1 }], [{ modelId: 'm', cacheWritePerM: 1 }]]) assert.throws(() => validateCustomPricingSetting(value));
+  assert.equal(validateCustomPricingSetting([{ modelId: 'm', inputPerM: 0 }])[0].inputPerM, 0);
+});
+test('unreadable or malformed manual pricing cannot be replaced with an empty file', () => {
+  const dir = tmpDir(), pricingPath = path.join(dir, 'custom-pricing.json'), sidecarPath = path.join(dir, 'sidecar.json');
+  for (const bytes of ['{broken', '[]', 'null']) {
+    fs.writeFileSync(pricingPath, bytes);
+    assert.throws(() => applyCustomPricing([{ modelId: 'm', inputPerM: 1 }], { pricingPath, sidecarPath }));
+    assert.equal(fs.readFileSync(pricingPath, 'utf8'), bytes);
+    assert.equal(fs.existsSync(sidecarPath), false);
   }
 });

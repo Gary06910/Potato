@@ -8,15 +8,50 @@ const CLIENT_ID = '1507034330436862062';
 const GITHUB_URL = 'https://github.com/Gary06910/Potato';
 const KNOWN_CLIENT_ASSETS = new Set([
   'claude', 'codex', 'opencode', 'hermes', 'openclaw', 'cursor', 'antigravity', 'cline',
-  'amp', 'droid', 'kimi', 'qwen', 'grok', 'copilot', 'pi', 'zed', 'kilo', 'commandcode', 'micode', 'zcode', 'kiro', 'codebuddy', 'workbuddy', 'proma', 'qodercn', 'reasonix', 'dsh', 'cherrystudio', 'lmstudio', 'unsloth',
-  'gemini'
+  'amp', 'droid', 'kimi', 'qwen', 'grok', 'copilot', 'pi', 'omp', 'goose', 'zed', 'kilo', 'commandcode', 'mimo', 'muse', 'zcode', 'kiro', 'codebuddy', 'workbuddy', 'proma', 'catpaw', 'qodercn', 'reasonix', 'dsh', 'cherrystudio', 'lmstudio', 'unsloth', 'devin', 'fx', 'mcode',
+  'gemini', 'micode', 'micode-desktop'
 ]);
 const CLIENT_LABELS = {
-  claude: 'Claude', codex: 'Codex', opencode: 'OpenCode', hermes: 'Hermes Agent',
-  openclaw: 'OpenClaw', cursor: 'Cursor', antigravity: 'Antigravity', cline: 'Cline',
-  amp: 'Amp', droid: 'Factory Droid', kimi: 'Kimi', qwen: 'Qwen', grok: 'Grok Build', copilot: 'GitHub Copilot',
-  pi: 'Pi', zed: 'Zed', kilo: 'Kilo', commandcode: 'Command Code', micode: 'MiMo Code', zcode: 'ZCode', kiro: 'Kiro', codebuddy: 'CodeBuddy', workbuddy: 'WorkBuddy', proma: 'Proma', qodercn: 'Qoder CN', reasonix: 'Reasonix', dsh: 'DeepSeek Harness', cherrystudio: 'Cherry Studio', lmstudio: 'LM Studio', unsloth: 'Unsloth',
-  gemini: 'Gemini'
+  claude: 'Claude',
+  codex: 'Codex',
+  opencode: 'OpenCode',
+  hermes: 'Hermes Agent',
+  openclaw: 'OpenClaw',
+  cursor: 'Cursor',
+  antigravity: 'Antigravity',
+  cline: 'Cline',
+  amp: 'Amp',
+  droid: 'Factory Droid',
+  kimi: 'Kimi',
+  qwen: 'Qwen',
+  grok: 'Grok Build',
+  copilot: 'GitHub Copilot',
+  pi: 'Pi',
+  omp: 'Oh My Pi',
+  goose: 'Goose',
+  zed: 'Zed',
+  kilo: 'Kilo',
+  commandcode: 'Command Code',
+  mimo: 'Xiaomi MiMo',
+  muse: 'Muse Code',
+  zcode: 'ZCode',
+  kiro: 'Kiro',
+  codebuddy: 'CodeBuddy',
+  workbuddy: 'WorkBuddy',
+  proma: 'Proma',
+  catpaw: 'CatPaw',
+  qodercn: 'Qoder CN',
+  reasonix: 'Reasonix',
+  dsh: 'DeepSeek Harness',
+  cherrystudio: 'Cherry Studio',
+  lmstudio: 'LM Studio',
+  unsloth: 'Unsloth',
+  devin: 'Devin',
+  fx: 'fx',
+  mcode: 'MiniMax Code',
+  micode: 'Xiaomi MiMo',
+  'micode-desktop': 'Xiaomi MiMo',
+  gemini: 'Gemini',
 };
 const UPDATE_MIN_INTERVAL_MS = 15000;
 const RECONNECT_DELAY_MS = 30000;
