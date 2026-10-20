@@ -13,6 +13,27 @@ const {
 } = require('./sessionUsageArchive');
 
 const SESSION_ARCHIVE_DATABASE_VERSION = 1;
+const DATABASE_BUSY_TIMEOUT_MS = 5000;
+const initializationWait = new Int32Array(new SharedArrayBuffer(4));
+
+function enableWriteAheadLogging(database) {
+  const deadline = performance.now() + DATABASE_BUSY_TIMEOUT_MS;
+  for (;;) {
+    // SQLite can bypass its busy handler when competing journal-mode changes
+    // would deadlock while upgrading shared locks. Retry only this autocommit
+    // PRAGMA, releasing its statement between attempts, within the same budget.
+    const remaining = Math.max(0, Math.ceil(deadline - performance.now()));
+    database.exec(`PRAGMA busy_timeout = ${remaining}`);
+    try {
+      database.exec('PRAGMA journal_mode = WAL');
+      break;
+    } catch (error) {
+      if ((error.errcode & 0xff) !== 5 || performance.now() >= deadline) throw error;
+      Atomics.wait(initializationWait, 0, 0, Math.min(10, Math.max(0, deadline - performance.now())));
+    }
+  }
+  database.exec(`PRAGMA busy_timeout = ${DATABASE_BUSY_TIMEOUT_MS}`);
+}
 
 function sessionUsageArchiveDatabasePath(options = {}) {
   return options.databasePath || path.join(sharedDataDir(options), 'session-usage-archive.sqlite');
@@ -234,14 +255,14 @@ function createSessionUsageArchiveStore(options = {}) {
   function ensureDatabase() {
     if (database) return database;
     fs.mkdirSync(path.dirname(databasePath), { recursive: true });
+    const previousState = { archive, archiveSource, revision, reloadRequired };
     database = new Database(databasePath);
     try {
-      database.exec('PRAGMA journal_mode = WAL');
+      enableWriteAheadLogging(database);
       // The one-time migration deletes the legacy JSON after its transaction
       // commits. FULL makes that handoff durable across an OS crash or power
       // loss; steady-state row updates return to NORMAL below.
       database.exec('PRAGMA synchronous = FULL');
-      database.exec('PRAGMA busy_timeout = 5000');
       database.exec(`
         CREATE TABLE IF NOT EXISTS metadata (
           key TEXT PRIMARY KEY,
@@ -266,6 +287,9 @@ function createSessionUsageArchiveStore(options = {}) {
     } catch (error) {
       try { database.close(); } catch (_) {}
       database = null;
+      // Migration may have staged rows or committed before a later PRAGMA
+      // failed. Keep only the state trusted before this initialization attempt.
+      ({ archive, archiveSource, revision, reloadRequired } = previousState);
       throw error;
     }
   }

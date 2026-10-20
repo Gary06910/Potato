@@ -10,7 +10,7 @@ const test = require('node:test');
 
 const { deviceRecordFromAnchor } = require('../../src/shared/anchorSeed');
 const { configFingerprint } = require('../../src/shared/collector');
-const { qoderCnDataPaths } = require('../fixtures/legacyQoderCnUsage');
+const { qoderCnDataPaths } = require('../../src/shared/providers/qodercn/paths');
 const { aggregateDevices, emptyPeriod } = require('../../src/shared/usage');
 
 const CLIENTS = 'claude,codex';
@@ -107,16 +107,50 @@ test('the seed reports the project setting it was built under', () => {
 
 test('the cold-start seed accepts an anchor configured for Qoder CN', () => {
   const homeDir = '/tmp/token-monitor-qodercn-home';
-  const qoderCnDbPath = qoderCnDataPaths({ homeDir }).dbPaths[0];
+  const sourceOptions = { homeDir };
+  const qoderCnDbPath = qoderCnDataPaths(sourceOptions).dbPaths[0];
   const clients = 'claude,qodercn';
   const anchor = anchorFixture({
-    configFingerprint: configFingerprint(clients, ALL_TIME_SINCE, true, qoderCnDbPath)
+    configFingerprint: configFingerprint(clients, ALL_TIME_SINCE, true, qoderCnDbPath, sourceOptions)
   });
-
-  const record = deviceRecordFromAnchor(anchor, seedOptions({ clients, homeDir }));
+  const record = deviceRecordFromAnchor(anchor, seedOptions({ clients, ...sourceOptions }));
   assert.equal(record.today.totalTokens, 1_000);
   assert.deepEqual(record.trackedClients, ['claude', 'qodercn']);
 });
+
+// Empty injected env prevents Windows HOME/APPDATA or a developer's source
+// overrides from hiding a mismatched home. These are paths, never real Qoder DBs.
+for (const sourcePlatform of ['win32', 'darwin', 'linux']) {
+  const homeDir = '/tmp/token-monitor-qodercn-home';
+  const clients = 'claude,qodercn';
+  const sourceOptions = { homeDir, platform: sourcePlatform, env: {}, pricingRevision: 'qoder-pricing-v1' };
+  const qoderCnDbPath = qoderCnDataPaths(sourceOptions).dbPaths[0];
+  const anchor = () => anchorFixture({
+    configFingerprint: configFingerprint(clients, ALL_TIME_SINCE, true, qoderCnDbPath, sourceOptions)
+  });
+  const options = (overrides = {}) => seedOptions({ ...sourceOptions, clients, sourcePlatform, qoderCnDbPath, ...overrides });
+
+  test(`the cold-start Qoder CN seed accepts matching source options on ${sourcePlatform}`, () => {
+    const record = deviceRecordFromAnchor(anchor(), options());
+    assert.equal(record.today.totalTokens, 1_000);
+    assert.deepEqual(record.trackedClients, ['claude', 'qodercn']);
+  });
+
+  test(`the cold-start Qoder CN seed rejects a different home on ${sourcePlatform}`, () => {
+    assert.equal(deviceRecordFromAnchor(anchor(), options({ homeDir: '/tmp/token-monitor-qodercn-other' })), null);
+  });
+
+  test(`the cold-start Qoder CN seed rejects a different source set on ${sourcePlatform}`, () => {
+    // Keep the clients and legacy DB path fixed; only the transcript source set
+    // changes. The Source Registry portion must independently invalidate it.
+    const env = { TOKEN_MONITOR_QODER_CN_PROJECTS_PATH: '/tmp/token-monitor-qodercn-other-projects' };
+    assert.equal(deviceRecordFromAnchor(anchor(), options({ env })), null);
+  });
+
+  test(`the cold-start Qoder CN seed rejects a different pricing revision on ${sourcePlatform}`, () => {
+    assert.equal(deviceRecordFromAnchor(anchor(), options({ pricingRevision: 'qoder-pricing-v2' })), null);
+  });
+}
 
 test('the seed carries local-only native Reasonix views when the anchor has them', () => {
   const nativeSessions = { today: { 'reasonix:session': { client: 'reasonix', totalTokens: 12 } }, month: {}, allTime: {} };

@@ -1206,3 +1206,161 @@ test('a failed full reload preserves the prior archive and stays pending for ret
   assert.equal(recovered.archive.sessions['codex:one'].periods.allTime.totalTokens, 100);
   assert.equal(recovered.archive.sessions['codex:two'].periods.allTime.totalTokens, 225);
 });
+
+function injectedBusy() {
+  return Object.assign(new Error('injected SQLITE_BUSY'), { code: 'ERR_SQLITE_ERROR', errcode: 5 });
+}
+
+test('WAL initialization retries an immediate SQLITE_BUSY but never retries unrelated errors', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'session-archive-init-'));
+  const options = { env: { TOKEN_MONITOR_SHARED_DIR: dir } };
+  let attempts = 0;
+  const connections = [];
+  const store = createSessionUsageArchiveStore({
+    ...options,
+    DatabaseSync: class extends DatabaseSync {
+      constructor(...args) { super(...args); connections.push(this); }
+      exec(sql) {
+        if (/journal_mode = WAL/.test(sql)) {
+          assert.ok(this.prepare('PRAGMA busy_timeout').get().timeout > 0);
+          attempts += 1;
+          if (attempts <= 2) throw injectedBusy();
+        }
+        return super.exec(sql);
+      }
+    }
+  });
+  t.after(() => store.close());
+  assert.deepEqual(store.read().sessions, {});
+  assert.equal(attempts, 3);
+  assert.equal(connections[0].prepare('PRAGMA busy_timeout').get().timeout, 5000);
+  store.close();
+  const failure = Object.assign(new Error('not a busy error'), { errcode: 6 });
+  let nonBusyAttempts = 0;
+  const broken = createSessionUsageArchiveStore({
+    ...options,
+    DatabaseSync: databaseWithExecHook((sql) => {
+      if (/journal_mode = WAL/.test(sql)) { nonBusyAttempts += 1; throw failure; }
+    })
+  });
+  assert.throws(() => broken.read(), (error) => error === failure);
+  assert.equal(nonBusyAttempts, 1);
+});
+
+test('repeated immediate WAL busy errors share one finite deadline and leave retryable state', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'session-archive-init-'));
+  const options = { env: { TOKEN_MONITOR_SHARED_DIR: dir } };
+  writeSessionUsageArchive(captureSessionUsageArchive({}, summary(100), new Date('2026-09-15T08:00:00Z')), options);
+  const legacyPath = path.join(dir, 'session-usage-archive.json');
+  const original = fs.readFileSync(legacyPath);
+  const connections = [];
+  const failure = injectedBusy();
+  let armed = true;
+  let attempts = 0;
+  const store = createSessionUsageArchiveStore({
+    ...options,
+    DatabaseSync: class extends DatabaseSync {
+      constructor(...args) { super(...args); connections.push(this); }
+      exec(sql) {
+        if (armed && /journal_mode = WAL/.test(sql)) { attempts += 1; throw failure; }
+        return super.exec(sql);
+      }
+    }
+  });
+  t.after(() => store.close());
+  const started = performance.now();
+  assert.throws(() => store.read(), (error) => error === failure);
+  const elapsed = performance.now() - started;
+  t.diagnostic(JSON.stringify({ elapsed, attempts, dir }));
+  assert.ok(elapsed >= 4500 && elapsed < 15000);
+  assert.ok(attempts > 1);
+  assert.equal(connections[0].isOpen, false);
+  assert.deepEqual(fs.readFileSync(legacyPath), original);
+  armed = false;
+  assert.equal(store.read(new Date('2026-09-15T08:01:00Z')).sessions['codex:one'].periods.allTime.totalTokens, 100);
+  assert.equal(connections.length, 2);
+});
+
+for (const stage of ['schema', 'migration-begin', 'migration-commit', 'normal-sync']) {
+  test(`initialization busy at ${stage} closes the connection, discards staged state and safely retries`, (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'session-archive-init-'));
+    const options = { env: { TOKEN_MONITOR_SHARED_DIR: dir } };
+    const now = new Date('2026-09-15T08:00:00Z');
+    writeSessionUsageArchive(captureSessionUsageArchive({}, summary(100), now), options);
+    const legacyPath = path.join(dir, 'session-usage-archive.json');
+    const original = fs.readFileSync(legacyPath);
+    const connections = [];
+    const failure = injectedBusy();
+    let armed = true;
+    let cleanupCount = 0;
+    const pattern = { schema: /CREATE TABLE/, 'migration-begin': /^BEGIN IMMEDIATE$/,
+      'migration-commit': /^COMMIT$/, 'normal-sync': /synchronous = NORMAL/ }[stage];
+    const store = createSessionUsageArchiveStore({
+      ...options,
+      unlinkSync(file) {
+        assert.equal(migrationMarker(options), '1', 'cleanup follows committed marker');
+        const trusted = readSessionUsageArchiveSnapshot({ ...options, strict: true });
+        assert.equal(trusted.sessions['codex:one'].periods.allTime.totalTokens, 100);
+        cleanupCount += 1;
+        fs.unlinkSync(file);
+      },
+      DatabaseSync: class extends DatabaseSync {
+        constructor(...args) { super(...args); connections.push(this); }
+        exec(sql) {
+          if (armed && pattern.test(sql.trim())) { armed = false; throw failure; }
+          return super.exec(sql);
+        }
+      }
+    });
+    t.after(() => store.close());
+    const failed = store.capture(summary(999, 'must-not-publish'), now);
+    assert.equal(failed.error, failure);
+    assert.equal(failed.changedKeys.size, 0);
+    assert.deepEqual(failed.archive.sessions, {}, 'no partially initialized in-memory archive escapes');
+    assert.equal(connections[0].isOpen, false);
+    if (stage === 'normal-sync') {
+      assert.equal(cleanupCount, 1);
+      assert.equal(readSessionUsageArchiveSnapshot({ ...options, strict: true }).sessions['codex:one'].periods.allTime.totalTokens, 100);
+    } else {
+      assert.equal(cleanupCount, 0);
+      assert.deepEqual(fs.readFileSync(legacyPath), original);
+      if (stage !== 'schema') assert.notEqual(migrationMarker(options), '1');
+    }
+    const recovered = store.read(now);
+    assert.equal(recovered.sessions['codex:one'].periods.allTime.totalTokens, 100);
+    assert.equal(recovered.sessions['codex:must-not-publish'], undefined);
+    assert.equal(cleanupCount, 1);
+    assert.equal(connections.length, 2);
+    assert.equal(migrationMarker(options), '1');
+    const check = new DatabaseSync(store.databasePath, { readOnly: true });
+    try { assert.equal(Object.values(check.prepare('PRAGMA integrity_check').get())[0], 'ok'); }
+    finally { check.close(); }
+  });
+}
+
+test('initialization failure retains the last trusted archive and catches up on retry', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'session-archive-init-'));
+  const options = { env: { TOKEN_MONITOR_SHARED_DIR: dir } };
+  const now = new Date('2026-09-15T08:00:00Z');
+  let armed = false;
+  const failure = injectedBusy();
+  const store = createSessionUsageArchiveStore({
+    ...options,
+    DatabaseSync: databaseWithExecHook((sql) => {
+      if (armed && /CREATE TABLE/.test(sql)) { armed = false; throw failure; }
+    })
+  });
+  const writer = createSessionUsageArchiveStore(options);
+  t.after(() => { store.close(); writer.close(); });
+  assert.equal(store.capture(summary(100), now).error, null);
+  const trusted = store.read(now);
+  store.close();
+  assert.equal(writer.capture(summary(200), new Date('2026-09-15T08:01:00Z')).error, null);
+  armed = true;
+  const failed = store.capture(summary(999, 'rejected'), now);
+  assert.equal(failed.error, failure);
+  assert.equal(failed.archive, trusted);
+  assert.equal(failed.archive.sessions['codex:one'].periods.allTime.totalTokens, 100);
+  assert.equal(store.snapshot({ strict: true }).sessions['codex:one'].periods.allTime.totalTokens, 200);
+  assert.equal(store.read(now).sessions['codex:one'].periods.allTime.totalTokens, 200);
+});
