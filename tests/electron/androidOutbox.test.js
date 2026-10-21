@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const { waitForOutbox, withDeadline } = require('../helpers/notificationLifecycle');
 const { classifyAndroidDelivery, createAndroidOutbox } = require('../../src/electron/androidOutbox');
 
 function payload(eventId = 'evt:session-1:turn-1') {
@@ -336,4 +337,73 @@ test('seven synthetic completion callbacks without occurred_at send once after f
   assert.equal(queue.snapshot().failed, 0);
   assert.equal(queue.snapshot().total, 0);
   assert.equal(stored(filePath).delivered.length, 1);
+});
+
+test('an unref outbox timer delivers while a bounded completion waiter owns the test lifecycle', async (t) => {
+  const filePath = fixture(t);
+  const timers = [];
+  const setTimer = global.setTimeout;
+  t.mock.method(global, 'setTimeout', (...args) => {
+    const timer = setTimer(...args);
+    timers.push(timer);
+    return timer;
+  });
+  let sends = 0;
+  const queue = createAndroidOutbox({ filePath, send: async () => { sends++; return { status: 201 }; } });
+  t.after(() => queue.stop());
+  await queue.start();
+  await queue.enqueue(payload());
+  assert.equal(timers.at(-1).hasRef(), false);
+  assert.equal(stored(filePath).items.length, 1);
+  await waitForOutbox(filePath, (document) => document.items.length === 0
+    && document.delivered.length === 1, 'unref timer delivery persisted');
+  assert.equal(sends, 1);
+});
+
+test('stop preserves a pending event and restart schedules delivery without another enqueue', async (t) => {
+  const filePath = fixture(t);
+  const first = createAndroidOutbox({ filePath, send: async () => { assert.fail('stopped outbox sent'); } });
+  await first.start();
+  await first.enqueue(payload());
+  await first.stop();
+  assert.equal(stored(filePath).items.length, 1);
+  assert.equal(stored(filePath).delivered.length, 0);
+
+  let sends = 0;
+  const recovered = createAndroidOutbox({ filePath, send: async () => { sends++; return { status: 201 }; } });
+  t.after(() => recovered.stop());
+  await recovered.start();
+  await waitForOutbox(filePath, (document) => document.items.length === 0
+    && document.delivered.length === 1, 'restart delivery persisted');
+  await recovered.enqueue(payload());
+  await recovered.flush();
+  assert.equal(sends, 1);
+});
+
+test('stop waits for an in-flight acknowledgement and its atomic document write', async (t) => {
+  const filePath = fixture(t);
+  const started = Promise.withResolvers();
+  const ack = Promise.withResolvers();
+  const queue = createAndroidOutbox({ filePath, send: async () => {
+    started.resolve();
+    return ack.promise;
+  } });
+  const flush = queue.enqueue(payload()).then(() => queue.flush());
+  try {
+    await withDeadline(started.promise, 'in-flight mock send');
+    const stopping = queue.stop();
+    let stopped = false;
+    stopping.then(() => { stopped = true; });
+    assert.equal(stopped, false);
+    assert.equal(stored(filePath).items.length, 1);
+    ack.resolve({ status: 201 });
+    await withDeadline(Promise.all([flush, stopping]), 'stop and persisted acknowledgement');
+    assert.equal(stopped, true);
+    assert.equal(stored(filePath).items.length, 0);
+    assert.equal(stored(filePath).delivered.length, 1);
+  } finally {
+    ack.resolve({ status: 201 });
+    await flush;
+    await queue.stop();
+  }
 });

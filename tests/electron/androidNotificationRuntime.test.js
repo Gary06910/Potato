@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const { waitForOutbox, withDeadline } = require('../helpers/notificationLifecycle');
 const {
   androidOutboxFilePath,
   createAndroidNotificationRuntime
@@ -96,14 +97,9 @@ test('Android notification runtime pairs, queues the explicit event, and unpairs
     cwd: 'C:\\private\\project',
     last_assistant_message: 'private result'
   });
-  const keepAlive = setInterval(() => {}, 60_000);
-  let event;
-  try {
-    event = await accepted;
-  } finally {
-    clearInterval(keepAlive);
-  }
-  await new Promise((resolve) => setImmediate(resolve));
+  const event = await withDeadline(accepted, 'paired Android mock request');
+  await waitForOutbox(outboxPath, (document) => document.items.length === 0
+    && document.delivered.some((item) => item.eventId === event.eventId), 'paired Android ack persisted');
   assert.equal(event.eventId, 'evt:session-1:turn-1');
   assert.equal(event.privacyMode, true);
   assert.deepEqual([event.project, event.model, event.summary, event.durationMs], [null, null, null, null]);
@@ -307,16 +303,17 @@ test('malformed Android event acknowledgement keeps the queue and invalidates th
     turn_id: 'turn-1',
     occurred_at: new Date().toISOString()
   });
-  await eventSeen;
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    if (runtime.publicStatus().bindingState === 'invalid') break;
-    await new Promise((resolve) => setImmediate(resolve));
-  }
+  await withDeadline(eventSeen, 'malformed Android mock request');
+  await waitForOutbox(outboxPath, (document) => document.items.length === 1
+    && document.items[0].attemptCount === 1
+    && document.items[0].lastError === 'invalid_response'
+    && runtime.publicStatus().bindingState === 'invalid', 'malformed ack invalidation persisted');
   const status = runtime.publicStatus();
   assert.equal(status.bindingState, 'invalid');
   assert.equal(status.outbox.paused, true);
   assert.equal(status.outbox.pausedReason, 'invalid_response');
   assert.equal(status.outbox.pending, 1);
+  assert.equal(JSON.parse(fs.readFileSync(outboxPath, 'utf8')).delivered.length, 0);
   assert.equal(settings.tokenMAndroidCredential, credential);
 });
 

@@ -1,5 +1,12 @@
 'use strict';
 
+// These markers precede imports so a native/startup exit can be distinguished
+// from a database operation. Requiring the helper in a test sends no messages.
+function startupStage(stage) {
+  if (require.main === module && process.connected) process.send({ type: 'startup', stage, atMs: Date.now() });
+}
+startupStage('module-entry');
+
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -12,6 +19,7 @@ const { DatabaseSync } = require('node:sqlite');
 const moduleRoot = process.env.POTATO_ARCHIVE_TEST_MODULE_ROOT || path.resolve(__dirname, '../..');
 const storeModule = require(path.join(moduleRoot, 'src/shared/sessionUsageArchiveStore'));
 const legacyModule = require(path.join(moduleRoot, 'src/shared/sessionUsageArchive'));
+startupStage('modules-loaded');
 const NOW = new Date('2026-10-20T06:00:00.000Z');
 
 function summary(tokens = 100, id = 'one', names = ['today', 'month', 'allTime']) {
@@ -26,35 +34,91 @@ function fixture(t) {
   const children = [];
   t.after(async () => {
     for (const child of children) {
+      child.note('parent-cleanup', { aborted: t.signal.aborted });
       if (child.proc.exitCode === null && child.proc.signalCode === null) child.proc.kill();
     }
     await Promise.all(children.map((child) => child.exited));
+    for (const child of children) t.diagnostic(JSON.stringify(child.diagnostics()));
     // Retain synthetic databases, sidecars and first failures for forensics.
   });
-  return { dir, options, worker(plan = {}) { const child = spawnWorker({ ...options, ...plan }); children.push(child); return child; } };
+  return { dir, options, worker(plan = {}, spawnOptions = {}) { const child = spawnWorker({ ...options, ...plan }, { ...spawnOptions, signal: spawnOptions.signal || t.signal }); children.push(child); return child; } };
 }
 
-function spawnWorker(plan) {
-  const proc = fork(__filename, [JSON.stringify(plan)], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true });
+function spawnWorker(plan, options = {}) {
+  const spawnAtMs = Date.now();
+  const proc = fork(__filename, [JSON.stringify(plan)], {
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true,
+    ...(options.execPath ? { execPath: options.execPath } : {})
+  });
   const messages = [];
+  const timeline = [];
+  const pending = new Set();
   let stderr = '';
-  proc.stderr.on('data', (data) => { stderr += data; });
-  proc.stdout.resume();
-  proc.on('message', (message) => messages.push(message));
-  const exited = new Promise((resolve) => proc.once('exit', (code, signal) => resolve({ code, signal })));
-  async function wait(type, start = 0) {
-    const deadline = Date.now() + 20_000;
-    for (;;) {
-      const message = messages.slice(start).find((value) => value.type === type || value.type === 'fatal');
-      if (message?.type === 'fatal') throw new Error(JSON.stringify(message));
-      if (message) return message;
-      if (proc.exitCode !== null || proc.signalCode !== null || Date.now() > deadline) {
-        throw new Error(`archive child ${type} failed: ${stderr} ${JSON.stringify(messages)}`);
-      }
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
+  let stdout = '';
+  let spawnError = null;
+  let exit = null;
+  let closed = false;
+  let disconnected = false;
+  const note = (event, fields = {}) => {
+    timeline.push({ event, atMs: Date.now(), ...fields });
+    if (timeline.length > 64) timeline.shift();
+  };
+  note('fork-return', { pid: proc.pid, spawnAtMs });
+  const kill = proc.kill.bind(proc);
+  proc.kill = (signal) => { note('parent-kill-request', { signal: signal || 'SIGTERM' }); return kill(signal); };
+  const diagnostics = () => ({
+    pid: proc.pid ?? null, spawnAtMs, executable: options.execPath || process.execPath,
+    nodeVersion: process.version, execArgv: proc.spawnargs.slice(1, -2),
+    connected: proc.connected, disconnected, spawnError, exit, closed, stderr, stdout, timeline,
+    messageTypes: messages.map((m) => m.type)
+  });
+  const fail = (type, reason) => {
+    const error = new Error(`archive child ${type} failed (${reason}): ${JSON.stringify(diagnostics())}`);
+    error.diagnostics = diagnostics();
+    return error;
+  };
+  const checkPending = () => { for (const check of [...pending]) check(); };
+  proc.stderr.on('data', (data) => { stderr = (stderr + data).slice(-8192); });
+  proc.stdout.on('data', (data) => { stdout = (stdout + data).slice(-4096); });
+  proc.on('spawn', () => note('spawn'));
+  proc.on('error', (error) => {
+    spawnError = { code: error.code, message: error.message };
+    note('error', spawnError);
+    checkPending();
+  });
+  proc.on('message', (message) => {
+    messages.push(message);
+    if (message.type === 'ready' || message.type === 'startup') note(message.type, { stage: message.stage });
+    checkPending();
+  });
+  proc.on('disconnect', () => { disconnected = true; note('disconnect'); checkPending(); });
+  proc.on('exit', (code, signal) => { exit = { code, signal }; note('exit', exit); });
+  const exited = new Promise((resolve) => proc.once('close', (code, signal) => {
+    exit = { code, signal }; closed = true; note('close', exit); checkPending(); resolve(exit);
+  }));
+  function wait(type, start = 0) {
+    return new Promise((resolve, reject) => {
+      const finish = (error, message) => {
+        clearTimeout(timer); pending.delete(check); options.signal?.removeEventListener('abort', abort);
+        if (error) reject(error); else resolve(message);
+      };
+      const check = () => {
+        const message = messages.slice(start).find((value) => value.type === type || value.type === 'fatal');
+        if (message?.type === 'fatal') return finish(fail(type, 'fatal'));
+        if (message) return finish(null, message);
+        if (spawnError || closed) return finish(fail(type, spawnError ? 'spawn-error' : 'closed-before-message'));
+        // An exited child is allowed to drain its streams before reporting.
+        // A disconnected child cannot send ready; close preserves the real exit
+        // code and all stderr. A child that stays alive still hits the deadline.
+      };
+      const abort = () => { note('test-abort'); finish(fail(type, 'test-abort')); };
+      const timer = setTimeout(() => finish(fail(type, 'deadline')), 20_000);
+      pending.add(check);
+      options.signal?.addEventListener('abort', abort, { once: true });
+      if (options.signal?.aborted) abort(); else check();
+    });
   }
-  return { proc, messages, wait, exited, send: (value) => proc.send(value) };
+  return { proc, messages, wait, exited, note, diagnostics, send: (value) => proc.send(value) };
 }
 
 function inspect(options) {
@@ -74,6 +138,15 @@ function errorInfo(error) {
 }
 
 function runWorker(plan) {
+  startupStage('runtime-init');
+  if (plan.lifecycleFault === 'startup-throw') throw new Error('synthetic archive startup exception');
+  if (plan.lifecycleFault === 'hold-before-ready') {
+    process.once('message', () => runWorker({ ...plan, lifecycleFault: undefined }));
+    return;
+  }
+  if (plan.lifecycleFault === 'exit-before-ready') process.exit(23);
+  if (plan.lifecycleFault === 'clean-exit-before-ready') process.exit(0);
+  if (plan.lifecycleFault === 'disconnect-before-ready') { process.disconnect(); return; }
   let lock;
   const notify = (message) => process.send(message);
   let migrationPaused = false;
@@ -121,9 +194,11 @@ function runWorker(plan) {
       notify({ type: 'result', archive, error: errorInfo(error), elapsedMs: Date.now() - started });
     } catch (error) { notify({ type: 'result', error: errorInfo(error), elapsedMs: Date.now() - started }); }
   });
+  startupStage('memory-sqlite-query');
   const runtimeDatabase = new DatabaseSync(':memory:');
   const sqlite = runtimeDatabase.prepare('SELECT sqlite_version() AS version').get().version;
   runtimeDatabase.close();
+  startupStage('send-ready');
   notify({ type: 'ready', versions: process.versions, platform: process.platform, arch: process.arch, sqlite });
 }
 

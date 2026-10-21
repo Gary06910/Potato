@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const { waitForOutbox, withDeadline } = require('../helpers/notificationLifecycle');
 const {
   createTokenMNotificationRuntime,
   hookCommandFor
@@ -22,7 +23,7 @@ function jsonResponse(value, status = 200) {
   });
 }
 
-function createFixture(t, overrides = {}, runtimeOptions = {}) {
+function createFixture(t, overrides = {}, runtimeOptions = {}, eventResponse = null) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'token-m-hook-reconcile-'));
   const codexHome = path.join(directory, 'codex-home');
   fs.mkdirSync(codexHome);
@@ -38,6 +39,7 @@ function createFixture(t, overrides = {}, runtimeOptions = {}) {
     ...overrides
   };
   const events = [];
+  const eventSeen = Promise.withResolvers();
   const fetch = async (url, options = {}) => {
     const parsed = new URL(url);
     if (parsed.pathname.endsWith('/v1/desktop/status')) {
@@ -48,6 +50,8 @@ function createFixture(t, overrides = {}, runtimeOptions = {}) {
     }
     if (parsed.pathname.endsWith('/v1/desktop/events')) {
       events.push(options.body ? JSON.parse(options.body) : null);
+      eventSeen.resolve();
+      if (eventResponse) return eventResponse();
       return jsonResponse({
         status: 'created',
         taskId: 'tsk_33333333-3333-4333-8333-333333333333',
@@ -85,7 +89,7 @@ function createFixture(t, overrides = {}, runtimeOptions = {}) {
     fs.rmdirSync(codexHome);
     fs.rmdirSync(directory);
   });
-  return { directory, codexHome, events, hooksPath, runtime, settings, cleanup };
+  return { directory, codexHome, events, eventSeen: eventSeen.promise, outboxPath, hooksPath, runtime, settings, cleanup };
 }
 
 test('Windows Hook command stays byte-for-byte stable when the portable executable moves versions', () => {
@@ -276,7 +280,7 @@ test('an unbound Android device rejects enabling and does not write a Hook', asy
 
 test('a trusted runtime event records only a safe timestamp and disabling removes the owned Hook', async (t) => {
   const fixture = createFixture(t, { tokenMAndroidEnabled: true, tokenMCodexHookEnabled: true });
-  const { events, runtime, settings } = fixture;
+  const { events, eventSeen, outboxPath, runtime, settings } = fixture;
   const status = await runtime.start();
   assert.equal(status.hook.status, 'needsTrust');
   const metadata = JSON.parse(fs.readFileSync(runtime.runtimePath, 'utf8'));
@@ -299,6 +303,14 @@ test('a trusted runtime event records only a safe timestamp and disabling remove
   assert.equal(afterEvent.hook.status, 'active');
   assert.match(afterEvent.hook.lastHookEventAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.equal(settings.tokenMCodexLastHookEventAt, afterEvent.hook.lastHookEventAt);
+  // HTTP 200 acknowledges the Hook handler, not remote delivery.
+  const enqueued = JSON.parse(fs.readFileSync(outboxPath, 'utf8'));
+  const eventId = 'evt:private-session:private-turn';
+  assert.equal(enqueued.items.filter((item) => item.payload.eventId === eventId).length
+    + enqueued.delivered.filter((item) => item.eventId === eventId).length, 1);
+  await withDeadline(eventSeen, 'trusted Hook mock request');
+  await waitForOutbox(outboxPath, (document) => document.items.length === 0
+    && document.delivered.some((item) => item.eventId === eventId), 'trusted Hook ack persisted');
   assert.equal(events.length, 1);
   assert.doesNotMatch(JSON.stringify(afterEvent), /private-session|private-turn|private reply|private\\project/);
 
@@ -309,4 +321,89 @@ test('a trusted runtime event records only a safe timestamp and disabling remove
   assert.equal(settings.tokenMCodexHookEnabled, false);
   assert.equal(settings.tokenMAndroidCredential.includes(DESKTOP_ID), true);
   assert.equal((await runtime.getStatus()).hook.status, 'disabled');
+});
+
+test('Hook HTTP acknowledgement precedes scheduled delivery and persisted remote acknowledgement', async (t) => {
+  const ack = Promise.withResolvers();
+  const fixture = createFixture(t, {
+    tokenMAndroidEnabled: true, tokenMCodexHookEnabled: true
+  }, {}, () => ack.promise);
+  const { events, eventSeen, outboxPath, runtime } = fixture;
+  await runtime.start();
+  const metadata = JSON.parse(fs.readFileSync(runtime.runtimePath, 'utf8'));
+  const input = { hook_event_name: 'Stop', session_id: 'scheduled-session', turn_id: 'turn-1' };
+  const post = async () => {
+    const response = await fetch('http://' + metadata.host + ':' + metadata.port + '/codex/stop', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-token-m-bridge-token': metadata.token },
+      body: JSON.stringify(input)
+    });
+    assert.equal(response.status, 200);
+    await response.text();
+  };
+  try {
+    // Freeze dispatch rather than relying on which callback the OS runs first.
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    await post();
+    const enqueued = JSON.parse(fs.readFileSync(outboxPath, 'utf8'));
+    assert.equal(enqueued.items.length, 1);
+    assert.equal(enqueued.items[0].payload.eventId, 'evt:scheduled-session:turn-1');
+    assert.equal(enqueued.delivered.length, 0);
+    assert.equal(events.length, 0); // The former HTTP-200 => events.length=1 assumption is false.
+    t.mock.timers.tick(1);
+    t.mock.timers.reset();
+
+    await withDeadline(eventSeen, 'scheduled Hook mock request');
+    assert.equal(events.length, 1);
+    assert.equal(JSON.parse(fs.readFileSync(outboxPath, 'utf8')).items.length, 1);
+    ack.resolve(jsonResponse({
+      status: 'created', taskId: 'tsk_33333333-3333-4333-8333-333333333333',
+      notificationStatus: 'not_requested'
+    }, 201));
+    await waitForOutbox(outboxPath, (document) => document.items.length === 0
+      && document.delivered.length === 1, 'scheduled Hook remote ack persisted');
+    await post(); // A completed duplicate must stay suppressed by the durable ledger.
+    await runtime.stop();
+    assert.equal(events.length, 1);
+    assert.equal(JSON.parse(fs.readFileSync(outboxPath, 'utf8')).delivered.length, 1);
+  } finally {
+    t.mock.timers.reset();
+    ack.resolve(jsonResponse({
+      status: 'created', taskId: 'tsk_33333333-3333-4333-8333-333333333333',
+      notificationStatus: 'not_requested'
+    }, 201));
+  }
+});
+
+test('Hook remote failure retains pending and a fresh runtime start recovers it', async (t) => {
+  let offline = true;
+  const fixture = createFixture(t, {
+    tokenMAndroidEnabled: true, tokenMCodexHookEnabled: true
+  }, {}, () => offline
+    ? jsonResponse({ error: { code: 'temporarily_unavailable' } }, 503)
+    : jsonResponse({
+      status: 'created', taskId: 'tsk_33333333-3333-4333-8333-333333333333',
+      notificationStatus: 'not_requested'
+    }, 201));
+  const { events, outboxPath, runtime } = fixture;
+  await runtime.start();
+  const metadata = JSON.parse(fs.readFileSync(runtime.runtimePath, 'utf8'));
+  const response = await fetch('http://' + metadata.host + ':' + metadata.port + '/codex/stop', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-token-m-bridge-token': metadata.token },
+    body: JSON.stringify({ hook_event_name: 'Stop', session_id: 'offline-session', turn_id: 'turn-1' })
+  });
+  assert.equal(response.status, 200);
+  await response.text();
+  await waitForOutbox(outboxPath, (document) => document.items.length === 1
+    && document.items[0].attemptCount >= 1
+    && document.items[0].lastError === 'temporarily_unavailable', 'Hook failure persisted');
+  await runtime.stop();
+  assert.equal(JSON.parse(fs.readFileSync(outboxPath, 'utf8')).items.length, 1);
+  offline = false;
+  await runtime.start();
+  await waitForOutbox(outboxPath, (document) => document.items.length === 0
+    && document.delivered.length === 1, 'Hook restart recovery persisted');
+  await runtime.stop();
+  assert.ok(events.length >= 2);
 });

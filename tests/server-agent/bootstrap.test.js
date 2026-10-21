@@ -13,6 +13,7 @@ const { writePrivateJsonAtomic } = require('../../src/shared/credentialStore');
 const { createServerAgentPaths } = require('../../src/server-agent/paths');
 const instance = require('../../src/server-agent/instance');
 const shell = require('../../src/server-agent/shellBootstrap');
+const { createAgentCleanup } = require('../helpers/serverAgentFixture');
 
 const cli = path.resolve(__dirname, '..', '..', 'src', 'server-agent', 'cli.js');
 const gitBash = 'C:\\Program Files\\Git\\bin\\bash.exe';
@@ -26,7 +27,7 @@ function fixture() {
   fs.writeFileSync(paths.configFile, JSON.stringify({ version: 1, profiles: [
     { id: 'codex', name: 'Codex', codexHome, enabled: true }
   ] }));
-  return { root, paths };
+  return { root, paths, startedAtMs: Date.now() };
 }
 
 function invoke(args, timeoutMs = 9000) {
@@ -68,11 +69,9 @@ test('run ownership is atomic, live ownership survives a second claim, and dead 
 });
 
 test('20 parallel ensure commands share one detached usage-only Agent; termination and SIGKILL recovery', async (t) => {
-  const { root, paths } = fixture();
-  const pids = new Set();
-  t.after(() => {
-    for (const pid of pids) { try { process.kill(pid, 'SIGKILL'); } catch (_) {} }
-  });
+  const f = fixture();
+  const { root, paths } = f;
+  const cleanup = createAgentCleanup(t, f);
   const args = ['ensure', `--root=${root}`];
   const calls = await Promise.all(Array.from({ length: 20 }, () => invoke(args)));
   assert.equal(calls.every((result) => result.code === 0 && result.stdout.includes('READY')), true,
@@ -80,7 +79,6 @@ test('20 parallel ensure commands share one detached usage-only Agent; terminati
   const first = await instance.readiness(paths);
   assert.equal(first.state, 'ready');
   assert.equal(first.notificationReady, false);
-  pids.add(first.pid);
   const fast = await invoke(args);
   assert.equal(fast.code, 0, fast.stderr);
   assert.match(fast.stdout, /READY \/ already-running/);
@@ -92,15 +90,14 @@ test('20 parallel ensure commands share one detached usage-only Agent; terminati
   assert.equal(duplicateRun.code, 1);
   assert.match(duplicateRun.stderr, /agent_already_running/);
   assert.equal((await instance.readiness(paths)).pid, first.pid);
-  process.kill(first.pid, 'SIGTERM');
+  cleanup.terminate(first.pid, 'SIGTERM');
   await until(() => instance.inspect(paths).state !== 'live', 18000);
   assert.equal(instance.inspect(paths).state, process.platform === 'win32' ? 'stale' : 'absent');
   const cold = await invoke(args);
   assert.equal(cold.code, 0, cold.stderr);
   const second = await instance.readiness(paths);
   assert.notEqual(second.pid, first.pid);
-  pids.add(second.pid);
-  process.kill(second.pid, 'SIGKILL');
+  cleanup.terminate(second.pid, 'SIGKILL');
   await until(() => instance.inspect(paths).state === 'stale');
   const recovered = await Promise.all(Array.from({ length: 20 }, () => invoke(args)));
   assert.equal(recovered.every((result) => result.code === 0), true,
@@ -108,15 +105,16 @@ test('20 parallel ensure commands share one detached usage-only Agent; terminati
   const third = await instance.readiness(paths);
   assert.equal(third.state, 'ready');
   assert.notEqual(third.pid, second.pid);
-  pids.add(third.pid);
-  process.kill(third.pid, 'SIGTERM');
+  cleanup.terminate(third.pid, 'SIGTERM');
   await until(() => instance.inspect(paths).state !== 'live', 18000);
   assert.equal(instance.inspect(paths).state, process.platform === 'win32' ? 'stale' : 'absent');
 });
 
 test('parallel bash shims exec each original once, forward arguments and streams, propagate exit status, and share an Agent',
   { skip: process.platform !== 'linux' }, async (t) => {
-    const { root, paths } = fixture();
+    const f = fixture();
+    const { root, paths } = f;
+    createAgentCleanup(t, f);
     const homeDir = path.join(root, 'home');
     const originals = path.join(root, 'originals');
     fs.mkdirSync(homeDir);
@@ -150,7 +148,7 @@ test('parallel bash shims exec each original once, forward arguments and streams
     }
     const agent = await instance.readiness(paths);
     assert.equal(agent.state, 'ready');
-    t.after(() => { try { process.kill(agent.pid, 'SIGKILL'); } catch (_) {} });
+    // Cleanup was registered before invoking the first shim.
     const second = await invoke(['ensure', `--root=${root}`]);
     assert.equal(second.code, 0);
     assert.equal((await instance.readiness(paths)).pid, agent.pid);
@@ -173,8 +171,10 @@ test('parallel bash shims exec each original once, forward arguments and streams
   });
 
 test('Git Bash fixture executes dynamic shims without recursion and keeps original streams and exit code',
-  { skip: process.platform !== 'win32' || !fs.existsSync(gitBash) }, async () => {
-    const { root, paths } = fixture();
+  { skip: process.platform !== 'win32' || !fs.existsSync(gitBash) }, async (t) => {
+    const f = fixture();
+    const { root, paths } = f;
+    const cleanup = createAgentCleanup(t, f);
     const shimDir = path.join(root, 'shims');
     const aliases = path.join(root, 'aliases');
     const originals = path.join(root, 'originals');
@@ -228,7 +228,7 @@ test('Git Bash fixture executes dynamic shims without recursion and keeps origin
     assert.equal(failOpen.code, 41);
     assert.match(failOpen.stdout, /ORIGINAL:codex:still-starts:input/);
     assert.match(failOpen.stderr, /Agent unavailable; continuing Codex/);
-    process.kill(running.pid, 'SIGTERM');
+    cleanup.terminate(running.pid, 'SIGTERM');
   });
 
 test('authenticated local health has no completion side effects', async (t) => {

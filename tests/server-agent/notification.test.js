@@ -14,6 +14,8 @@ const {
 } = require('../../src/server-agent/notificationRuntime');
 const { writePrivateJsonAtomic } = require('../../src/shared/credentialStore');
 
+const { createLoopbackDiagnostics } = require('../helpers/loopbackDiagnostics');
+
 const DESKTOP_ID = 'dev_11111111-1111-4111-8111-111111111111';
 const CREDENTIAL = `tm_uc_d1.${DESKTOP_ID}.${'x'.repeat(43)}`;
 const TEST_NOW_MS = Date.parse('2026-09-21T10:05:00.000Z');
@@ -31,7 +33,7 @@ function rawInput(sessionId = 'session-1', turnId = 'turn-1') {
   };
 }
 
-function fixture(t, send, runtimeOptions = {}) {
+function fixture(t, send, runtimeOptions = {}, diagnostics = null) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'toknow-server-notification-'));
   const paths = createServerAgentPaths({ root });
   const codexBusiness = path.join(root, 'codex-business');
@@ -64,12 +66,14 @@ function fixture(t, send, runtimeOptions = {}) {
       now: () => TEST_NOW_MS
     }
   }, {
+    ...(diagnostics ? { createCodexHookBridge: diagnostics.bridgeFactory } : {}),
     createAndroidClient: () => ({ sendEvent: send }),
     randomBytes: () => crypto.createHash('sha256').update('test-token').digest()
   });
   const outboxPath = paths.notificationOutboxPath(DESKTOP_ID);
   t.after(async () => {
-    await runtime.stop();
+    diagnostics?.note('cleanup-start');
+    try { await runtime.stop(); } finally { diagnostics?.finish(); }
     for (const filePath of [outboxPath, paths.credentialFile]) {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
@@ -154,28 +158,35 @@ test('credential rejection pauses the source outbox without losing the event', a
 });
 
 test('loopback bridge requires token and validated profile header', async (t) => {
+  const diagnostics = createLoopbackDiagnostics(t);
   const sent = [];
   const setup = fixture(t, async (payload) => {
     sent.push(payload);
     return { status: 201 };
-  });
+  }, {}, diagnostics);
+  diagnostics.note('runtime-start-begin');
   const status = await setup.runtime.start();
+  diagnostics.note('runtime-start-complete', diagnostics.snapshot());
   const runtimeDocument = JSON.parse(fs.readFileSync(setup.runtime.runtimePath, 'utf8'));
   assert.deepEqual(Object.keys(runtimeDocument).sort(), ['host', 'port', 'token', 'version']);
   assert.equal(runtimeDocument.host, '127.0.0.1');
   assert.equal(status.bridge.host, '127.0.0.1');
+  assert.equal(status.bridge.port, runtimeDocument.port);
+  assert.equal(diagnostics.snapshot().listening, true);
+  assert.equal(diagnostics.snapshot().address.address, runtimeDocument.host);
+  assert.equal(diagnostics.snapshot().address.port, runtimeDocument.port);
   const url = `http://127.0.0.1:${runtimeDocument.port}/codex/stop`;
   const body = JSON.stringify(rawInput('bridge-session', 'turn-1'));
 
-  const unauthorized = await fetch(url, { method: 'POST', body });
+  const unauthorized = await diagnostics.request('unauthorized', url, { method: 'POST', body });
   assert.equal(unauthorized.status, 401);
-  const missingProfile = await fetch(url, {
+  const missingProfile = await diagnostics.request('missing-profile', url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-token-m-bridge-token': runtimeDocument.token },
     body
   });
   assert.equal(missingProfile.status, 400);
-  const unknownProfile = await fetch(url, {
+  const unknownProfile = await diagnostics.request('unknown-profile', url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -185,7 +196,7 @@ test('loopback bridge requires token and validated profile header', async (t) =>
     body
   });
   assert.equal(unknownProfile.status, 400);
-  const accepted = await fetch(url, {
+  const accepted = await diagnostics.request('valid-profile', url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
