@@ -4,17 +4,16 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
 const test = require('node:test');
 const instance = require('../../src/server-agent/instance');
 const { createServerAgentPaths } = require('../../src/server-agent/paths');
 const { createAgentCleanup, matchesRoot } = require('../helpers/serverAgentFixture');
 const cli = path.resolve(__dirname, '../../src/server-agent/cli.js');
-const preload = path.resolve(__dirname, '../fixtures/serverAgentFaultPreload.js');
+const preload = path.resolve(__dirname, '../fixtures/serverAgentFaultPreload.js').replaceAll('\\', '/');
 
 function fixture(t) {
   const startedAtMs = Date.now();
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-recovery-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent recovery-'));
   const paths = createServerAgentPaths({ root });
   const codexHome = path.join(root, 'codex-home');
   fs.mkdirSync(codexHome); fs.mkdirSync(paths.configRoot, { recursive: true });
@@ -26,10 +25,10 @@ function fixture(t) {
 function invoke(f, fault) {
   return new Promise((resolve, reject) => {
     const startMs = Date.now();
-    const child = spawn(process.execPath, [cli, 'ensure', `--root=${f.root}`], {
+    const child = f.cleanup.spawn(process.execPath, [cli, 'ensure', `--root=${f.root}`], {
       windowsHide: true,
       env: { ...process.env, POTATO_TEST_AGENT_FAULT: fault || '',
-        NODE_OPTIONS: `${process.env.NODE_OPTIONS || ''} --require=${preload}` }
+        NODE_OPTIONS: `${process.env.NODE_OPTIONS || ''} --require="${preload}"` }
     });
     let stdout = ''; let stderr = '';
     child.stdout.on('data', data => { stdout = (stdout + data).slice(-4096); });
@@ -114,8 +113,30 @@ test('cleanup finds a daemon even when an assertion failed before its PID was re
   assert.ok(f.cleanup.timeline.some(item => item.event === 'verified-termination' && item.pid === state.pid));
 });
 
-test('fixture command matching rejects another root and a non-run command', () => {
-  assert.equal(matchesRoot('node src/server-agent/cli.js run --root=/tmp/fixture', '/tmp/fixture'), true);
-  assert.equal(matchesRoot('node src/server-agent/cli.js run --root=/tmp/fixture-other', '/tmp/fixture'), false);
-  assert.equal(matchesRoot('node src/server-agent/cli.js ensure --root=/tmp/fixture', '/tmp/fixture'), false);
+test('fixture argv matching rejects another root and a non-run command', () => {
+  const canonical = value => value;
+  const root = path.resolve('synthetic fixture with spaces');
+  const argv = [process.execPath, cli, 'run', `--root=${root}`];
+  assert.equal(matchesRoot(argv, root, cli, canonical), true);
+  assert.equal(matchesRoot([...argv.slice(0, 3), `--root=${root}-other`], root, cli, canonical), false);
+  assert.equal(matchesRoot([argv[0], cli, 'ensure', argv[3]], root, cli, canonical), false);
+});
+
+test('parent spawn registry covers real detached children blocked before any owner or ready marker', async t => {
+  const f = fixture(t);
+  const result = await invoke(f, 'entry-gate');
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /agent_start_timeout/);
+  assert.equal(fs.existsSync(f.paths.agentLockPath), false);
+  assert.equal(fs.existsSync(f.paths.agentReadyPath), false);
+  const { readDiscovery } = require('../helpers/serverAgentFixture');
+  const before = readDiscovery(f.cleanup.registry, []);
+  assert.equal(before.state, 'DISCOVERY_COMPLETE');
+  assert.ok(before.registrations.length > 0);
+  await f.cleanup.cleanup();
+  assert.equal(f.cleanup.timeline.at(-1).state, 'CLEANUP_PASS');
+  for (const row of before.registrations) {
+    assert.ok(f.cleanup.timeline.some(item => item.event === 'verified-termination' && item.pid === row.pid));
+    assert.ok(f.cleanup.timeline.some(item => item.event === 'exit-verification' && item.pid === row.pid && item.raw.state === 'VERIFIED_EXITED'));
+  }
 });

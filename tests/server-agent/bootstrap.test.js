@@ -5,7 +5,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn, spawnSync } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
 const test = require('node:test');
 const { createCodexHookBridge } = require('../../src/shared/notification/codexHookBridge');
 const { readRuntime } = require('../../src/shared/notification/codexHookForwarder');
@@ -19,6 +19,7 @@ const cli = path.resolve(__dirname, '..', '..', 'src', 'server-agent', 'cli.js')
 const gitBash = 'C:\\Program Files\\Git\\bin\\bash.exe';
 
 function fixture() {
+  const startedAtMs = Date.now();
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'toknow-bootstrap-'));
   const paths = createServerAgentPaths({ root });
   const codexHome = path.join(root, 'codex-home');
@@ -27,12 +28,12 @@ function fixture() {
   fs.writeFileSync(paths.configFile, JSON.stringify({ version: 1, profiles: [
     { id: 'codex', name: 'Codex', codexHome, enabled: true }
   ] }));
-  return { root, paths, startedAtMs: Date.now() };
+  return { root, paths, startedAtMs };
 }
 
-function invoke(args, timeoutMs = 9000) {
+function invoke(args, cleanup, timeoutMs = 9000, entry = cli) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [cli, ...args], { windowsHide: true });
+    const child = cleanup.spawn(process.execPath, [entry, ...args], { windowsHide: true });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (chunk) => { stdout += chunk; });
@@ -73,33 +74,38 @@ test('20 parallel ensure commands share one detached usage-only Agent; terminati
   const { root, paths } = f;
   const cleanup = createAgentCleanup(t, f);
   const args = ['ensure', `--root=${root}`];
-  const calls = await Promise.all(Array.from({ length: 20 }, () => invoke(args)));
+  const calls = await Promise.all(Array.from({ length: 20 }, () => invoke(args, cleanup)));
   assert.equal(calls.every((result) => result.code === 0 && result.stdout.includes('READY')), true,
     calls.filter((result) => result.code !== 0).map((result) => result.stderr));
   const first = await instance.readiness(paths);
   assert.equal(first.state, 'ready');
   assert.equal(first.notificationReady, false);
-  const fast = await invoke(args);
+  const fast = await invoke(args, cleanup);
   assert.equal(fast.code, 0, fast.stderr);
   assert.match(fast.stdout, /READY \/ already-running/);
-  const direct = await instance.ensure(paths);
+  // Exercise the direct API in an instrumented launcher too: even an unexpected
+  // cold path must inherit registration and forward the explicit synthetic root.
+  const apiScript = 'const {createServerAgentPaths}=require("./src/server-agent/paths"); const {ensure}=require("./src/server-agent/instance"); const root=process.argv[1]; ensure(createServerAgentPaths({root}),["--root="+root]).then(value=>console.log(JSON.stringify(value)),()=>{process.exitCode=1;});';
+  const apiCall = await invoke([apiScript, root], cleanup, 9000, '-e');
+  assert.equal(apiCall.code, 0, apiCall.stderr);
+  const direct = JSON.parse(apiCall.stdout);
   assert.equal(direct.result, 'already-running');
   assert.equal(direct.pid, first.pid);
   assert.equal((await instance.readiness(paths)).pid, first.pid);
-  const duplicateRun = await invoke(['run', `--root=${root}`]);
+  const duplicateRun = await invoke(['run', `--root=${root}`], cleanup);
   assert.equal(duplicateRun.code, 1);
   assert.match(duplicateRun.stderr, /agent_already_running/);
   assert.equal((await instance.readiness(paths)).pid, first.pid);
   cleanup.terminate(first.pid, 'SIGTERM');
   await until(() => instance.inspect(paths).state !== 'live', 18000);
   assert.equal(instance.inspect(paths).state, process.platform === 'win32' ? 'stale' : 'absent');
-  const cold = await invoke(args);
+  const cold = await invoke(args, cleanup);
   assert.equal(cold.code, 0, cold.stderr);
   const second = await instance.readiness(paths);
   assert.notEqual(second.pid, first.pid);
   cleanup.terminate(second.pid, 'SIGKILL');
   await until(() => instance.inspect(paths).state === 'stale');
-  const recovered = await Promise.all(Array.from({ length: 20 }, () => invoke(args)));
+  const recovered = await Promise.all(Array.from({ length: 20 }, () => invoke(args, cleanup)));
   assert.equal(recovered.every((result) => result.code === 0), true,
     recovered.filter((result) => result.code !== 0).map((result) => result.stderr));
   const third = await instance.readiness(paths);
@@ -114,7 +120,7 @@ test('parallel bash shims exec each original once, forward arguments and streams
   { skip: process.platform !== 'linux' }, async (t) => {
     const f = fixture();
     const { root, paths } = f;
-    createAgentCleanup(t, f);
+    const cleanup = createAgentCleanup(t, f);
     const homeDir = path.join(root, 'home');
     const originals = path.join(root, 'originals');
     fs.mkdirSync(homeDir);
@@ -130,7 +136,7 @@ test('parallel bash shims exec each original once, forward arguments and streams
     const shimDir = shell.locations(paths, homeDir).shimDir;
     const calls = await Promise.all(Array.from({ length: 9 }, (_, index) => new Promise((resolve, reject) => {
       const name = names[index % names.length];
-      const child = spawn(path.join(shimDir, name), [`argument-${index}`], {
+      const child = cleanup.spawn(path.join(shimDir, name), [`argument-${index}`], {
         env: { ...process.env, PATH: `${shimDir}:${originals}:${process.env.PATH}` }
       });
       let stdout = '';
@@ -149,12 +155,12 @@ test('parallel bash shims exec each original once, forward arguments and streams
     const agent = await instance.readiness(paths);
     assert.equal(agent.state, 'ready');
     // Cleanup was registered before invoking the first shim.
-    const second = await invoke(['ensure', `--root=${root}`]);
+    const second = await invoke(['ensure', `--root=${root}`], cleanup);
     assert.equal(second.code, 0);
     assert.equal((await instance.readiness(paths)).pid, agent.pid);
     fs.writeFileSync(launcher, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
     const failOpen = await new Promise((resolve, reject) => {
-      const child = spawn(path.join(shimDir, 'codex'), ['still-starts'], {
+      const child = cleanup.spawn(path.join(shimDir, 'codex'), ['still-starts'], {
         env: { ...process.env, PATH: `${shimDir}:${originals}:${process.env.PATH}` }
       });
       let stdout = '';
@@ -198,7 +204,7 @@ test('Git Bash fixture executes dynamic shims without recursion and keeps origin
     const environment = { ...process.env, PATH: `${posix(shimDir)}:${posix(aliases)}:${posix(originals)}:/usr/bin` };
     const calls = await Promise.all(Array.from({ length: 9 }, (_, index) => new Promise((resolve, reject) => {
       const name = names[index % names.length];
-      const child = spawn(gitBash, [posix(path.join(shimDir, name)), `arg-${index}`], { env: environment });
+      const child = cleanup.spawn(gitBash, [posix(path.join(shimDir, name)), `arg-${index}`], { env: environment });
       let stdout = '';
       let stderr = '';
       child.stdout.on('data', (chunk) => { stdout += chunk; });
@@ -216,7 +222,7 @@ test('Git Bash fixture executes dynamic shims without recursion and keeps origin
     assert.equal(running.state, 'ready');
     fs.writeFileSync(agent, '#!/bin/bash\nexit 1\n', { mode: 0o755 });
     const failOpen = await new Promise((resolve, reject) => {
-      const child = spawn(gitBash, [posix(path.join(shimDir, 'codex')), 'still-starts'], { env: environment });
+      const child = cleanup.spawn(gitBash, [posix(path.join(shimDir, 'codex')), 'still-starts'], { env: environment });
       let stdout = '';
       let stderr = '';
       child.stdout.on('data', (chunk) => { stdout += chunk; });
@@ -263,10 +269,12 @@ test('configured readiness verifies the version-1 Hook runtime through authentic
   assert.equal((await instance.readiness(paths)).state, 'starting');
 });
 
-test('ensure reports a bounded safe error for invalid configuration', async () => {
-  const { root, paths } = fixture();
+test('ensure reports a bounded safe error for invalid configuration', async (t) => {
+  const f = fixture();
+  const { root, paths } = f;
+  const cleanup = createAgentCleanup(t, f);
   fs.writeFileSync(paths.configFile, '{invalid-json');
-  const result = await invoke(['ensure', `--root=${root}`]);
+  const result = await invoke(['ensure', `--root=${root}`], cleanup);
   assert.equal(result.code, 1);
   assert.match(result.stderr, /server-agent failed: config-read-failed/);
   assert.equal(result.stderr.includes(root), false);
