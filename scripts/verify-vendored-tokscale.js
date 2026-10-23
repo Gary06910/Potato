@@ -32,7 +32,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const { runNativeFixture } = require('../tests/helpers/tokscaleFailureCapsule');
 const { loadManifest, manifestMode, resolveManifestEntry, resolveTargetBinPath } = require('./vendoredTokscale');
 const { extractUsageFromTokscale } = require('../src/shared/usage');
 
@@ -518,25 +518,26 @@ function hermeticEnv(home) {
   return env;
 }
 
-function spawnFixture(binPath, home, groupBy, client = FIXTURE_CLIENT) {
-  return spawnSync(binPath, ['--json', '--client', client, '--group-by', groupBy, '--no-spinner'], {
-    encoding: 'utf8',
-    timeout: 15_000,
-    env: hermeticEnv(home)
-  });
+function spawnFixture(binPath, home, groupBy, client = FIXTURE_CLIENT, diagnostics = {}, consume = (result) => result, deps = {}) {
+  return runNativeFixture({
+    stageId: 'DSH_BASE', contractClient: FIXTURE_CLIENT, ...diagnostics,
+    binaryPath: binPath, fixtureRoot: home, scanClients: client, groupBy,
+    argv: ['--json', '--client', client, '--group-by', groupBy, '--no-spinner'],
+    spawnOptions: { encoding: 'utf8', timeout: 15_000, env: hermeticEnv(home) }
+  }, consume, deps);
 }
 
-function runAgainstFixture(binPath, home, groupBy = 'client,model', client = FIXTURE_CLIENT) {
-  const result = spawnFixture(binPath, home, groupBy, client);
-  if (result.error) throw new Error(`Fixture run failed to execute: ${result.error.message}`);
-  if (result.status !== 0) throw new Error(`Fixture run exited ${result.status}: ${result.stderr || result.stdout}`);
-  let parsed;
-  try {
-    parsed = JSON.parse(result.stdout);
-  } catch (error) {
-    throw new Error(`Fixture run did not produce valid JSON:\n${result.stdout}`, { cause: error });
-  }
-  return parsed;
+function runAgainstFixture(binPath, home, groupBy = 'client,model', client = FIXTURE_CLIENT, diagnostics = {}, deps = {}) {
+  return spawnFixture(binPath, home, groupBy, client, diagnostics, (result) => {
+    if (result.status !== 0) throw new Error(`Fixture run exited ${result.status}: ${result.stderr || result.stdout}`);
+    let parsed;
+    try {
+      parsed = JSON.parse(result.stdout);
+    } catch (error) {
+      throw new Error(`Fixture run did not produce valid JSON:\n${result.stdout}`, { cause: error });
+    }
+    return parsed;
+  }, deps);
 }
 
 function assertExpected(parsed, expected = EXPECTED) {
@@ -620,20 +621,22 @@ function assertGroupByRejected(result) {
 let retainedFixtureIndex = 0;
 function retainFixtureFile(file) { fs.renameSync(file, `${file}.retained-${++retainedFixtureIndex}`); }
 
-function verifyGooseScannerContract(binPath) {
+function verifyGooseScannerContract(binPath, diagnostics = {}, deps = {}) {
   const assert = require('node:assert/strict');
   const { writeGooseDatabase, insertGooseRow } = require('../tests/fixtures/goose');
-  const home = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'tm-goose-contract-'));
+  const home = fs.mkdtempSync(path.join(fs.realpathSync(deps.fixtureTmpDir || os.tmpdir()), 'tm-goose-contract-'));
   const env = hermeticEnv(home);
   // Pin local date boundaries as well as the fixture clock.
   env.TZ = 'UTC';
-  const run = (overrides = {}, args = []) => {
-    const result = spawnSync(binPath, ['--json', '--client', 'goose', '--group-by', 'client,session,model', '--no-spinner', ...args], {
-      encoding: 'utf8', timeout: 15_000, env: { ...env, ...overrides }
-    });
+  const run = (stageId = 'GOOSE_BASE', overrides = {}, args = []) => runNativeFixture({
+    ...diagnostics, stageId, contractClient: 'goose', scanClients: 'goose', groupBy: 'client,session,model',
+    binaryPath: binPath, fixtureRoot: home,
+    argv: ['--json', '--client', 'goose', '--group-by', 'client,session,model', '--no-spinner', ...args],
+    spawnOptions: { encoding: 'utf8', timeout: 15_000, env: { ...env, ...overrides } }
+  }, (result) => {
     assert.equal(result.status, 0, result.stderr);
     return JSON.parse(result.stdout);
-  };
+  }, deps);
   const counters = (parsed) => Object.fromEntries(parsed.entries.map((row) => [row.sessionId,
     [row.input, row.output, row.reasoning]]));
   const xdg = path.join(home, '.local', 'share', 'goose', 'sessions', 'sessions.db');
@@ -653,19 +656,23 @@ function verifyGooseScannerContract(binPath) {
     const usage = extractUsageFromTokscale(parsed);
     assert.equal(usage.totalTokens, 1730);
     assert.equal(usage.clientOutputs.goose, 390);
-    const graphResult = spawnSync(binPath, ['graph', '--client', 'goose', '--no-spinner'], {
-      encoding: 'utf8', timeout: 15_000, env
-    });
-    assert.equal(graphResult.status, 0, graphResult.stderr);
+    const graphResult = runNativeFixture({
+      ...diagnostics, stageId: 'GOOSE_GRAPH', contractClient: 'goose', scanClients: 'goose', groupBy: null,
+      binaryPath: binPath, fixtureRoot: home, argv: ['graph', '--client', 'goose', '--no-spinner'],
+      spawnOptions: { encoding: 'utf8', timeout: 15_000, env }
+    }, (result) => {
+      assert.equal(result.status, 0, result.stderr);
+      return JSON.parse(result.stdout);
+    }, deps);
     const { parseGraphResult, normalizeHistory } = require('../src/shared/history');
-    const history = normalizeHistory(parseGraphResult(JSON.parse(graphResult.stdout)), { todayKey: '2026-08-21' });
+    const history = normalizeHistory(parseGraphResult(graphResult), { todayKey: '2026-08-21' });
     assert.equal(history.summary.totalTokens, 1730);
     assert.equal(history.daily.length, 1);
     assert.equal(history.daily[0].date, '2026-08-20');
     assert.equal(history.daily[0].perClient.goose.tokens, 1730);
     assert.equal(history.daily[0].outputTokens, 390);
-    assert.equal(extractUsageFromTokscale(run({}, ['--since', '2026-08-20', '--until', '2026-08-20'])).totalTokens, 1730);
-    assert.equal(run({}, ['--since', '2026-08-21', '--until', '2026-08-21']).entries.length, 0);
+    assert.equal(extractUsageFromTokscale(run('GOOSE_PATH_DATE', {}, ['--since', '2026-08-20', '--until', '2026-08-20'])).totalTokens, 1730);
+    assert.equal(run('GOOSE_PATH_DATE', {}, ['--since', '2026-08-21', '--until', '2026-08-21']).entries.length, 0);
     retainFixtureFile(xdg);
 
     // A raw absolute override is authoritative; invalid overrides use defaults.
@@ -681,41 +688,41 @@ function verifyGooseScannerContract(binPath) {
     // then returns an absolute path and accidentally tests a valid override.
     const relativeRoot = path.relative(home, customRoot);
     assert.equal(path.isAbsolute(relativeRoot), false, 'fixture override must be relative');
-    assert.deepEqual(Object.keys(counters(run({ GOOSE_PATH_ROOT: relativeRoot }))), ['priority-1'], 'relative override is ignored');
-    assert.deepEqual(Object.keys(counters(run({ GOOSE_PATH_ROOT: ` ${customRoot} ` }))), ['priority-1']);
-    assert.deepEqual(Object.keys(counters(run({ GOOSE_PATH_ROOT: customRoot }))), ['priority-0']);
+    assert.deepEqual(Object.keys(counters(run('GOOSE_PATH_DATE', { GOOSE_PATH_ROOT: relativeRoot }))), ['priority-1'], 'relative override is ignored');
+    assert.deepEqual(Object.keys(counters(run('GOOSE_PATH_DATE', { GOOSE_PATH_ROOT: ` ${customRoot} ` }))), ['priority-1']);
+    assert.deepEqual(Object.keys(counters(run('GOOSE_PATH_DATE', { GOOSE_PATH_ROOT: customRoot }))), ['priority-0']);
     retainFixtureFile(candidates[0]);
-    assert.equal(run({ GOOSE_PATH_ROOT: customRoot }).entries.length, 0);
+    assert.equal(run('GOOSE_PATH_DATE', { GOOSE_PATH_ROOT: customRoot }).entries.length, 0);
     // Default candidates are first-existing, never a union. Empty shadows too.
     for (let i = 1; i < candidates.length; i += 1) {
-      assert.deepEqual(Object.keys(counters(run())), [`priority-${i}`]);
+      assert.deepEqual(Object.keys(counters(run('GOOSE_PATH_DATE'))), [`priority-${i}`]);
       if (i === 1) {
         retainFixtureFile(candidates[i]);
         writeGooseDatabase(candidates[i], []);
-        assert.equal(run().entries.length, 0);
+        assert.equal(run('GOOSE_PATH_DATE').entries.length, 0);
       }
       retainFixtureFile(candidates[i]);
     }
     const extra = path.join(home, 'extra');
     writeGooseDatabase(path.join(extra, 'sessions.db'));
-    assert.equal(run({ TOKSCALE_EXTRA_DIRS: `goose:${extra}` }).entries.length, 0);
+    assert.equal(run('GOOSE_PATH_DATE', { TOKSCALE_EXTRA_DIRS: `goose:${extra}` }).entries.length, 0);
     const windowsDb = path.join(home, 'AppData', 'Roaming', 'Block', 'goose', 'data', 'sessions', 'sessions.db');
     writeGooseDatabase(windowsDb);
     writeGooseDatabase(path.join(home, 'Library', 'Application Support', 'Block', 'goose', 'data', 'sessions', 'sessions.db'));
-    assert.equal(extractUsageFromTokscale(run()).totalTokens, process.platform === 'win32' ? 1540 : 0);
+    assert.equal(extractUsageFromTokscale(run('GOOSE_PATH_DATE')).totalTokens, process.platform === 'win32' ? 1540 : 0);
     // Explicit --home inspects only that profile, on every host platform.
-    assert.equal(extractUsageFromTokscale(run({
+    assert.equal(extractUsageFromTokscale(run('GOOSE_PATH_DATE', {
       GOOSE_PATH_ROOT: customRoot, APPDATA: path.join(home, 'unrelated-appdata')
     }, ['--home', home])).totalTokens, 1540);
     retainFixtureFile(windowsDb);
 
     writer = writeGooseDatabase(xdg, [{}], { wal: true });
     assert.ok(fs.statSync(`${xdg}-wal`).size > 0);
-    assert.equal(extractUsageFromTokscale(run()).totalTokens, 1540);
+    assert.equal(extractUsageFromTokscale(run('GOOSE_WAL')).totalTokens, 1540);
     insertGooseRow(writer, { id: 'wal-next', accumulatedInput: 200, accumulatedOutput: 50, accumulatedTotal: 250 });
-    assert.equal(extractUsageFromTokscale(run()).totalTokens, 1790);
+    assert.equal(extractUsageFromTokscale(run('GOOSE_WAL')).totalTokens, 1790);
     // Even a later WAL write remains on created_at, not the update/read date.
-    assert.equal(run({}, ['--since', '2026-08-21']).entries.length, 0);
+    assert.equal(run('GOOSE_WAL', {}, ['--since', '2026-08-21']).entries.length, 0);
   } finally {
     writer?.close();
     /* Retain the isolated fixture home for diagnostics. */
@@ -735,28 +742,37 @@ function main() {
     );
   }
 
-  verifyGooseScannerContract(binPath);
+  const diagnostics = {
+    binaryPlatform: key, binaryVersion: manifest.baseVersion,
+    binaryVersionSource: 'manifest.baseVersion', binaryReleaseTag: manifest.releaseTag ?? null,
+    expectedBinaryHash: entry.sha256 ?? null
+  };
+  verifyGooseScannerContract(binPath, diagnostics);
 
   const home = writeFixtureHome();
   try {
-    const parsed = runAgainstFixture(binPath, home);
+    const parsed = runAgainstFixture(binPath, home, 'client,model', FIXTURE_CLIENT, { ...diagnostics, stageId: 'DSH_BASE' });
     assertExpected(parsed);
     if (isUpstream) {
-      assertGroupByRejected(spawnFixture(binPath, home, SESSION_GROUP_BY));
+      spawnFixture(binPath, home, SESSION_GROUP_BY, FIXTURE_CLIENT, { ...diagnostics, stageId: 'DSH_SESSION_METADATA' }, assertGroupByRejected);
     } else {
-      assertSessionMetadata(runAgainstFixture(binPath, home, SESSION_GROUP_BY));
+      assertSessionMetadata(runAgainstFixture(binPath, home, SESSION_GROUP_BY, FIXTURE_CLIENT, { ...diagnostics, stageId: 'DSH_SESSION_METADATA' }));
     }
     for (const contract of applicableTokenContracts()) {
-      assertTokenContract(runAgainstFixture(binPath, home, 'client,session,model', contract.scanClients || contract.client), contract);
+      assertTokenContract(runAgainstFixture(binPath, home, 'client,session,model', contract.scanClients || contract.client, {
+        ...diagnostics, stageId: `CLIENT_${contract.client.toUpperCase()}`, contractClient: contract.client
+      }), contract);
     }
   } finally {
     /* Retain the isolated fixture home for diagnostics. */
   }
 
-  for (const contract of DSH_MODEL_CONTRACT_CASES) {
+  for (const [caseIndex, contract] of DSH_MODEL_CONTRACT_CASES.entries()) {
     const modelHome = writeFixtureHome(contract);
     try {
-      const parsed = runAgainstFixture(binPath, modelHome);
+      const parsed = runAgainstFixture(binPath, modelHome, 'client,model', FIXTURE_CLIENT, {
+        ...diagnostics, stageId: 'DSH_MODEL_ATTRIBUTION', caseIndex
+      });
       assertExpected(parsed, { ...EXPECTED, model: contract.expectedModel });
       const period = extractUsageFromTokscale(parsed);
       if (period.totalTokens !== 2910 || period.clientOutputs.dsh !== 25) throw new Error('DSH model attribution changed token accounting');
@@ -773,6 +789,7 @@ if (require.main === module) {
     main();
   } catch (error) {
     console.error(`verify-vendored-tokscale failed: ${error.message}`);
+    if (error.failureCapsule?.status !== 'DISABLED' && error.failureCapsule) console.error(JSON.stringify(error.failureCapsule));
     process.exit(1);
   }
 }
