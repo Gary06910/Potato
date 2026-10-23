@@ -194,7 +194,7 @@ test('Darwin native generation changed during OS inspection refuses signal', () 
 });
 
 function linuxStat(ticks = '150') {
-  const fields = Array(20).fill('0'); fields[0] = 'S'; fields[19] = ticks;
+  const fields = Array(20).fill('0'); fields[0] = 'S'; fields[17] = '1'; fields[19] = ticks;
   return `4242 (node name with ) parens) ${fields.join(' ')}\n`;
 }
 test('Linux raw /proc records use NUL argv, exe path and start ticks', t => {

@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const cp = require('node:child_process');
 const { randomUUID } = require('node:crypto');
-const { createProcessInspector, inspectProcessExistence, linuxClock } = require('./agentProcessInspection');
+const { createProcessInspector, createLinuxExitInspector, inspectProcessExistence, linuxClock } = require('./agentProcessInspection');
 
 const cli = path.resolve(__dirname, '../../src/server-agent/cli.js');
 const preload = path.resolve(__dirname, '../fixtures/serverAgentOwnershipPreload.js');
@@ -51,6 +51,13 @@ function matchesRoot(argv, root, expectedCli = cli, canonical = canonicalIdentit
 }
 
 function verifyOwnership(row, fixture, registration, deps = {}) {
+  if (row.state === 'LINUX_ZOMBIE') {
+    if (!Number.isSafeInteger(row.pid) || row.pid <= 0 || row.processState !== 'Z' || row.threadCount !== 1
+      || !/^linux:[1-9]\d*$/.test(row.generation || '') || row.generation !== `linux:${row.startTicks}`
+      || registration?.pid !== row.pid || !registration.generation) return { state: 'IDENTITY_INCOMPLETE', reason: 'no complete spawn generation', pid: row.pid };
+    if (row.generation !== registration.generation) return { state: 'PID_REUSED', reason: 'Zombie generation differs from registration', pid: row.pid };
+    return { ...row, state: 'REGISTERED_GENERATION_ZOMBIE' };
+  }
   if (row.state !== 'OBSERVED') return row;
   const deny = (state, reason) => ({ state, reason, pid: row.pid });
   if (!Number.isSafeInteger(row.pid) || row.pid <= 0 || !row.executable || !Array.isArray(row.argv)
@@ -166,7 +173,9 @@ function createAgentCleanup(t, fixture, deps = {}) {
   const registry = path.join(fixture.root, 'test-agent-spawns');
   fs.mkdirSync(registry, { mode: 0o700 });
   const inspect = deps.inspect || createProcessInspector();
-  const inspectExit = deps.inspectExit || inspectProcessExistence;
+  const inspectExit = deps.inspectExit || (process.platform === 'linux' ? createLinuxExitInspector() : (pid => inspectProcessExistence(pid)));
+  const monotonicNow = deps.monotonicNow || (() => performance.now());
+  const wait = deps.wait || (ms => new Promise(resolve => setTimeout(resolve, ms)));
   // A read-only self query must work before any detached fixture can be launched.
   const self = inspect(process.pid);
   const unavailable = process.platform === 'darwin' ? 'MAC_PROCESS_INSPECTION_UNAVAILABLE' : 'PROCESS_INSPECTION_UNAVAILABLE';
@@ -222,7 +231,7 @@ function createAgentCleanup(t, fixture, deps = {}) {
       const found = discovery(); note('discovery', found);
       assert.equal(found.state, 'DISCOVERY_COMPLETE', JSON.stringify(found));
       const candidates = [...new Set([...found.registrations.map(row => row.pid), ...found.markerPids])];
-      const remaining = new Set();
+      const remaining = new Set(), awaitingReap = new Set();
       // Preflight every candidate before signaling any of them.
       for (const pid of candidates) {
         const raw = inspect(pid), registration = found.registrations.find(row => row.pid === pid);
@@ -234,21 +243,34 @@ function createAgentCleanup(t, fixture, deps = {}) {
             replacementGeneration: raw.generation, decision: 'NO_SIGNAL_PID_REUSED' });
           continue;
         }
-        assert.equal(result.state, 'VERIFIED_OWNED', JSON.stringify({ pid, result }));
+        if (result.state === 'REGISTERED_GENERATION_ZOMBIE') {
+          awaitingReap.add(pid);
+          note('runtime-terminated-awaiting-reap', { pid, generation: registration.generation,
+            runtimeTerminated: true, pidReaped: false, evidence: raw.evidence });
+        } else assert.equal(result.state, 'VERIFIED_OWNED', JSON.stringify({ pid, result }));
         remaining.add(pid);
       }
       for (const pid of remaining) {
+        if (awaitingReap.has(pid)) continue;
         const result = controller.terminate(pid, 'SIGKILL', found.registrations.find(row => row.pid === pid));
-        assert.ok(['SIGNALLED', 'VERIFIED_EXITED'].includes(result.state), JSON.stringify({ pid, result }));
-      }
-      deadline = Date.now() + 5000;
-      while (remaining.size && Date.now() < deadline) {
-        for (const pid of remaining) {
-          const raw = inspectExit(pid); note('exit-verification', { pid, raw });
-          if (raw.state === 'VERIFIED_EXITED') remaining.delete(pid);
-          else assert.equal(raw.state, 'PROCESS_EXISTS', `cleanup exit query unresolved: ${JSON.stringify(raw)}`);
+        assert.ok(['SIGNALLED', 'VERIFIED_EXITED', 'REGISTERED_GENERATION_ZOMBIE'].includes(result.state), JSON.stringify({ pid, result }));
+        if (result.state === 'REGISTERED_GENERATION_ZOMBIE') {
+          note('runtime-terminated-awaiting-reap', { pid, runtimeTerminated: true, pidReaped: false });
         }
-        if (remaining.size) await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      deadline = monotonicNow() + 5000;
+      while (remaining.size && monotonicNow() < deadline) {
+        for (const pid of remaining) {
+          const raw = inspectExit(pid, found.registrations.find(row => row.pid === pid)); note('exit-verification', { pid, raw });
+          if (raw.state === 'VERIFIED_EXITED') remaining.delete(pid);
+          else if (raw.state === 'ORIGINAL_GENERATION_TERMINATED') {
+            remaining.delete(pid);
+            note('original-generation-exited', { pid, originalGeneration: raw.originalGeneration,
+              replacementGeneration: raw.generation, runtimeTerminated: true, pidReaped: true,
+              currentPidReaped: false, decision: 'NO_SIGNAL_PID_REUSED' });
+          } else assert.ok(['PROCESS_EXISTS', 'REGISTERED_GENERATION_ZOMBIE'].includes(raw.state), `cleanup exit query unresolved: ${JSON.stringify(raw)}`);
+        }
+        if (remaining.size) await wait(50);
       }
       // If the OS reused a just-signalled PID before the existence probe saw
       // ESRCH, verify the original generation once at the bounded deadline.
@@ -262,7 +284,7 @@ function createAgentCleanup(t, fixture, deps = {}) {
             replacementGeneration: raw.generation, decision: 'NO_FURTHER_SIGNAL' });
         }
       }
-      assert.equal(remaining.size, 0, 'fixture Agent still alive after cleanup deadline');
+      assert.equal(remaining.size, 0, 'fixture Agent not proven reaped after cleanup deadline');
       completed = true;
       note('cleanup-end', { state: 'CLEANUP_PASS', remaining: [] });
     } catch (error) { note('cleanup-failed', { error: error.message }); throw error; }

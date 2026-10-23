@@ -158,17 +158,99 @@ function linuxClock() {
 }
 
 function decodeLinuxStat(text, pid) {
-  const boundary = text.lastIndexOf(')');
-  if (!text.startsWith(`${pid} (`) || boundary < 0) throw new Error('invalid /proc stat');
+  const boundary = typeof text === 'string' ? text.lastIndexOf(') ') : -1;
+  if (boundary < 0 || !text.startsWith(`${pid} (`)) throw new Error('invalid /proc stat');
   const fields = text.slice(boundary + 2).trim().split(/\s+/);
   const ticks = fields[19]; // field 22; fields[0] is state (field 3).
-  if (!/^\d+$/.test(ticks || '') || BigInt(ticks) <= 0n) throw new Error('missing start ticks');
-  return { generation: `linux:${ticks}`, startTicks: ticks };
+  if (fields.length < 20 || !/^[RSDTtXZPI]$/.test(fields[0])
+    || fields.slice(1, 20).some(v => !/^-?\d+$/.test(v))
+    || !/^[1-9]\d*$/.test(ticks || '') || !/^\d+$/.test(fields[1])
+    || !Number.isSafeInteger(Number(fields[1])) || !/^[1-9]\d*$/.test(fields[17])
+    || !Number.isSafeInteger(Number(fields[17]))) throw new Error('incomplete /proc state or start ticks');
+  return { generation: `linux:${ticks}`, startTicks: ticks, processState: fields[0], parentPid: Number(fields[1]), threadCount: Number(fields[17]) };
+}
+
+// Only explicit OS absence proves reaping. Missing exe/cmdline is never enough.
+function linuxFailure(pid, error, probe, evidence) {
+  let result;
+  if (['ENOENT', 'ESRCH'].includes(error.code)) {
+    const existence = inspectProcessExistence(pid, probe);
+    evidence.existenceProbe = existence.state;
+    result = existence.state === 'PROCESS_EXISTS'
+      ? verdict('QUERY_FAILED', 'metadata missing for an existing process') : existence;
+  } else result = error.code ? queryError(error) : verdict('IDENTITY_INCOMPLETE', error.message);
+  return { ...result, pid, evidence };
+}
+
+// A bounded stat pair is sufficient for exit observation, never signal authority.
+// On a live -> Z transition a third stat must confirm Z with the same generation.
+function observeLinux(pid, deps, identity) {
+  const read = deps.readFile || fs.readFileSync, readlink = deps.readlink || fs.readlinkSync;
+  const probe = deps.probe || (candidate => process.kill(candidate, 0));
+  const evidence = { stat: [], exeRead: 'NOT_REQUESTED', cmdlineRead: 'NOT_REQUESTED' };
+  const existence = inspectProcessExistence(pid, probe);
+  evidence.existenceProbe = existence.state;
+  if (existence.state !== 'PROCESS_EXISTS') return { ...existence, pid, evidence };
+  function stat() {
+    try {
+      const row = decodeLinuxStat(read(`/proc/${pid}/stat`, 'utf8'), pid);
+      evidence.stat.push({ state: row.processState, startTicks: row.startTicks, parentPid: row.parentPid, threadCount: row.threadCount });
+      return row;
+    } catch (error) { evidence.stat.push({ error: error.code || 'INVALID_STAT' }); throw error; }
+  }
+  try {
+    const before = stat();
+    let executable, argv, metadataError;
+    if (identity && before.processState !== 'Z') {
+      try { executable = readlink(`/proc/${pid}/exe`); evidence.exeRead = 'OK'; }
+      catch (error) { evidence.exeRead = error.code || 'INVALID'; metadataError = error; }
+      if (!metadataError) {
+        try { argv = decodeNulArgv(read(`/proc/${pid}/cmdline`)); evidence.cmdlineRead = 'OK'; }
+        catch (error) { evidence.cmdlineRead = error.code || 'INVALID'; metadataError = error; }
+      }
+    }
+    // Do not replace permission failures with a later exit observation.
+    if (['EPERM', 'EACCES'].includes(metadataError?.code)) throw metadataError;
+    const after = stat();
+    if (before.generation !== after.generation) return verdict('PID_REUSED', 'generation changed during /proc query', { pid, evidence });
+    if (after.processState === 'Z') {
+      if (after.threadCount !== 1) return verdict('QUERY_FAILED', 'Zombie leader may still have executing threads', { pid, evidence });
+      if (before.processState !== 'Z' || before.threadCount !== 1) {
+        const confirmed = stat();
+        if (confirmed.generation !== after.generation) return verdict('PID_REUSED', 'generation changed while confirming Z', { pid, evidence });
+        if (confirmed.processState !== 'Z' || confirmed.threadCount !== 1) return verdict('QUERY_FAILED', 'unstable Zombie observation', { pid, evidence });
+      }
+      return { state: 'LINUX_ZOMBIE', pid, ...after, runtimeTerminated: true, pidReaped: false, evidence };
+    }
+    if (before.processState === 'Z') return verdict('QUERY_FAILED', 'inconsistent Zombie state', { pid, evidence });
+    if (metadataError) throw metadataError;
+    if (!identity) return { state: 'LINUX_STATE_OBSERVED', pid, ...after, evidence };
+    // Running/sleeping may alternate during revalidation. Neither is ownership
+    // identity; the stable PID/start ticks plus complete exe/argv still are.
+    return { state: 'OBSERVED', pid, executable, argv, generation: before.generation, startTicks: before.startTicks };
+  } catch (error) { return linuxFailure(pid, error, probe, evidence); }
+}
+
+function createLinuxExitInspector(deps = {}) {
+  return (pid, registration) => {
+    if (!Number.isSafeInteger(pid) || pid <= 0 || registration?.pid !== pid
+      || !/^linux:[1-9]\d*$/.test(registration?.generation || '')) return verdict('IDENTITY_INCOMPLETE', 'no complete Linux spawn generation', { pid });
+    const row = observeLinux(pid, deps, false);
+    if (!['LINUX_ZOMBIE', 'LINUX_STATE_OBSERVED'].includes(row.state)) return row;
+    if (row.generation !== registration.generation) {
+      if (BigInt(row.startTicks) > BigInt(registration.generation.slice(6))) {
+        return { ...row, state: 'ORIGINAL_GENERATION_TERMINATED', originalGeneration: registration.generation,
+          runtimeTerminated: true, pidReaped: true, currentPidReaped: false };
+      }
+      return { ...row, state: 'PID_REUSED', reason: 'observed generation is older than registration' };
+    }
+    return { ...row, state: row.state === 'LINUX_ZOMBIE' ? 'REGISTERED_GENERATION_ZOMBIE' : 'PROCESS_EXISTS' };
+  };
 }
 
 function createProcessInspector(deps = {}) {
   const platform = deps.platform || process.platform;
-  const run = deps.run || spawnSync, read = deps.readFile || fs.readFileSync;
+  const run = deps.run || spawnSync;
   const probe = deps.probe || (pid => process.kill(pid, 0));
   const native = deps.darwin;
   function absent(pid, error) {
@@ -179,6 +261,7 @@ function createProcessInspector(deps = {}) {
   }
   return function inspect(pid) {
     if (!Number.isSafeInteger(pid) || pid <= 0) return verdict('IDENTITY_INCOMPLETE', 'invalid PID');
+    if (platform === 'linux') return observeLinux(pid, deps, true);
     try {
       if (platform === 'win32') {
         const script = `$ErrorActionPreference='Stop'; $p=Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}'; if ($p) { @{ found=$true; pid=$p.ProcessId; executable=$p.ExecutablePath; commandLine=$p.CommandLine; started=$p.CreationDate.ToUniversalTime().ToString('o') } | ConvertTo-Json -Compress } else { '{"found":false}' }`;
@@ -205,14 +288,6 @@ function createProcessInspector(deps = {}) {
         if (before.generation !== after.generation) return verdict('PID_REUSED', 'generation changed during native query');
         return { state: 'OBSERVED', pid, executable, argv, ...before };
       }
-      if (platform === 'linux') {
-        const before = decodeLinuxStat(read(`/proc/${pid}/stat`, 'utf8'), pid);
-        const executable = (deps.readlink || fs.readlinkSync)(`/proc/${pid}/exe`);
-        const argv = decodeNulArgv(read(`/proc/${pid}/cmdline`));
-        const after = decodeLinuxStat(read(`/proc/${pid}/stat`, 'utf8'), pid);
-        if (before.generation !== after.generation) return verdict('PID_REUSED', 'generation changed during /proc query');
-        return { state: 'OBSERVED', pid, executable, argv, ...before };
-      }
       return verdict('QUERY_FAILED', `unsupported process inspection platform: ${platform}`);
     } catch (error) {
       if (error.code) return absent(pid, error);
@@ -221,5 +296,5 @@ function createProcessInspector(deps = {}) {
   };
 }
 
-module.exports = { commandResult, createDarwinApi, createProcessInspector, decodeDarwinArgs, decodeDarwinStart,
+module.exports = { createLinuxExitInspector, commandResult, createDarwinApi, createProcessInspector, decodeDarwinArgs, decodeDarwinStart,
   decodeLinuxStat, decodeNulArgv, decodeWindowsArgv, inspectProcessExistence, linuxClock };
