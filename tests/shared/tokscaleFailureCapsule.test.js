@@ -330,6 +330,28 @@ test('Devin retains every original token bucket, deduplication and session expec
   assert.deepEqual(devin.expectedSession, { id: 'devin-contract', totalTokens: 2120, outputTokens: 340, reasoningTokens: 0 });
 });
 
+test('direct exported calls identify every catalog client without explicit diagnostics metadata', () => {
+  for (const contract of TOKEN_CONTRACT_CASES) {
+    const f = fixture(), scanClients = contract.scanClients || contract.client;
+    const error = thrown(() => runAgainstFixture(f.call.binaryPath, f.home, 'client,session,model', scanClients, {},
+      { ...f.deps, spawnSync: () => timeout() }));
+    const saved = capsule(error);
+    assert.equal(saved.contractClient, contract.client);
+    assert.equal(saved.stageId, `CLIENT_${contract.client.toUpperCase()}`);
+    assert.equal(saved.scanClients, scanClients);
+    assert.equal(saved.groupBy, 'client,session,model');
+  }
+});
+
+test('direct DSH joined grouping identifies the metadata stage without explicit diagnostics', () => {
+  const f = fixture();
+  const error = thrown(() => runAgainstFixture(f.call.binaryPath, f.home, 'client,workspace,session,model', 'dsh', {},
+    { ...f.deps, spawnSync: () => timeout() }));
+  const saved = capsule(error);
+  assert.equal(saved.contractClient, 'dsh');
+  assert.equal(saved.stageId, 'DSH_SESSION_METADATA');
+});
+
 for (const stageId of ['DSH_BASE', 'DSH_SESSION_METADATA', 'DSH_MODEL_ATTRIBUTION']) test(`actual ${stageId} wrapper preserves stage`, () => {
   const f = fixture();
   const error = thrown(() => runAgainstFixture(f.call.binaryPath, f.home, 'client,model', 'dsh', { stageId, caseIndex: 2 },

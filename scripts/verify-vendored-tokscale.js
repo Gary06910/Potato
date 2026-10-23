@@ -519,8 +519,12 @@ function hermeticEnv(home) {
 }
 
 function spawnFixture(binPath, home, groupBy, client = FIXTURE_CLIENT, diagnostics = {}, consume = (result) => result, deps = {}) {
+  const contractClient = TOKEN_CONTRACT_CASES.find((contract) => contract.client === client || contract.scanClients === client)?.client || client;
+  const stageId = client === FIXTURE_CLIENT
+    ? groupBy === SESSION_GROUP_BY ? 'DSH_SESSION_METADATA' : 'DSH_BASE'
+    : `CLIENT_${String(contractClient).toUpperCase()}`;
   return runNativeFixture({
-    stageId: 'DSH_BASE', contractClient: FIXTURE_CLIENT, ...diagnostics,
+    stageId, contractClient, ...diagnostics,
     binaryPath: binPath, fixtureRoot: home, scanClients: client, groupBy,
     argv: ['--json', '--client', client, '--group-by', groupBy, '--no-spinner'],
     spawnOptions: { encoding: 'utf8', timeout: 15_000, env: hermeticEnv(home) }
