@@ -496,7 +496,7 @@ function mountTypeForPath(targetPath, mountInfo, pathApi = path) {
     selected = { mountPoint, fileSystem: after[0].toLowerCase() };
   }
   if (!selected) return 'unknown';
-  if (/^(?:ceph|ceph-fuse|nfs|nfs4|cifs|glusterfs)$/.test(selected.fileSystem)) return 'persistent-volume-supported';
+  if (/^(?:ceph|ceph-fuse|fuse\.ceph-fuse|nfs|nfs4|cifs|glusterfs)$/.test(selected.fileSystem)) return 'persistent-volume-supported';
   if (selected.fileSystem === 'overlay' || selected.fileSystem === 'overlayfs') {
     return 'ephemeral_or_orchestrator_managed';
   }
